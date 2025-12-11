@@ -51,6 +51,26 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body class="bg-background-light dark:bg-background-dark font-display">
+    <!-- PANTALLA DE CARGA GLOBAL -->
+    <div
+      id="page-loader"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300"
+    >
+      <div class="flex flex-col items-center gap-4">
+        <!-- Cambia loader.gif por el nombre real de tu animación -->
+        <img
+          src="/img/loader.gif"
+          alt="Cargando Tierra Querida"
+          class="w-32 h-32 object-contain"
+        />
+        <p
+          class="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase text-white/80 text-center"
+        >
+          Cargando
+        </p>
+      </div>
+    </div>
+
     <div class="app-root">
       <!-- Banner superior -->
       <div class="bg-[#FFC700] p-2 text-center">
@@ -181,63 +201,251 @@
         </div>
       </section>
 
-      <!-- Our Story -->
-      <section class="p-4 my-8">
-        <div class="relative rounded-xl overflow-hidden">
-          <img
-            alt="Vintage style photo of a burger on a checkered paper."
-            class="w-full h-64 object-cover"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo8_h9aTkCbktARnGTFwl4fzRuu_jefrrSPFTM7lmmptl7Ajc01_AqBpY2n5NTUnn7PNmH8qVcHCBrvQ6F6lZ565W_6w3LHRrnGQ9DrgnZ0N4aVP-eeMkENyxCIcT6GyCftOZK5OzLkRqlboMrYe3WBqDJCrzGTqBdpe8A5KuSV732uS5i8C7PpMNqjjKoO2rm6FZBXUqlrAqcampzfCV3CVtKFeOpUz-C0SylLFQWEo3JhWuVRlvxtCqdW2sePlb2pFffTChnsiU"
-          />
+      <!-- ABOUT / QUIÉNES SOMOS -->
+      <section class="bg-background-light dark:bg-[#020617] py-12 sm:py-16">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div
-            class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-6 text-center"
+            class="grid gap-10 lg:gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] items-center"
           >
-            <h2
-              class="text-white text-2xl font-extrabold leading-tight tracking-tight mb-2"
-            >
-              Our Story
-            </h2>
-            <p class="text-white/90 text-sm leading-relaxed max-w-lg">
-              Born from a passion for authentic flavors and quality ingredients,
-              our journey began in a small kitchen with one big dream: to craft
-              the perfect burger.
-            </p>
+            <!-- IMAGEN / EQUIPO -->
+            <div class="relative">
+              <div
+                class="absolute -inset-0.5 rounded-3xl bg-gradient-to-br from-primary/80 via-red-900/60 to-black/80 opacity-70 blur-xl"
+                aria-hidden="true"
+              ></div>
+
+              <div
+                class="relative rounded-3xl overflow-hidden bg-black shadow-xl shadow-black/40"
+              >
+                <img
+                  src="./img/empleados.png"
+                  alt="Equipo de Tierra Querida"
+                  class="w-full h-full object-cover max-h-[420px]"
+                />
+              </div>
+
+              <div
+                class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-black/85 text-white text-xs sm:text-sm shadow-lg shadow-black/40 absolute -bottom-4 left-4"
+              >
+                <span
+                  class="inline-block h-2 w-2 rounded-full bg-emerald-400"
+                ></span>
+                <span>+100 puntos de venta en Colombia</span>
+              </div>
+            </div>
+
+            <!-- TEXTO -->
+            <div class="space-y-5 sm:space-y-6">
+              <p
+                class="inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.28em] text-primary"
+              >
+                #Movimiento TQ
+                <span
+                  class="h-px w-10 bg-primary/70 hidden sm:inline-block"
+                ></span>
+              </p>
+
+              <h2
+                class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-black dark:text-white"
+              >
+                ¿Quiénes Somos?
+              </h2>
+
+              <p
+                class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
+              >
+                Hace 5 años, empezamos en una cocina pequeña con una idea
+                grande: llevar hamburguesas honestas, hechas al momento, a cada
+                rincón de esta Tierra Querida.
+              </p>
+
+              <p
+                class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
+              >
+                Sin letreros luminosos ni grandes campañas. Solo una plancha
+                caliente, 4 amigos con ganas de emprender y cientos de clientes
+                que fueron pasando la voz, mordida tras mordida.
+              </p>
+
+              <p
+                class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
+              >
+                Hoy seguimos siendo la misma cocina inquieta, pero con un sueño
+                más grande: que cada pedido se sienta como comer en casa, sin
+                perder el sabor callejero que nos trajo hasta aquí.
+              </p>
+
+              <div
+                class="flex flex-col sm:flex-row sm:items-center gap-4 pt-2 sm:pt-3"
+              >
+                <a
+                  href="/store.html"
+                  class="inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-primary text-white text-sm font-bold tracking-[0.04em] shadow-lg shadow-primary/40 hover:shadow-primary/60 hover:brightness-110 transition"
+                >
+                  Pide aquí
+                  <span class="material-symbols-outlined ml-1 text-base">
+                    arrow_forward
+                  </span>
+                </a>
+
+                <div
+                  class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"
+                >
+                  <span class="hidden sm:inline">Síguenos</span>
+                  <a
+                    href="https://www.facebook.com"
+                    target="_blank"
+                    class="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white hover:bg-primary transition"
+                    aria-label="Facebook"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">
+                      facebook
+                    </span>
+                  </a>
+                  <a
+                    href="https://www.instagram.com"
+                    target="_blank"
+                    class="flex h-9 w-9 items-center justify-center rounded-full bg-black text-white hover:bg-primary transition"
+                    aria-label="Instagram"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">
+                      camera_alt
+                    </span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- Join Our Community -->
-      <section class="py-8">
-        <h2
-          class="text-black dark:text-white text-xl font-bold leading-tight px-4 text-center mb-4"
-        >
-          Join Our Community
-        </h2>
-        <div class="grid grid-cols-3 gap-1">
-          <div
-            class="aspect-square bg-cover bg-center"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDihG7_HNRuQviQKs2rYNIQtS6RGHRLfK6IrM9SC6vGgNnVZyOmqrlSwv9kcE5sbOCnzF2R4GAQh-pQ_OyFQc6Wat9Wjr-1JG-lhpN0zIokrdU8HZb30tyLyR1_TM9e2Zpu-QBvEYmsmGsW_YK2x8hddHDmKyCpi913S2TcnZeIsrqAi3IMRrRwLtNbmjrCVrcTQPnWG86lDIOz2AX2qPtbvuA0llKXA_0Qg3RnNRlxPbgY2myQCo0Mo8BvlUFvpp4djU4Kfi_ntO8')"
-          ></div>
-          <div
-            class="aspect-square bg-cover bg-center"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDFBwnmVb5K6xm9VdMTIt__TtWmwKoHdR4utoIqJrbMLKjRkL-APOEC4u5T05nh0qGCbY5rfGNhyE5BYkXMWu8LfqLARSfdKX5CPKv788owkaqICDH_hkRGtqyUrQ7lSFSAQe8fO5uFsg1dnRQiF0RRZCKH_wfowIrWb4OpNCZ7zoFeDLFwbsnfojyZArG3GHkXUqzR4FwifIPJw9vfkiwdYNU1Nib1TfabDBm1Fa3UvDd-k1WvZKJfL5faIKdvBF9fjTu-7jx4FWo')"
-          ></div>
-          <div
-            class="aspect-square bg-cover bg-center"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuANpuSikKc6ZFojTorDmN7mkAMpwGtT1IVw26OkKy55c66Bb4gjc7zsykOJoE8eyD1xy41v36aSlyiITiuHFKou34lJz6wHSTxEBvUzc5t03ALwZXzwoqgLjDea__XPJXUD6S4_m48B_bYVeFgEsVc1XfFg4RwL5Pe1kkRg7loktA78mmRF9HrZ5BInOtPj_JeTqqvHuwXjrecSGrVMo1dF7GcOA3QSiPZifyPZ5sPGycVnNSGUidOwHNrdHRLGQn7GwRTgBwF096M')"
-          ></div>
-          <div
-            class="aspect-square bg-cover bg-center"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAuEaCvr317U1H4fngQlHCiR0EUZgWW7W11PNuP1Ndd6_89B6_Da4epK0MyMqeeapnpplHXlJt-eEKxJCND3jm__uy1PnRcmbjCysoertwEgcwn_2aOU8Mr4wyeCq8EPfxmuU9r11OrhZPFVORTKSDCGZCsnqjpICqs9LBuoyj9qhHT-RbzSLoPzEvK_r1ec-x_2RJuAyu-El3LGJiKvf3TDqNoktKqBMVw4NSuMswZTbbXIQSiNrAlh_ts5C08u0DnqYv1g3INRKU')"
-          ></div>
-          <div
-            class="aspect-square bg-cover bg-center"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqOhIRenVlgje0s-UccsUI3gNUBppSQTaQ7TPDgxKHTJyW2oP1A3k5a0ImwUX8tlVVD4k-27MxqHaoMJ1IEujKB6QCvNnLV5IVJ6K5Eh5s8WU1r3bSwue4QBF15nhDlQp3ItmNf_w3mxhiWTU_lOKS8IxxDaNN_OlK0YuDKwq2lSN-cHIntn9-CesY2acDh60ioheow2nNKgf6p5trGoWMd0jxsTYSLxD-Tx-NvM5ZkdgvELhvomykQ_5FAMkT_ZTiEa5PgLN8cM')"
-          ></div>
-          <div
-            class="aspect-square bg-cover bg-center"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQG3zU69YSvWN1R_aGqYmL-DsA57MsSm1td0ZPnRx5LYwU_0PNOTfg-oBxXmkeZ-2pxnnGGKmLYwV0eEVm9e4qw3GwMMy9lfajLpl86MdBwdqNhSXiT9CUI2VsmvrNVM7xA05nYw0HAcLx0vBmpmHToq1B5yhzNjzBGdelDFCh3Wp3I9Fw7Dto9hwzPI3B1WqFnlrrBbvVTYiGCXjo9dYDgPyyvNke1qjh2EiFs_CmH_vwisjsD1STtEZArAXsVFrtTTnmT0-kBKQ')"
-          ></div>
+      <!-- INSTAGRAM / STORIES -->
+      <section class="py-10 bg-background-light dark:bg-background-dark">
+        <div class="max-w-6xl mx-auto px-4">
+          <h2
+            class="text-center text-2xl md:text-3xl font-extrabold tracking-tight text-black dark:text-white mb-6"
+          >
+            Síguenos en Instagram
+            <span class="text-primary">@tierraquerida20</span>
+          </h2>
+
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <!-- Card 1 -->
+            <a
+              href="https://www.instagram.com/tierraquerida20/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
+            >
+              <img
+                src="./img/ig-story-1.webp"
+                alt="Cliente disfrutando una hamburguesa Tierra Querida"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div
+                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
+              ></div>
+              <div
+                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
+              >
+                <p class="text-white text-sm font-semibold">
+                  
+                </p>
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
+                >
+                  Ver en Instagram
+                </span>
+              </div>
+            </a>
+
+            <!-- Card 2 -->
+            <a
+              href="https://www.instagram.com/tierraquerida20/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
+            >
+              <img
+                src="./img/ig-story-2.webp"
+                alt="Amigos comiendo papas y hamburguesas en Tierra Querida"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div
+                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
+              ></div>
+              <div
+                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
+              >
+                <p class="text-white text-sm font-semibold">
+                  
+                </p>
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
+                >
+                  Ver en Instagram
+                </span>
+              </div>
+            </a>
+
+            <!-- Card 3 -->
+            <a
+              href="https://www.instagram.com/tierraquerida20/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
+            >
+              <img
+                src="./img/ig-story-3.webp"
+                alt="Caravana de Tierra Querida por las calles de la ciudad"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div
+                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
+              ></div>
+              <div
+                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
+              >
+                <p class="text-white text-sm font-semibold">
+                  
+                </p>
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
+                >
+                  Ver en Instagram
+                </span>
+              </div>
+            </a>
+
+            <!-- Card 4 -->
+            <a
+              href="https://www.instagram.com/tierraquerida20/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
+            >
+              <img
+                src="./img/ig-story-4.webp"
+                alt="Vista aérea de Cartagena con punto Tierra Querida"
+                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              <div
+                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
+              ></div>
+              <div
+                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
+              >
+                <p class="text-white text-sm font-semibold">
+                  
+                </p>
+                <span
+                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
+                >
+                  Ver en Instagram
+                </span>
+              </div>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -246,7 +454,7 @@
         <div class="container mx-auto px-4 py-8">
           <div class="text-center text-sm text-white/70 flex flex-col gap-2">
             <p class="text-xs text-white/50 mt-4">
-              © 2024 Burger Store. All Rights Reserved.
+            © 2025 Tierra Querida. All Rights Reserved.
             </p>
           </div>
         </div>
@@ -353,6 +561,48 @@
       id="toast"
       class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 hidden px-4 py-2 rounded-lg bg-black/80 text-white text-xs sm:text-sm shadow-lg"
     ></div>
+
+    <!-- SCRIPT DEL LOADER (envolviendo fetch) -->
+    <script>
+      (function () {
+        const loader = document.getElementById("page-loader");
+        if (!loader) return;
+
+        function showLoader() {
+          loader.style.display = "flex";
+          loader.classList.remove("opacity-0", "pointer-events-none");
+        }
+
+        function hideLoader() {
+          loader.classList.add("opacity-0", "pointer-events-none");
+          setTimeout(() => {
+            loader.style.display = "none";
+          }, 350);
+        }
+
+        // Exponer por si quieres usarlo en otros scripts
+        window.TQShowLoader = showLoader;
+        window.TQHideLoader = hideLoader;
+
+        // Ocultar cuando termine de cargar la página
+        window.addEventListener("load", hideLoader);
+
+        // Envolver fetch para mostrar pantalla de carga en peticiones
+        if (window.fetch) {
+          const originalFetch = window.fetch.bind(window);
+          let pending = 0;
+
+          window.fetch = (...args) => {
+            pending++;
+            showLoader();
+            return originalFetch(...args).finally(() => {
+              pending--;
+              if (pending <= 0) hideLoader();
+            });
+          };
+        }
+      })();
+    </script>
 
     <!-- JS del front -->
     <script type="module" src="/index.js"></script>

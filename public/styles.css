@@ -66,19 +66,10 @@ body {
 .hero-section {
   position: relative;
   width: 100%;
-  max-width: 1200px; /* ancho máximo en desktop */
-  margin: 0.75rem auto 0; /* centrado */
+  max-width: 1200px;
+  margin: 0.75rem auto 0;
   border-radius: 1rem;
   overflow: hidden;
-
-  /* Altura adaptable:
-     - mínimo 240px (celular)
-     - en función del ancho (42vw)
-     - máximo 380px (pantallas grandes)
-  */
-  height: clamp(240px, 42vw, 380px);
-
-  /* Fondo base oscuro elegante para que no haya "barras negras feas" */
   background: radial-gradient(
     circle at top,
     #1f2937 0,
@@ -88,6 +79,14 @@ body {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
+/* En pantallas grandes le damos una altura mínima bonita */
+@media (min-width: 1024px) {
+  .hero-section {
+    min-height: 320px;
+  }
+}
+
+
 .hero-carousel {
   position: relative;
   width: 100%;
@@ -96,11 +95,19 @@ body {
 
 /* Slide contenedor (se apilan uno encima de otro con opacidad) */
 .hero-slide {
-  position: absolute;
-  inset: 0;
+  width: 100%;
+  display: none;             /* no ocupa espacio si no está activa */
   opacity: 0;
-  transition: opacity 0.6s ease;
+  transition: opacity 0.4s ease;
 }
+
+/* Sólo el slide activo se ve y ocupa espacio */
+.hero-slide.hero-slide--active {
+  display: block;
+  opacity: 1;
+}
+
+
 
 /* Layout interno: imagen + texto */
 .hero-slide-inner {
@@ -658,6 +665,7 @@ body {
   background-repeat: no-repeat;
   background-size: contain;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
 }
 
 /* bloque de texto (nombre, descripción, precio) */
@@ -690,11 +698,53 @@ body {
     height: 360px;
   }
 }
+
+/* modal 
+#image-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}*/
+
+#modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+#image-modal .relative {
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+}
+
+#image-modal img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+#close-modal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.container {
+  padding: 20px;
+}
+
 #department-select, #store-select {
-    margin: 10px 0;
+  margin: 10px 0;
 }
 
 #map {
-    height: 500px;
-    width: 100%;
+  height: 500px;
+  width: 100%;
 }

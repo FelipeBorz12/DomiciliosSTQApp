@@ -3,7 +3,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// src/server.ts
 const express_1 = __importDefault(require("express"));
 const path_1 = __importDefault(require("path"));
 const cors_1 = __importDefault(require("cors"));
@@ -45,6 +44,9 @@ app.get('/cart', (_req, res) => {
 });
 app.get('/confirm', (_req, res) => {
     res.sendFile(path_1.default.join(publicPath, 'confirm.html'));
+});
+app.get('/stores', (_req, res) => {
+    res.sendFile(path_1.default.join(publicPath, 'store.html'));
 });
 // -------------------- API MENÚ --------------------
 // GET /api/menu?tipo=1

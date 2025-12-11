@@ -74,6 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 🔁 Versión mejorada
   function updateCartCount() {
     try {
       const raw = localStorage.getItem("burgerCart");
@@ -81,19 +82,28 @@ document.addEventListener("DOMContentLoaded", () => {
         if (cartCount) cartCount.textContent = "0";
         return;
       }
+
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) {
         if (cartCount) cartCount.textContent = "0";
         return;
       }
-      const totalItems = parsed.reduce(
-        (acc, item) => acc + (Number(item.quantity) || 0),
-        0
-      );
+
+      const totalItems = parsed.reduce((acc, item) => {
+        // Soporta item.quantity, item.cantidad o default 1
+        const q = Number(item?.quantity ?? item?.cantidad ?? 1);
+        if (!Number.isFinite(q) || q <= 0) return acc + 1;
+        return acc + q;
+      }, 0);
+
       if (cartCount) {
-        cartCount.textContent = String(totalItems || 0);
+        cartCount.textContent = String(totalItems);
       }
-    } catch {
+    } catch (err) {
+      console.error(
+        "[index.js] Error leyendo carrito en updateCartCount:",
+        err
+      );
       if (cartCount) cartCount.textContent = "0";
     }
   }
@@ -319,6 +329,69 @@ document.addEventListener("DOMContentLoaded", () => {
     modalImage.classList.remove("zoomed");
   }
 
+  function renderProducts(products) {
+  const productsContainer = document.getElementById('products-container');
+  if (!productsContainer) return;
+
+  productsContainer.innerHTML = '';
+
+  if (!products || products.length === 0) {
+    productsContainer.innerHTML =
+      '<p class="text-center text-sm text-gray-500 mt-4">No hay productos disponibles en esta categoría.</p>';
+    return;
+  }
+
+  products.forEach((item) => {
+    const price = item[zonaPrecio] ?? 0;
+
+    const card = document.createElement('div');
+    card.className =
+      'product-card flex h-full flex-col gap-4 rounded-xl bg-white dark:bg-black/20 shadow-md overflow-hidden';
+
+    const imgUrl = item.imagen || '';
+
+    card.innerHTML = `
+      <div class="product-image-wrapper">
+        <img
+          src="${imgUrl}"
+          alt="${item.Nombre || 'Producto'}"
+          loading="lazy"
+          class="product-image-img"
+        />
+      </div>
+      <div class="flex flex-col flex-1 justify-between p-4 pt-0 gap-4">
+        <div>
+          <p class="text-black dark:text-white text-base md:text-lg font-semibold leading-normal">
+            ${item.Nombre}
+          </p>
+          <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm leading-normal mb-1 line-clamp-2">
+            ${item.Descripcion}
+          </p>
+          <p class="text-gray-800 dark:text-gray-200 text-sm md:text-base font-semibold leading-normal">
+            $${Number(price).toLocaleString('es-CO')}
+          </p>
+        </div>
+        <button
+          class="product-go-detail flex min-w-[110px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary text-white text-sm md:text-base font-bold leading-normal tracking-[0.015em]"
+        >
+          <span class="truncate">Agregar al carrito</span>
+        </button>
+      </div>
+    `;
+
+    const detailBtn = card.querySelector('.product-go-detail');
+    if (detailBtn) {
+      detailBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.location.href = `/product?id=${item.id}`;
+      });
+    }
+
+    productsContainer.appendChild(card);
+  });
+}
+
+
   function renderHeroSlides() {
     if (!heroCarousel || !heroDots) return;
 
@@ -328,8 +401,12 @@ document.addEventListener("DOMContentLoaded", () => {
     heroImages.forEach((item, index) => {
       const slide = document.createElement("div");
       slide.className = "hero-slide";
-      slide.style.opacity = index === 0 ? "1" : "0";
       slide.dataset.index = index.toString();
+
+      // marcamos el primero como activo
+      if (index === 0) {
+        slide.classList.add("hero-slide--active");
+      }
 
       slide.innerHTML = `
         <div class="hero-slide-inner">
@@ -388,9 +465,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function goToSlide(index) {
     if (!heroCarousel) return;
     const slides = heroCarousel.querySelectorAll(".hero-slide");
+
     slides.forEach((slide, i) => {
-      slide.style.opacity = i === index ? "1" : "0";
+      if (i === index) {
+        slide.classList.add("hero-slide--active");
+      } else {
+        slide.classList.remove("hero-slide--active");
+      }
     });
+
     currentSlide = index;
     updateDots();
   }
@@ -462,7 +545,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const tabButtons = document.querySelectorAll(".tab-btn");
 
   async function fetchMenu(tipo) {
-    const url = typeof tipo === "number" ? `/api/menu?tipo=${tipo}` : "/api/menu";
+    const url =
+      typeof tipo === "number" ? `/api/menu?tipo=${tipo}` : "/api/menu";
     const res = await fetch(url);
     if (!res.ok) {
       console.error("Error al cargar menú", res.status);
@@ -549,7 +633,22 @@ document.addEventListener("DOMContentLoaded", () => {
   // cargar hamburguesas por defecto
   loadCategory(1);
 
-  // Inicialización
+  // =============================
+  // INICIALIZACIÓN
+  // =============================
   updateCartCount();
   applyUserUI();
+
+  // 🔄 al volver con el botón Atrás (bfcache)
+  window.addEventListener("pageshow", () => {
+    updateCartCount();
+    applyUserUI();
+  });
+
+  // 🧠 si cambia el carrito en otra pestaña
+  window.addEventListener("storage", (e) => {
+    if (e.key === "burgerCart") {
+      updateCartCount();
+    }
+  });
 });
