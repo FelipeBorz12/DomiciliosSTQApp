@@ -58,6 +58,11 @@ app.get('/stores', (_req: Request, res: Response) => {
   res.sendFile(path.join(publicPath, 'store.html'));
 });
 
+// 🔹 Página historial de pedidos
+app.get('/history', (_req: Request, res: Response) => {
+  res.sendFile(path.join(publicPath, 'history.html'));
+});
+
 // -------------------- API MENÚ --------------------
 // GET /api/menu?tipo=1
 app.get('/api/menu', async (req: Request, res: Response) => {
@@ -268,7 +273,6 @@ app.post('/api/auth/recover', async (req: Request, res: Response) => {
       !!user
     );
 
-    // Aquí iría la lógica de envío de correo si implementas un servicio de emails.
     return res.json({
       message: 'Si el correo existe, te enviaremos instrucciones.',
     });
@@ -300,6 +304,46 @@ app.get('/api/puntos-venta', async (_req: Request, res: Response) => {
 });
 
 // -------------------- API PEDIDOS --------------------
+
+// ✅ GET /api/pedidos?correo=algo@mail.com
+app.get('/api/pedidos', async (req: Request, res: Response) => {
+  try {
+    const correo = (req.query.correo as string) || '';
+
+    if (!correo) {
+      return res
+        .status(400)
+        .json({ message: 'El parámetro "correo" es obligatorio' });
+    }
+
+    console.log('[GET /api/pedidos] Buscando pedidos para correo:', correo);
+
+    const { data, error } = await supabase
+      .from('pedidos')
+      .select('*')
+      .eq('nombre_cliente', correo) // aquí guardas el correo
+      .order('id', { ascending: false });
+
+    if (error) {
+      console.error('[GET /api/pedidos] error supabase:', error);
+      return res.status(500).json({
+        message: 'Error al obtener pedidos',
+        detail: error.message,
+      });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ message: 'No se encontraron pedidos' });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('[GET /api/pedidos] error inesperado:', err);
+    res.status(500).json({ message: 'Error inesperado en el servidor' });
+  }
+});
+
+// POST /api/pedidos
 app.post('/api/pedidos', async (req: Request, res: Response) => {
   try {
     const {

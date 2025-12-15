@@ -22,8 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const pvBarrioSelect = document.getElementById("pv-barrio");
   const orderText = document.getElementById("order-text");
   const sendWhatsappBtn = document.getElementById("send-whatsapp-btn");
+
+  // Botones existentes y botón nuevo para refrescar mensaje
   const confirmInfoBtn = document.getElementById("confirm-info-btn");
   const saveInfoBtn = document.getElementById("save-info-btn");
+  const refreshMessageBtn = document.getElementById("refresh-message-btn");
 
   // ---- Estado ----
   let cartItems = [];
@@ -172,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return cartItems.reduce((acc, item) => acc + Number(item.total || 0), 0);
   }
 
+  // Construye el texto del pedido (SIEMPRE genera uno nuevo)
   function buildOrderText() {
     const name = nameInput?.value?.trim() || "No especificado";
     const email = emailInput?.value?.trim() || "No especificado";
@@ -248,6 +252,15 @@ document.addEventListener("DOMContentLoaded", () => {
     return headerLines.join("\n");
   }
 
+  // Ahora acepta `force`: si true, siempre regenera aunque el textarea tenga texto
+  function updateOrderTextIfEmpty(force = false) {
+    if (!orderText) return;
+
+    if (force || orderText.value.trim() === "") {
+      orderText.value = buildOrderText();
+    }
+  }
+
   function updatePVCard() {
     if (!pvCard || !pvName || !pvAddress || !pvWhatsapp) return;
 
@@ -317,14 +330,14 @@ document.addEventListener("DOMContentLoaded", () => {
       throw new Error("No se pudieron obtener puntos de venta");
     }
     const data = await res.json();
-    console.log("Datos obtenidos de la API:", data); // Verifica los datos obtenidos
+    console.log("Datos obtenidos de la API:", data);
     return data;
   }
 
   async function ensurePuntosVentaLoaded() {
     if (Array.isArray(puntosVenta) && puntosVenta.length > 0) return;
     puntosVenta = await fetchPuntosVenta();
-    console.log("Puntos de venta cargados:", puntosVenta); // Agrega esto para depurar los datos
+    console.log("Puntos de venta cargados:", puntosVenta);
     buildPvSelects();
   }
 
@@ -430,22 +443,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (found) {
       selectedPV = found;
-      console.log("Punto de venta seleccionado:", selectedPV); // Agrega esto para depurar los datos
-      console.log("Número de WhatsApp:", selectedPV.num_whatsapp); // Verifica el número de WhatsApp
+      console.log("Punto de venta seleccionado:", selectedPV);
+      console.log("Número de WhatsApp:", selectedPV.num_whatsapp);
       updatePVCard();
+      // Solo generamos texto automático si está vacío
       updateOrderTextIfEmpty();
       validateForm();
       if (pvMessage) {
-        pvMessage.textContent = `Punto de venta seleccionado: ${found.Barrio}`;
+        pvMessage.textContent =
+          `Punto de venta seleccionado: ${found.Barrio}. ` +
+          `Si cambias de punto de venta y quieres actualizar el texto, usa el botón "Actualizar mensaje".`;
       }
-    }
-  }
-
-  function updateOrderTextIfEmpty() {
-    if (!orderText) return;
-
-    if (orderText.value.trim() === "") {
-      orderText.value = buildOrderText();
     }
   }
 
@@ -535,10 +543,14 @@ document.addEventListener("DOMContentLoaded", () => {
           updatePVCard();
 
           if (pvMessage) {
-            pvMessage.textContent = `Punto de venta sugerido: ${best.Barrio || 'Punto de venta'} (a ~${bestDist.toFixed(1)} km). También puedes cambiarlo manualmente.`;
+            pvMessage.textContent =
+              `Punto de venta sugerido: ${best.Barrio || "Punto de venta"} ` +
+              `(a ~${bestDist.toFixed(
+                1
+              )} km). Si luego cambias a uno manual, usa "Actualizar mensaje" para regenerar el texto.`;
           }
 
-          // (Opcional) setear selects según sugerido
+          // Opcional: setear selects según sugerido
           if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
             pvDeptSelect.value = best.Departamento;
             onDeptChange();
@@ -597,6 +609,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const puntoventaName =
       selectedPV.Barrio || selectedPV.Direccion || String(selectedPV.id);
 
+    let pedidoId = null;
+
     // 1. Registrar en tabla pedidos
     try {
       const payload = {
@@ -621,6 +635,24 @@ document.addEventListener("DOMContentLoaded", () => {
         alert(
           "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
         );
+      } else {
+        try {
+          const data = await res.json();
+          if (data) {
+            if (typeof data.id !== "undefined") {
+              pedidoId = data.id;
+            } else if (Array.isArray(data) && data[0]?.id) {
+              pedidoId = data[0].id;
+            } else if (data.pedido && data.pedido.id) {
+              pedidoId = data.pedido.id;
+            }
+          }
+        } catch (jsonErr) {
+          console.warn(
+            "[confirm.js] No se pudo obtener el id del pedido de la respuesta:",
+            jsonErr
+          );
+        }
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
@@ -652,12 +684,24 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("No se pudo abrir WhatsApp desde el navegador.");
     }
 
-    // 3. Borrar el pedido del carrito
+    // 3. Borrar el carrito del JSON (localStorage) y redirigir al historial
     localStorage.removeItem("burgerCart");
     cartItems = [];
-    loadCart();
-    updateOrderTextIfEmpty();
-    validateForm();
+
+    const params = new URLSearchParams();
+    if (email && email !== "No especificado") {
+      params.set("correo", email);
+    }
+    if (pedidoId !== null && pedidoId !== undefined) {
+      params.set("pedidoId", String(pedidoId));
+    }
+
+    const historyUrl =
+      "/history" + (params.toString() ? "?" + params.toString() : "");
+
+    setTimeout(() => {
+      window.location.href = historyUrl;
+    }, 800);
   }
 
   // ---- Eventos ----
@@ -674,6 +718,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (suggestPvBtn) {
     suggestPvBtn.addEventListener("click", () => {
       suggestNearestPV();
+    });
+  }
+
+  // Botón NUEVO: refrescar mensaje manualmente
+  if (refreshMessageBtn) {
+    refreshMessageBtn.addEventListener("click", () => {
+      updateOrderTextIfEmpty(true); // fuerza regeneración
+      validateForm();
     });
   }
 
@@ -721,16 +773,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Estos botones ahora también regeneran siempre el mensaje
   if (confirmInfoBtn) {
     confirmInfoBtn.addEventListener("click", () => {
-      updateOrderTextIfEmpty();
+      updateOrderTextIfEmpty(true);
       validateForm();
     });
   }
 
   if (saveInfoBtn) {
     saveInfoBtn.addEventListener("click", () => {
-      updateOrderTextIfEmpty();
+      updateOrderTextIfEmpty(true);
       validateForm();
     });
   }

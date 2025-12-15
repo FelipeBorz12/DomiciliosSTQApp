@@ -106,7 +106,7 @@
         >
           <span class="material-symbols-outlined">arrow_back</span>
         </button>
-        <h1 class="text-lg font-bold text-black dark:text-white">
+        <h1 class="text-lg md:text-xl font-bold text-black dark:text-white">
           Confirmar pedido
         </h1>
         <div class="size-10"></div>
@@ -134,7 +134,7 @@
 
           <!-- Datos del cliente -->
           <section
-            class="rounded-xl bg-white/90 dark:bg-black/40 p-4 space-y-3 shadow-sm"
+            class="rounded-2xl bg-white/90 dark:bg-black/40 p-4 md:p-5 space-y-3 shadow-sm border border-black/5 dark:border-white/5"
           >
             <h2
               class="text-base md:text-lg font-bold mb-1 flex items-center gap-2"
@@ -197,9 +197,9 @@
 
           <!-- Punto de venta -->
           <section
-            class="rounded-xl bg-white/90 dark:bg-black/40 p-4 space-y-3 shadow-sm"
+            class="rounded-2xl bg-white/90 dark:bg-black/40 p-4 md:p-5 space-y-3 shadow-sm border border-black/5 dark:border-white/5"
           >
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h2
                 class="text-base md:text-lg font-bold mb-1 flex items-center gap-2"
               >
@@ -208,23 +208,35 @@
                 >
                 Punto de venta
               </h2>
-              <button
-                id="suggest-pv-btn"
-                class="px-3 py-1.5 rounded-full bg-primary text-xs md:text-sm font-semibold text-white flex items-center gap-1"
-              >
-                <span class="material-symbols-outlined text-sm"
-                  >my_location</span
+              <div class="flex gap-2">
+                <button
+                  id="suggest-pv-btn"
+                  class="px-3 py-1.5 rounded-full bg-primary text-xs md:text-sm font-semibold text-white flex items-center gap-1"
                 >
-                Usar cercano
-              </button>
+                  <span class="material-symbols-outlined text-sm"
+                    >my_location</span
+                  >
+                  Usar cercano
+                </button>
+                <!-- NUEVO: botón para regenerar mensaje -->
+                <button
+                  id="refresh-message-btn"
+                  class="px-3 py-1.5 rounded-full bg-black/80 dark:bg-white/10 text-xs md:text-sm font-semibold text-white flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-sm">sync</span>
+                  Actualizar mensaje
+                </button>
+              </div>
             </div>
 
             <p
               id="pv-message"
               class="text-xs md:text-sm text-black/70 dark:text-white/70"
             >
-              Puedes usar el punto de venta más cercano a tu ubicación o
-              seleccionar uno manualmente por departamento, municipio y barrio.
+              Elige si quieres usar el punto de venta más cercano o selecciona
+              uno manualmente. Cuando cambies de opción, pulsa
+              <span class="font-semibold">“Actualizar mensaje”</span> para
+              regenerar el texto de WhatsApp.
             </p>
 
             <!-- Card del PV seleccionado (sugerido o manual) -->
@@ -266,7 +278,6 @@
                   class="block appearance-none w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl py-2 px-4 pr-8 leading-tight focus:outline-none focus:border-blue-500 focus:bg-white focus:dark:bg-gray-800 text-xs md:text-sm"
                 >
                   <option value="">Departamento</option>
-                  <!-- Opciones dinámicas -->
                 </select>
                 <div
                   class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300"
@@ -290,7 +301,6 @@
                   disabled
                 >
                   <option value="">Municipio</option>
-                  <!-- Opciones dinámicas -->
                 </select>
                 <div
                   class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300"
@@ -314,7 +324,6 @@
                   disabled
                 >
                   <option value="">Barrio</option>
-                  <!-- Opciones dinámicas -->
                 </select>
                 <div
                   class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-gray-300"
@@ -335,7 +344,7 @@
 
           <!-- Mensaje WhatsApp -->
           <section
-            class="rounded-xl bg-white/90 dark:bg-black/40 p-4 space-y-3 shadow-sm"
+            class="rounded-2xl bg-white/90 dark:bg-black/40 p-4 md:p-5 space-y-3 shadow-sm border border-black/5 dark:border-white/5"
           >
             <h2 class="text-base md:text-lg font-bold mb-1">
               Mensaje de pedido (editable)
@@ -343,7 +352,8 @@
             <p class="text-xs md:text-sm text-black/70 dark:text-white/70">
               Este es el mensaje que se enviará al punto de venta por WhatsApp y
               se guardará en la base de datos. Puedes editarlo libremente antes
-              de enviarlo.
+              de enviarlo o regenerarlo con el botón
+              <span class="font-semibold">“Actualizar mensaje”</span>.
             </p>
             <textarea
               id="order-text"

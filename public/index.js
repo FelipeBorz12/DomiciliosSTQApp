@@ -25,6 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const userPhoneInput = document.getElementById("user-phone-input");
   const userAddressInput = document.getElementById("user-address-input");
 
+  // -----------------------------
+  // Helpers localStorage / toast
+  // -----------------------------
   function getStoredUser() {
     try {
       const raw = localStorage.getItem("burgerUser");
@@ -50,9 +53,13 @@ document.addEventListener("DOMContentLoaded", () => {
     toast.classList.add("opacity-100");
     setTimeout(() => {
       toast.classList.add("hidden");
+      toast.classList.remove("opacity-100");
     }, 2200);
   }
 
+  // -----------------------------
+  // Menú lateral
+  // -----------------------------
   function openMenu() {
     if (!menu || !overlay) return;
     menu.classList.add("open");
@@ -74,10 +81,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 🔁 Versión mejorada
+  // -----------------------------
+  // Contador de carrito
+  // -----------------------------
+  // Soporta "cart" o "burgerCart" como clave en localStorage
   function updateCartCount() {
     try {
-      const raw = localStorage.getItem("burgerCart");
+      let raw = localStorage.getItem("cart");
+      if (!raw) {
+        raw = localStorage.getItem("burgerCart");
+      }
+
       if (!raw) {
         if (cartCount) cartCount.textContent = "0";
         return;
@@ -90,7 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const totalItems = parsed.reduce((acc, item) => {
-        // Soporta item.quantity, item.cantidad o default 1
         const q = Number(item?.quantity ?? item?.cantidad ?? 1);
         if (!Number.isFinite(q) || q <= 0) return acc + 1;
         return acc + q;
@@ -100,14 +113,14 @@ document.addEventListener("DOMContentLoaded", () => {
         cartCount.textContent = String(totalItems);
       }
     } catch (err) {
-      console.error(
-        "[index.js] Error leyendo carrito en updateCartCount:",
-        err
-      );
+      console.error("[index.js] Error leyendo carrito en updateCartCount:", err);
       if (cartCount) cartCount.textContent = "0";
     }
   }
 
+  // -----------------------------
+  // UI según usuario logueado
+  // -----------------------------
   function applyUserUI() {
     const user = getStoredUser();
     if (user && user.correo) {
@@ -129,7 +142,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function openUserModal() {
     const user = getStoredUser();
-    if (!userModal || !user) return;
+    if (!userModal || !user) {
+      // Si no está logueado, lo mandamos a login
+      window.location.href = "/login";
+      return;
+    }
+
     userModal.classList.remove("hidden");
     userModal.classList.add("flex");
 
@@ -150,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
     userModal.classList.remove("flex");
   }
 
-  // eventos de header
+  // Eventos header / menú
   if (menuIcon) {
     menuIcon.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -179,22 +197,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  if (cartButton) {
-    cartButton.addEventListener("click", () => {
-      try {
-        const raw = localStorage.getItem("burgerCart");
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (!raw || !Array.isArray(parsed) || parsed.length === 0) {
-          showToast("Tu carrito está vacío. Agrega productos desde el menú.");
-          return;
-        }
-        window.location.href = "/cart";
-      } catch (err) {
-        console.error("[index.js] Error leyendo carrito:", err);
-        showToast("Hubo un problema leyendo tu carrito.");
-      }
-    });
-  }
+  // IMPORTANTE: el click del carrito se maneja en el script del modal
+  // empty-cart-modal en index.html. Aquí NO lo tocamos para no duplicar
+  // comportamiento.
 
   if (userButton) {
     userButton.addEventListener("click", () => {
@@ -304,93 +309,30 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentSlide = 0;
   let heroInterval;
 
-  // Modal imagen
-  const modal = document.getElementById("image-modal");
-  const modalBackdrop = modal?.querySelector(".modal-backdrop");
-  const modalClose = modal?.querySelector(".modal-close");
+  // Modal imagen hero
+  const imgModal = document.getElementById("image-modal");
+  const modalBackdrop = imgModal?.querySelector(".modal-backdrop");
+  const modalClose = imgModal?.querySelector(".modal-close");
   const modalImage = document.getElementById("modal-image");
   const modalCaption = document.getElementById("modal-caption");
 
   function openModal(url, alt) {
-    if (!modal || !modalImage || !modalCaption) return;
+    if (!imgModal || !modalImage || !modalCaption) return;
     modalImage.src = url;
     modalImage.alt = alt;
     modalCaption.textContent = alt;
-    modal.classList.add("open");
-    modal.classList.remove("hidden");
+    imgModal.classList.add("open");
+    imgModal.classList.remove("hidden");
   }
 
   function closeModal() {
-    if (!modal || !modalImage) return;
-    modal.classList.remove("open");
-    modal.classList.add("hidden");
+    if (!imgModal || !modalImage) return;
+    imgModal.classList.remove("open");
+    imgModal.classList.add("hidden");
     modalImage.src = "";
     modalImage.alt = "";
     modalImage.classList.remove("zoomed");
   }
-
-  function renderProducts(products) {
-  const productsContainer = document.getElementById('products-container');
-  if (!productsContainer) return;
-
-  productsContainer.innerHTML = '';
-
-  if (!products || products.length === 0) {
-    productsContainer.innerHTML =
-      '<p class="text-center text-sm text-gray-500 mt-4">No hay productos disponibles en esta categoría.</p>';
-    return;
-  }
-
-  products.forEach((item) => {
-    const price = item[zonaPrecio] ?? 0;
-
-    const card = document.createElement('div');
-    card.className =
-      'product-card flex h-full flex-col gap-4 rounded-xl bg-white dark:bg-black/20 shadow-md overflow-hidden';
-
-    const imgUrl = item.imagen || '';
-
-    card.innerHTML = `
-      <div class="product-image-wrapper">
-        <img
-          src="${imgUrl}"
-          alt="${item.Nombre || 'Producto'}"
-          loading="lazy"
-          class="product-image-img"
-        />
-      </div>
-      <div class="flex flex-col flex-1 justify-between p-4 pt-0 gap-4">
-        <div>
-          <p class="text-black dark:text-white text-base md:text-lg font-semibold leading-normal">
-            ${item.Nombre}
-          </p>
-          <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm leading-normal mb-1 line-clamp-2">
-            ${item.Descripcion}
-          </p>
-          <p class="text-gray-800 dark:text-gray-200 text-sm md:text-base font-semibold leading-normal">
-            $${Number(price).toLocaleString('es-CO')}
-          </p>
-        </div>
-        <button
-          class="product-go-detail flex min-w-[110px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary text-white text-sm md:text-base font-bold leading-normal tracking-[0.015em]"
-        >
-          <span class="truncate">Agregar al carrito</span>
-        </button>
-      </div>
-    `;
-
-    const detailBtn = card.querySelector('.product-go-detail');
-    if (detailBtn) {
-      detailBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        window.location.href = `/product?id=${item.id}`;
-      });
-    }
-
-    productsContainer.appendChild(card);
-  });
-}
-
 
   function renderHeroSlides() {
     if (!heroCarousel || !heroDots) return;
@@ -403,7 +345,6 @@ document.addEventListener("DOMContentLoaded", () => {
       slide.className = "hero-slide";
       slide.dataset.index = index.toString();
 
-      // marcamos el primero como activo
       if (index === 0) {
         slide.classList.add("hero-slide--active");
       }
@@ -429,13 +370,11 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-      // click en la imagen -> zoom
       const imgEl = slide.querySelector("img");
       if (imgEl) {
         imgEl.addEventListener("click", () => openModal(item.url, item.alt));
       }
 
-      // CTA -> hacer scroll a productos
       const cta = slide.querySelector(".hero-cta");
       if (cta) {
         cta.addEventListener("click", () => {
@@ -539,10 +478,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // =============================
   // PRODUCTOS DESDE SUPABASE
+  // Carrusel: máx 4 completos + 5º asomado
   // =============================
-  const zonaPrecio = "PrecioOriente"; // puedes cambiar según la zona que uses
+  const zonaPrecio = "PrecioOriente"; // ajusta a tu zona si quieres
   const productsContainer = document.getElementById("products-container");
   const tabButtons = document.querySelectorAll(".tab-btn");
+  const productsPrevBtn = document.getElementById("products-prev");
+  const productsNextBtn = document.getElementById("products-next");
+  const productsFadeRight = document.getElementById("products-fade-right");
+
+  const MAX_VISIBLE_FULL = 4;
+  const MAX_RENDER = 5; // 4 completos + 1 a la mitad
+
+  let allProducts = [];
+  let currentTipo = 1;
+  let startIndex = 0;
 
   async function fetchMenu(tipo) {
     const url =
@@ -559,95 +509,202 @@ document.addEventListener("DOMContentLoaded", () => {
     return await res.json();
   }
 
-  function renderProducts(products) {
+  function updateProductsNavButtons() {
+    if (!productsPrevBtn || !productsNextBtn) return;
+
+    productsPrevBtn.disabled = startIndex <= 0;
+    const moreToRight = startIndex + MAX_VISIBLE_FULL < allProducts.length;
+    productsNextBtn.disabled = !moreToRight;
+
+    if (productsFadeRight) {
+      productsFadeRight.style.opacity = moreToRight ? "1" : "0";
+    }
+  }
+
+  function buildProductCard(item, isHalf) {
+    const card = document.createElement("article");
+    card.className = [
+      "group relative flex flex-col rounded-2xl overflow-hidden",
+      "bg-[#020617] text-white",
+      "border border-white/5 shadow-lg shadow-black/40",
+      "min-w-[230px] max-w-[260px] flex-shrink-0",
+      "backdrop-blur-sm",
+      isHalf ? "opacity-70 translate-x-3 scale-[0.98]" : "",
+    ].join(" ");
+
+    if (isHalf) {
+      card.style.maskImage =
+        "linear-gradient(to right, transparent 0%, black 35%, black 85%, transparent 100%)";
+      card.style.webkitMaskImage = card.style.maskImage;
+    }
+
+    const price = item[zonaPrecio] ?? item.PrecioAreaMetrop ?? item.PrecioRestoPais ?? 0;
+
+    let priceDisplay;
+    try {
+      priceDisplay = new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      }).format(price);
+    } catch {
+      priceDisplay = `$${price}`;
+    }
+
+    const imgSrc = item.imagen || "/img/placeholder-product.webp";
+
+    card.innerHTML = `
+      <div class="relative w-full aspect-[4/3] overflow-hidden bg-black/40">
+        <img
+          loading="lazy"
+          src="${imgSrc}"
+          alt="${item.Nombre || "Producto Tierra Querida"}"
+          class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
+        <div class="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">
+          <span class="material-symbols-outlined text-[16px]">local_fire_department</span>
+          Popular
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5 px-3 pt-3 pb-3">
+        <h3 class="text-[15px] sm:text-[16px] font-extrabold text-white leading-snug line-clamp-2">
+          ${item.Nombre || "Hamburguesa"}
+        </h3>
+        <p class="text-[12px] sm:text-[13px] text-gray-300 leading-snug line-clamp-3">
+          ${item.Descripcion || ""}
+        </p>
+        <div class="mt-3 flex items-center justify-between">
+          <span class="text-[15px] sm:text-[16px] font-extrabold text-primary bg-white/5 rounded-full px-3 py-1">
+            ${priceDisplay}
+          </span>
+          <button
+            class="product-go-detail inline-flex items-center gap-1 rounded-full bg-primary text-white text-[12px] sm:text-[13px] font-bold px-3 py-1.5 hover:brightness-110 transition-colors"
+          >
+            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+            Ver detalle
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Al hacer click en el botón, ir a la página de producto
+    const detailBtn = card.querySelector(".product-go-detail");
+    if (detailBtn) {
+      detailBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.location.href = `/product?id=${item.id}`;
+      });
+    }
+
+    // Opcional: click en toda la tarjeta también lleva al detalle
+    card.addEventListener("click", () => {
+      window.location.href = `/product?id=${item.id}`;
+    });
+
+    return card;
+  }
+
+  function renderProductsCarousel() {
     if (!productsContainer) return;
 
     productsContainer.innerHTML = "";
 
-    if (!products || products.length === 0) {
-      productsContainer.innerHTML =
-        '<p class="text-center text-sm text-gray-300 mt-4">No hay productos disponibles en esta categoría.</p>';
-      return;
-    }
-
-    products.forEach((item) => {
-      const price = item[zonaPrecio] ?? 0;
-
-      const card = document.createElement("div");
-      card.className =
-        "product-card flex h-full flex-col gap-3 rounded-xl bg-white dark:bg-black/30";
-
-      card.innerHTML = `
-        <div
-          class="product-image"
-          style="background-image: url('${item.imagen || ""}');"
-        ></div>
-        <div class="flex flex-col flex-1 justify-between p-4 pt-1 gap-3">
-          <div>
-            <p class="text-black dark:text-white text-base md:text-lg font-semibold leading-snug">
-              ${item.Nombre}
-            </p>
-            <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm leading-normal mb-1 line-clamp-2">
-              ${item.Descripcion}
-            </p>
-            <p class="text-gray-900 dark:text-gray-100 text-sm md:text-base font-semibold leading-normal">
-              $${Number(price).toLocaleString("es-CO")}
-            </p>
-          </div>
-          <button
-            class="product-go-detail flex min-w-[110px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 px-4 bg-primary text-white text-sm md:text-base font-bold leading-normal tracking-[0.015em]"
-          >
-            <span class="truncate">Agregar al carrito</span>
-          </button>
+    if (!allProducts || allProducts.length === 0) {
+      productsContainer.innerHTML = `
+        <div class="w-full flex flex-col items-center justify-center py-8 text-center text-sm text-gray-300">
+          <span class="material-symbols-outlined text-4xl mb-2">fastfood</span>
+          <p>No hay productos disponibles en esta categoría.</p>
         </div>
       `;
+    } else {
+      const visibleEnd = Math.min(
+        startIndex + MAX_RENDER,
+        allProducts.length
+      );
+      const slice = allProducts.slice(startIndex, visibleEnd);
 
-      const detailBtn = card.querySelector(".product-go-detail");
-      if (detailBtn) {
-        detailBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          window.location.href = `/product?id=${item.id}`;
-        });
-      }
+      slice.forEach((item, idx) => {
+        const isHalf =
+          idx === MAX_RENDER - 1 &&
+          visibleEnd < allProducts.length &&
+          slice.length === MAX_RENDER;
 
-      productsContainer.appendChild(card);
-    });
+        const card = buildProductCard(item, isHalf);
+        productsContainer.appendChild(card);
+      });
+    }
+
+    updateProductsNavButtons();
   }
 
   async function loadCategory(tipo) {
-    const products = await fetchMenu(tipo);
-    renderProducts(products);
+    currentTipo = tipo ?? 1;
+    startIndex = 0;
+
+    if (productsContainer) {
+      productsContainer.innerHTML = `
+        <div class="flex gap-4 w-full">
+          <div class="flex-1 h-40 rounded-2xl bg-gray-200/70 dark:bg-[#18181b] animate-pulse"></div>
+          <div class="flex-1 h-40 rounded-2xl bg-gray-200/70 dark:bg-[#18181b] animate-pulse hidden sm:block"></div>
+          <div class="flex-1 h-40 rounded-2xl bg-gray-200/70 dark:bg-[#18181b] animate-pulse hidden md:block"></div>
+        </div>
+      `;
+    }
+
+    const products = await fetchMenu(currentTipo);
+    allProducts = Array.isArray(products) ? products : [];
+    renderProductsCarousel();
   }
 
+  // Eventos tabs
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       tabButtons.forEach((b) => b.classList.remove("tab-btn--active"));
       btn.classList.add("tab-btn--active");
 
       const tipoAttr = btn.dataset.tipo;
-      const tipo = tipoAttr ? Number(tipoAttr) : undefined;
+      const tipo = tipoAttr ? Number(tipoAttr) : 1;
       loadCategory(tipo);
     });
   });
 
-  // cargar hamburguesas por defecto
-  loadCategory(1);
+  // Flechas carrusel de productos
+  productsPrevBtn?.addEventListener("click", () => {
+    if (startIndex <= 0) return;
+    startIndex = Math.max(0, startIndex - MAX_VISIBLE_FULL);
+    renderProductsCarousel();
+  });
+
+  productsNextBtn?.addEventListener("click", () => {
+    if (startIndex + MAX_VISIBLE_FULL >= allProducts.length) return;
+    startIndex = Math.min(
+      allProducts.length - MAX_VISIBLE_FULL,
+      startIndex + MAX_VISIBLE_FULL
+    );
+    renderProductsCarousel();
+  });
 
   // =============================
   // INICIALIZACIÓN
   // =============================
+  // Categoría por defecto
+  loadCategory(1);
+
+  // Estado inicial del header
   updateCartCount();
   applyUserUI();
 
-  // 🔄 al volver con el botón Atrás (bfcache)
+  // Al volver con botón atrás (bfcache)
   window.addEventListener("pageshow", () => {
     updateCartCount();
     applyUserUI();
   });
 
-  // 🧠 si cambia el carrito en otra pestaña
+  // Si el carrito cambia en otra pestaña
   window.addEventListener("storage", (e) => {
-    if (e.key === "burgerCart") {
+    if (e.key === "cart" || e.key === "burgerCart") {
       updateCartCount();
     }
   });
