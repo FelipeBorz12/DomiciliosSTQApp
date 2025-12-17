@@ -103,10 +103,7 @@
           </div>
 
           <!-- HEADER: DERECHA (MENÚ + CARRITO) -->
-          <div
-            id="header-right"
-            class="flex items-center justify-end gap-2"
-          >
+          <div id="header-right" class="flex items-center justify-end gap-2">
             <button class="icon-button" id="menu-icon">
               <span class="material-symbols-outlined text-2xl">menu</span>
             </button>
@@ -192,25 +189,13 @@
           >
             <p class="tab-label">Hamburguesas</p>
           </button>
-          <button
-            id="tab-combos"
-            class="tab-btn flex-shrink-0"
-            data-tipo="3"
-          >
+          <button id="tab-combos" class="tab-btn flex-shrink-0" data-tipo="3">
             <p class="tab-label">Combos</p>
           </button>
-          <button
-            id="tab-papas"
-            class="tab-btn flex-shrink-0"
-            data-tipo="4"
-          >
+          <button id="tab-papas" class="tab-btn flex-shrink-0" data-tipo="4">
             <p class="tab-label">Papas</p>
           </button>
-          <button
-            id="tab-bebidas"
-            class="tab-btn flex-shrink-0"
-            data-tipo="6"
-          >
+          <button id="tab-bebidas" class="tab-btn flex-shrink-0" data-tipo="6">
             <p class="tab-label">Bebidas</p>
           </button>
         </div>
@@ -740,7 +725,7 @@
             window.location.href = "/";
           }
         });
-
+        
         // Manejo del icono del carrito
         const cartIcon = document.getElementById("cart-icon");
         if (cartIcon) {
@@ -748,10 +733,26 @@
             event.preventDefault();
 
             let items = [];
+
             try {
-              const raw = localStorage.getItem("cart");
+              // Siempre trabajamos con burgerCart
+              let raw = localStorage.getItem("burgerCart");
+
+              // Si no hay burgerCart pero sí existe la clave vieja "cart",
+              // migramos y la borramos.
+              if (!raw) {
+                const oldRaw = localStorage.getItem("cart");
+                if (oldRaw) {
+                  raw = oldRaw;
+                  localStorage.setItem("burgerCart", oldRaw);
+                  localStorage.removeItem("cart");
+                }
+              }
+
               items = raw ? JSON.parse(raw) : [];
+              if (!Array.isArray(items)) items = [];
             } catch (e) {
+              console.error("[empty-cart-modal] Error leyendo carrito:", e);
               items = [];
             }
 

@@ -84,14 +84,58 @@ document.addEventListener("DOMContentLoaded", () => {
   // -----------------------------
   // Contador de carrito
   // -----------------------------
-  // Soporta "cart" o "burgerCart" como clave en localStorage
-  function updateCartCount() {
+  function migrateCartStorage() {
     try {
-      let raw = localStorage.getItem("cart");
-      if (!raw) {
-        raw = localStorage.getItem("burgerCart");
+      const oldRaw = localStorage.getItem("cart");
+      const newRaw = localStorage.getItem("burgerCart");
+
+      let oldArr = [];
+      let newArr = [];
+
+      if (oldRaw) {
+        try {
+          const parsed = JSON.parse(oldRaw);
+          if (Array.isArray(parsed)) oldArr = parsed;
+        } catch {}
       }
 
+      if (newRaw) {
+        try {
+          const parsed = JSON.parse(newRaw);
+          if (Array.isArray(parsed)) newArr = parsed;
+        } catch {}
+      }
+
+      // Si solo hay carrito viejo -> lo migramos tal cual
+      if (oldArr.length && !newArr.length) {
+        localStorage.setItem("burgerCart", JSON.stringify(oldArr));
+        localStorage.removeItem("cart");
+        return;
+      }
+
+      // Si hay en ambos, los combinamos y limpiamos "cart"
+      if (oldArr.length && newArr.length) {
+        const merged = [...newArr, ...oldArr];
+        localStorage.setItem("burgerCart", JSON.stringify(merged));
+        localStorage.removeItem("cart");
+        return;
+      }
+
+      // Si no hay nada útil en cart, lo borramos para que no moleste
+      if (!oldArr.length) {
+        localStorage.removeItem("cart");
+      }
+    } catch (e) {
+      console.error("[index.js] Error migrando carrito:", e);
+    }
+  }
+
+  // Contador de carrito usando SOLO burgerCart
+  function updateCartCount() {
+    try {
+      migrateCartStorage(); // aseguramos migración
+
+      const raw = localStorage.getItem("burgerCart");
       if (!raw) {
         if (cartCount) cartCount.textContent = "0";
         return;
@@ -113,7 +157,10 @@ document.addEventListener("DOMContentLoaded", () => {
         cartCount.textContent = String(totalItems);
       }
     } catch (err) {
-      console.error("[index.js] Error leyendo carrito en updateCartCount:", err);
+      console.error(
+        "[index.js] Error leyendo carrito en updateCartCount:",
+        err
+      );
       if (cartCount) cartCount.textContent = "0";
     }
   }
@@ -538,7 +585,8 @@ document.addEventListener("DOMContentLoaded", () => {
       card.style.webkitMaskImage = card.style.maskImage;
     }
 
-    const price = item[zonaPrecio] ?? item.PrecioAreaMetrop ?? item.PrecioRestoPais ?? 0;
+    const price =
+      item[zonaPrecio] ?? item.PrecioAreaMetrop ?? item.PrecioRestoPais ?? 0;
 
     let priceDisplay;
     try {
@@ -617,10 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
     } else {
-      const visibleEnd = Math.min(
-        startIndex + MAX_RENDER,
-        allProducts.length
-      );
+      const visibleEnd = Math.min(startIndex + MAX_RENDER, allProducts.length);
       const slice = allProducts.slice(startIndex, visibleEnd);
 
       slice.forEach((item, idx) => {
@@ -687,6 +732,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // INICIALIZACIÓN
   // =============================
+  // Migrar carrito viejo -> nuevo
+  migrateCartStorage();
+
   // Categoría por defecto
   loadCategory(1);
 

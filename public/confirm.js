@@ -176,7 +176,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Construye el texto del pedido (SIEMPRE genera uno nuevo)
-  function buildOrderText() {
+  // Construye el texto del pedido (ahora puede incluir el ID del pedido)
+  function buildOrderText(pedidoId = null) {
     const name = nameInput?.value?.trim() || "No especificado";
     const email = emailInput?.value?.trim() || "No especificado";
     const phone = phoneInput?.value?.trim() || "No especificado";
@@ -221,8 +222,16 @@ document.addEventListener("DOMContentLoaded", () => {
       ? `${selectedPV.Direccion || ""} - ${selectedPV.Municipio || ""}`
       : "";
 
-    const headerLines = [
-      "🧾 *NUEVO PEDIDO*",
+    const headerLines = [];
+
+    // 👇 Aquí metemos el ID cuando lo tengamos
+    if (pedidoId !== null && pedidoId !== undefined) {
+      headerLines.push(`🧾 *PEDIDO #${pedidoId}*`);
+    } else {
+      headerLines.push("🧾 *NUEVO PEDIDO*");
+    }
+
+    headerLines.push(
       "────────────────────────────",
       "👤 *Datos del cliente:*",
       `• Nombre: ${name}`,
@@ -235,16 +244,14 @@ document.addEventListener("DOMContentLoaded", () => {
       "────────────────────────────",
       `💵 *Subtotal:* ${formatPrice(subtotal)}`,
       `🛵 *Total con envío:* ${formatPrice(total)}`,
-      "────────────────────────────",
-    ];
+      "────────────────────────────"
+    );
 
     if (selectedPV) {
       headerLines.push(
         `🏬 *Punto de venta:* ${pvNameText}`,
         `📍 ${pvAddrText}`,
-        selectedPV.num_whatsapp
-          ? `📞 WhatsApp: ${selectedPV.num_whatsapp}`
-          : ""
+        selectedPV.num_whatsapp ? `📞 WhatsApp: ${selectedPV.num_whatsapp}` : ""
       );
       headerLines.push("────────────────────────────");
     }
@@ -272,7 +279,9 @@ document.addEventListener("DOMContentLoaded", () => {
     pvCard.classList.remove("hidden");
 
     const name = selectedPV.Barrio || "Punto de venta";
-    const addr = `${selectedPV.Direccion || ""} - ${selectedPV.Municipio || ""}`;
+    const addr = `${selectedPV.Direccion || ""} - ${
+      selectedPV.Municipio || ""
+    }`;
     const whats = selectedPV.num_whatsapp || "No disponible";
 
     pvName.textContent = name;
@@ -580,6 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---- Enviar pedido ----
+  // ---- Enviar pedido ----
   async function sendOrder() {
     if (!sendWhatsappBtn) return;
 
@@ -600,22 +610,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Mensaje final
-    let message = orderText?.value?.trim();
-    if (!message) {
-      message = buildOrderText();
-    }
-
     const puntoventaName =
       selectedPV.Barrio || selectedPV.Direccion || String(selectedPV.id);
 
     let pedidoId = null;
 
-    // 1. Registrar en tabla pedidos
+    // 1. Registrar en tabla pedidos (primero sin mensaje definitivo)
     try {
       const payload = {
         nombre_cliente: email, // correo va en nombre_cliente
-        resumen_pedido: message,
+        resumen_pedido: "", // se actualizará luego con el mensaje completo
         direccion_cliente: address,
         celular_cliente: phone,
         puntoventa: puntoventaName,
@@ -661,7 +665,39 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     }
 
-    // 2. Abrir WhatsApp
+    // 2. Construir el mensaje final (con ID si lo tenemos)
+    let message = orderText?.value?.trim();
+
+    if (!message) {
+      // Si el usuario no escribió nada, generamos el mensaje completo
+      message = buildOrderText(pedidoId ?? undefined);
+    } else if (pedidoId !== null && pedidoId !== undefined) {
+      // Si el usuario escribió algo, solo lo prefijamos con el ID
+      const header = `PEDIDO #${pedidoId}`;
+      // Evitamos duplicar el encabezado si ya lo agregó a mano
+      if (!message.startsWith(header)) {
+        message = `${header}\n${message}`;
+      }
+    }
+
+    // 3. Actualizar el pedido con el mensaje final (si tenemos ID)
+    if (pedidoId !== null && pedidoId !== undefined) {
+      try {
+        // Ajusta la URL si tu API de actualización es distinta
+        await fetch(`/api/pedidos/${pedidoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resumen_pedido: message }),
+        });
+      } catch (err) {
+        console.warn(
+          "[confirm.js] No se pudo actualizar el resumen_pedido con el ID:",
+          err
+        );
+      }
+    }
+
+    // 4. Abrir WhatsApp con el mensaje final (también con ID)
     try {
       const pvPhoneRaw = selectedPV.num_whatsapp || "";
       const pvPhoneDigits = pvPhoneRaw.replace(/\D/g, "");
@@ -684,7 +720,7 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("No se pudo abrir WhatsApp desde el navegador.");
     }
 
-    // 3. Borrar el carrito del JSON (localStorage) y redirigir al historial
+    // 5. Limpiar carrito y redirigir al historial
     localStorage.removeItem("burgerCart");
     cartItems = [];
 
