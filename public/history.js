@@ -1,25 +1,25 @@
 // history.js
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   // --------------------------
   // Elementos base
   // --------------------------
-  const backButton = document.getElementById('back-button');
-  const backBottom = document.getElementById('back-bottom');
-  const ordersContainer = document.getElementById('orders-container');
-  const filterChips = document.querySelectorAll('.filter-chip');
-  const emailSearchWrapper = document.getElementById('email-search-wrapper');
-  const emailSearchForm = document.getElementById('email-search-form');
-  const emailInput = document.getElementById('email-input');
-  const loadStatusMessage = document.getElementById('load-status-message');
-  const sessionInfo = document.getElementById('session-info');
-  const sessionEmailLabel = document.getElementById('session-email-label');
+  const backButton = document.getElementById("back-button");
+  const backBottom = document.getElementById("back-bottom");
+  const ordersContainer = document.getElementById("orders-container");
+  const filterChips = document.querySelectorAll(".filter-chip");
+  const emailSearchWrapper = document.getElementById("email-search-wrapper");
+  const emailSearchForm = document.getElementById("email-search-form");
+  const emailInput = document.getElementById("email-input");
+  const loadStatusMessage = document.getElementById("load-status-message");
+  const sessionInfo = document.getElementById("session-info");
+  const sessionEmailLabel = document.getElementById("session-email-label");
 
   // --------------------------
   // Parámetros URL
   // --------------------------
   const urlParams = new URLSearchParams(window.location.search);
-  const paramCorreo = urlParams.get('correo');
-  const paramPedidoId = urlParams.get('pedidoId');
+  const paramCorreo = urlParams.get("correo");
+  const paramPedidoId = urlParams.get("pedidoId");
 
   // --------------------------
   // Sesión local (burgerUser)
@@ -27,10 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentEmail = null;
   let hasSession = false;
   let allOrders = [];
-  let currentFilter = 'all';
+  let currentFilter = "all";
 
   try {
-    const userRaw = localStorage.getItem('burgerUser');
+    const userRaw = localStorage.getItem("burgerUser");
     if (userRaw) {
       const user = JSON.parse(userRaw);
       if (user && user.correo) {
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   } catch (err) {
-    console.warn('[history.js] No se pudo leer burgerUser:', err);
+    console.warn("[history.js] No se pudo leer burgerUser:", err);
   }
 
   // Si viene ?correo en la URL, tiene prioridad
@@ -50,14 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (currentEmail) {
     if (hasSession) {
       // Hay sesión: mostramos la barra de sesión
-      sessionInfo.classList.remove('hidden');
+      sessionInfo.classList.remove("hidden");
       sessionEmailLabel.textContent = `Mostrando pedidos para: ${currentEmail}`;
       // El buscador no hace falta
-      emailSearchWrapper.classList.add('hidden');
+      emailSearchWrapper.classList.add("hidden");
     } else {
       // Sin sesión pero con correo en la URL
-      sessionInfo.classList.add('hidden');
-      emailSearchWrapper.classList.remove('hidden');
+      sessionInfo.classList.add("hidden");
+      emailSearchWrapper.classList.remove("hidden");
       if (emailInput) emailInput.value = currentEmail;
     }
 
@@ -65,33 +65,33 @@ document.addEventListener('DOMContentLoaded', () => {
     loadOrders(currentEmail);
   } else {
     // Sin sesión y sin correo: mostrar buscador vacío
-    sessionInfo.classList.add('hidden');
-    emailSearchWrapper.classList.remove('hidden');
+    sessionInfo.classList.add("hidden");
+    emailSearchWrapper.classList.remove("hidden");
   }
 
   // --------------------------
   // Botones de volver -> siempre a la página principal
   // --------------------------
   function goHome() {
-    window.location.href = '/';
+    window.location.href = "/";
   }
 
   if (backButton) {
-    backButton.addEventListener('click', goHome);
+    backButton.addEventListener("click", goHome);
   }
   if (backBottom) {
-    backBottom.addEventListener('click', goHome);
+    backBottom.addEventListener("click", goHome);
   }
 
   // --------------------------
   // Formulario de búsqueda por correo (solo si no hay sesión o queremos cambiar correo)
   // --------------------------
   if (emailSearchForm) {
-    emailSearchForm.addEventListener('submit', (e) => {
+    emailSearchForm.addEventListener("submit", (e) => {
       e.preventDefault();
       const email = emailInput.value.trim();
       if (!email) {
-        alert('Ingresa un correo para buscar tus pedidos.');
+        alert("Ingresa un correo para buscar tus pedidos.");
         return;
       }
       currentEmail = email;
@@ -103,28 +103,38 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filtros
   // --------------------------
   filterChips.forEach((chip) => {
-    chip.addEventListener('click', () => {
-      const filter = chip.dataset.filter || 'all';
+    chip.addEventListener("click", () => {
+      const filter = chip.dataset.filter || "all";
       currentFilter = filter;
 
       filterChips.forEach((c) => {
         if (c === chip) {
-          c.classList.add('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/20');
+          c.classList.add(
+            "bg-primary",
+            "text-white",
+            "shadow-lg",
+            "shadow-primary/20"
+          );
           c.classList.remove(
-            'bg-white',
-            'dark:bg-[#392828]',
-            'border',
-            'border-gray-200',
-            'dark:border-transparent'
+            "bg-white",
+            "dark:bg-[#392828]",
+            "border",
+            "border-gray-200",
+            "dark:border-transparent"
           );
         } else {
-          c.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/20');
+          c.classList.remove(
+            "bg-primary",
+            "text-white",
+            "shadow-lg",
+            "shadow-primary/20"
+          );
           c.classList.add(
-            'bg-white',
-            'dark:bg-[#392828]',
-            'border',
-            'border-gray-200',
-            'dark:border-transparent'
+            "bg-white",
+            "dark:bg-[#392828]",
+            "border",
+            "border-gray-200",
+            "dark:border-transparent"
           );
         }
       });
@@ -139,20 +149,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function setLoadingMessage(msg) {
     if (!loadStatusMessage) return;
     if (!msg) {
-      loadStatusMessage.classList.add('hidden');
-      loadStatusMessage.textContent = '';
+      loadStatusMessage.classList.add("hidden");
+      loadStatusMessage.textContent = "";
     } else {
       loadStatusMessage.textContent = msg;
-      loadStatusMessage.classList.remove('hidden');
+      loadStatusMessage.classList.remove("hidden");
     }
   }
 
   function formatTimeFromISO(isoString) {
-    if (!isoString) return '--:--';
+    if (!isoString) return "--:--";
     const d = new Date(isoString);
-    if (Number.isNaN(d.getTime())) return '--:--';
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
+    if (Number.isNaN(d.getTime())) return "--:--";
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
     return `${hh}:${mm}`;
   }
 
@@ -160,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function formatDuration(ms) {
     if (!ms || ms <= 0) return null;
     const totalSeconds = Math.floor(ms / 1000);
-    if (totalSeconds < 60) return '<1 min';
+    if (totalSeconds < 60) return "<1 min";
 
     const totalMinutes = Math.floor(totalSeconds / 60);
     const hours = Math.floor(totalMinutes / 60);
@@ -170,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return `${minutes} min`;
     }
     if (hours < 24) {
-      return `${hours} h ${String(minutes).padStart(2, '0')} min`;
+      return `${hours} h ${String(minutes).padStart(2, "0")} min`;
     }
     const days = Math.floor(hours / 24);
     const restHours = hours % 24;
@@ -181,22 +191,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const STATUS_ORDER = [
-    'Recibido',
-    'En preparación',
-    'Listo',
-    'En camino',
-    'Entregado',
+    "Recibido",
+    "En preparación",
+    "Listo",
+    "En camino",
+    "Entregado",
   ];
 
   function normalizeStatus(raw) {
-    if (!raw) return 'Recibido';
+    if (!raw) return "Recibido";
     const val = String(raw).toLowerCase();
-    if (val.includes('prepar')) return 'En preparación';
-    if (val.includes('listo')) return 'Listo';
-    if (val.includes('camino')) return 'En camino';
-    if (val.includes('entregado')) return 'Entregado';
-    if (val.includes('recib')) return 'Recibido';
-    return 'Recibido';
+    if (val.includes("prepar")) return "En preparación";
+    if (val.includes("listo")) return "Listo";
+    if (val.includes("camino")) return "En camino";
+    if (val.includes("entregado")) return "Entregado";
+    if (val.includes("recib")) return "Recibido";
+    return "Recibido";
+  }
+  // Mapea cualquier estado a la "bucket" de los filtros
+  function getFilterKeyFromOrder(order) {
+    const norm = normalizeStatus(order.estado);
+
+    // Todo lo que no esté terminado va a "en-proceso"
+    if (norm === "Recibido" || norm === "En preparación") {
+      return "en-proceso";
+    }
+
+    if (norm === "Listo") return "listo";
+    if (norm === "En camino") return "camino";
+    if (norm === "Entregado") return "entregado";
+
+    // fallback: lo consideramos "en proceso"
+    return "en-proceso";
   }
 
   function statusToIndex(status) {
@@ -210,80 +236,70 @@ document.addEventListener('DOMContentLoaded', () => {
   function statusBadge(status) {
     const norm = normalizeStatus(status);
     switch (norm) {
-      case 'Recibido':
+      case "Recibido":
         return {
-          text: 'Recibido',
+          text: "Recibido",
           classes:
-            'inline-flex items-center rounded-md bg-slate-500/10 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 ring-1 ring-inset ring-slate-500/20',
-          icon: 'markunread_mailbox',
+            "inline-flex items-center rounded-md bg-slate-500/10 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 ring-1 ring-inset ring-slate-500/20",
+          icon: "markunread_mailbox",
         };
-      case 'En preparación':
+      case "En preparación":
         return {
-          text: 'En preparación',
+          text: "En preparación",
           classes:
-            'inline-flex items-center rounded-md bg-yellow-500/10 px-2.5 py-1 text-xs font-bold text-yellow-600 dark:text-yellow-400 ring-1 ring-inset ring-yellow-500/20',
-          icon: 'skillet',
+            "inline-flex items-center rounded-md bg-yellow-500/10 px-2.5 py-1 text-xs font-bold text-yellow-600 dark:text-yellow-400 ring-1 ring-inset ring-yellow-500/20",
+          icon: "skillet",
         };
-      case 'Listo':
+      case "Listo":
         return {
-          text: 'Listo para recoger',
+          text: "Listo para recoger",
           classes:
-            'inline-flex items-center rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20',
-          icon: 'restaurant',
+            "inline-flex items-center rounded-md bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
+          icon: "restaurant",
         };
-      case 'En camino':
+      case "En camino":
         return {
-          text: 'En camino',
+          text: "En camino",
           classes:
-            'inline-flex items-center rounded-md bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 ring-1 ring-inset ring-blue-500/20',
-          icon: 'two_wheeler',
+            "inline-flex items-center rounded-md bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 ring-1 ring-inset ring-blue-500/20",
+          icon: "two_wheeler",
         };
-      case 'Entregado':
+      case "Entregado":
         return {
-          text: 'Entregado',
+          text: "Entregado",
           classes:
-            'inline-flex items-center rounded-md bg-green-500/10 px-2.5 py-1 text-xs font-bold text-green-600 dark:text-green-400 ring-1 ring-inset ring-green-500/20',
-          icon: 'check_circle',
+            "inline-flex items-center rounded-md bg-green-500/10 px-2.5 py-1 text-xs font-bold text-green-600 dark:text-green-400 ring-1 ring-inset ring-green-500/20",
+          icon: "check_circle",
         };
       default:
         return {
           text: norm,
           classes:
-            'inline-flex items-center rounded-md bg-slate-500/10 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 ring-1 ring-inset ring-slate-500/20',
-          icon: 'info',
+            "inline-flex items-center rounded-md bg-slate-500/10 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 ring-1 ring-inset ring-slate-500/20",
+          icon: "info",
         };
     }
   }
 
   function filterOrders(rawOrders) {
-    if (currentFilter === 'all') return rawOrders;
+    if (currentFilter === "all") return rawOrders;
 
     return rawOrders.filter((order) => {
-      const norm = normalizeStatus(order.estado);
-      switch (currentFilter) {
-        case 'en-proceso':
-          // Recibido, En preparación, Listo
-          return (
-            norm === 'Recibido' ||
-            norm === 'En preparación' ||
-            norm === 'Listo'
-          );
-        case 'listo':
-          return norm === 'Listo';
-        case 'camino':
-          return norm === 'En camino';
-        case 'entregado':
-          return norm === 'Entregado';
-        default:
-          return true;
-      }
+      const key = getFilterKeyFromOrder(order);
+      return key === currentFilter;
     });
   }
 
   // --------------------------
   // Cálculo de duraciones por estado
   // --------------------------
-  const STATE_KEYS = ['recibido', 'preparacion', 'listo', 'camino', 'entregado'];
+  const STATE_KEYS = [
+    "recibido",
+    "preparacion",
+    "listo",
+    "camino",
+    "entregado",
+  ];
 
   function computeDurations(times, statusIndex) {
     const now = new Date();
@@ -340,18 +356,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------
   async function loadOrders(email) {
     if (!email) {
-      setLoadingMessage('Ingresa un correo para ver tus pedidos.');
-      ordersContainer.innerHTML = '';
+      setLoadingMessage("Ingresa un correo para ver tus pedidos.");
+      ordersContainer.innerHTML = "";
       return;
     }
 
-    setLoadingMessage('Cargando pedidos...');
-    ordersContainer.innerHTML = '';
+    setLoadingMessage("Cargando pedidos...");
+    ordersContainer.innerHTML = "";
 
     // Skeleton simple
-    const skeleton = document.createElement('div');
+    const skeleton = document.createElement("div");
     skeleton.className =
-      'space-y-3 mt-2 animate-pulse max-w-3xl mx-auto w-full';
+      "space-y-3 mt-2 animate-pulse max-w-3xl mx-auto w-full";
     skeleton.innerHTML = `
       <div class="h-24 rounded-xl bg-gray-200/70 dark:bg-[#261a1a]"></div>
       <div class="h-24 rounded-xl bg-gray-200/70 dark:bg-[#261a1a]"></div>
@@ -359,13 +375,15 @@ document.addEventListener('DOMContentLoaded', () => {
     ordersContainer.appendChild(skeleton);
 
     try {
-      const res = await fetch(`/api/pedidos?correo=${encodeURIComponent(email)}`);
+      const res = await fetch(
+        `/api/pedidos?correo=${encodeURIComponent(email)}`
+      );
       if (!res.ok) {
-        ordersContainer.innerHTML = '';
+        ordersContainer.innerHTML = "";
         if (res.status === 404) {
-          setLoadingMessage('No se encontraron pedidos para este correo.');
+          setLoadingMessage("No se encontraron pedidos para este correo.");
         } else {
-          setLoadingMessage('Error al obtener los pedidos. Intenta de nuevo.');
+          setLoadingMessage("Error al obtener los pedidos. Intenta de nuevo.");
         }
         return;
       }
@@ -380,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p>No encontramos pedidos recientes para <span class="font-semibold">${email}</span>.</p>
           </div>
         `;
-        setLoadingMessage('');
+        setLoadingMessage("");
         return;
       }
 
@@ -410,9 +428,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       renderOrders();
     } catch (err) {
-      console.error('[history.js] Error cargando pedidos:', err);
-      ordersContainer.innerHTML = '';
-      setLoadingMessage('Error inesperado al cargar los pedidos.');
+      console.error("[history.js] Error cargando pedidos:", err);
+      ordersContainer.innerHTML = "";
+      setLoadingMessage("Error inesperado al cargar los pedidos.");
     }
   }
 
@@ -421,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------
   function renderOrders() {
     if (!ordersContainer) return;
-    ordersContainer.innerHTML = '';
+    ordersContainer.innerHTML = "";
 
     const visible = filterOrders(allOrders);
 
@@ -467,19 +485,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Duraciones por estado
     const stepDurations = computeDurations(times, statusIndex);
 
-    const wrapper = document.createElement('article');
+    const wrapper = document.createElement("article");
     wrapper.className =
-      'group relative flex flex-col overflow-hidden rounded-xl bg-white dark:bg-[#261a1a] shadow-md border border-gray-100 dark:border-[#392828] transition-all hover:shadow-lg hover:border-primary/30';
+      "group relative flex flex-col overflow-hidden rounded-xl bg-white dark:bg-[#261a1a] shadow-md border border-gray-100 dark:border-[#392828] transition-all hover:shadow-lg hover:border-primary/30";
 
-    const idLabel = order.id ? `Pedido #${order.id}` : 'Pedido sin ID';
-    const resumen = String(order.resumen_pedido || '').trim() || '(Sin detalle)';
+    const idLabel = order.id ? `Pedido #${order.id}` : "Pedido sin ID";
+    const resumen =
+      String(order.resumen_pedido || "").trim() || "(Sin detalle)";
 
-    const isDone = normStatus === 'Entregado';
+    const isDone = normStatus === "Entregado";
 
     const headerSubtitleParts = [];
     if (order.puntoventa) headerSubtitleParts.push(order.puntoventa);
-    if (order.direccion_cliente) headerSubtitleParts.push(order.direccion_cliente);
-    const headerSubtitle = headerSubtitleParts.join(' • ');
+    if (order.direccion_cliente)
+      headerSubtitleParts.push(order.direccion_cliente);
+    const headerSubtitle = headerSubtitleParts.join(" • ");
 
     const progressPercent = ((statusIndex + 1) / STATUS_ORDER.length) * 100;
 
@@ -493,12 +513,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <div>
             <h3 class="text-lg font-bold text-slate-900 dark:text-white leading-none">${idLabel}</h3>
             <p class="text-xs text-slate-500 dark:text-[#b99d9d] mt-1">
-              ${headerSubtitle || (order.nombre_cliente || '')}
+              ${headerSubtitle || order.nombre_cliente || ""}
             </p>
           </div>
         </div>
         <span class="${badge.classes}">
-          <span class="material-symbols-outlined mr-1 text-[14px]">${badge.icon}</span>
+          <span class="material-symbols-outlined mr-1 text-[14px]">${
+            badge.icon
+          }</span>
           ${badge.text}
         </span>
       </div>
@@ -549,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${
                           durationLabel
                             ? `<span class="text-[9px] text-slate-400 dark:text-gray-500">Duración: ${durationLabel}</span>`
-                            : ''
+                            : ""
                         }
                       </div>
                     </div>
@@ -566,54 +588,54 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${
                           durationLabel
                             ? `<span class="text-[9px] text-slate-400 dark:text-gray-500">En este estado hace ${durationLabel}</span>`
-                            : ''
+                            : ""
                         }
                       </div>
                     </div>
                   `;
                 } else {
-                  const isLast = stateIndex === STATUS_ORDER.length - 1 && isDone;
-                  const icon =
-                    isLast && isDone
-                      ? 'done_all'
-                      : '';
-                  const timeFinal = isLast && isDone ? timeLabel : '--:--';
+                  const isLast =
+                    stateIndex === STATUS_ORDER.length - 1 && isDone;
+                  const icon = isLast && isDone ? "done_all" : "";
+                  const timeFinal = isLast && isDone ? timeLabel : "--:--";
                   const durationFinal = isLast && isDone ? durationLabel : null;
 
                   return `
                     <div class="flex flex-col items-center gap-1 ${
-                      isDone ? '' : 'opacity-50'
+                      isDone ? "" : "opacity-50"
                     }">
                       <div class="w-5 h-5 rounded-full ${
-                        isDone ? 'bg-green-500 border-2 border-green-500' : 'bg-gray-200 dark:bg-[#392828] border-2 border-transparent'
+                        isDone
+                          ? "bg-green-500 border-2 border-green-500"
+                          : "bg-gray-200 dark:bg-[#392828] border-2 border-transparent"
                       } flex items-center justify-center">
                         ${
                           isDone && icon
                             ? `<span class="material-symbols-outlined text-[10px] text-white font-bold">${icon}</span>`
-                            : ''
+                            : ""
                         }
                       </div>
                       <div class="flex flex-col items-center">
                         <span class="text-[10px] ${
                           isDone
-                            ? 'text-green-600 dark:text-green-500 font-bold'
-                            : 'text-slate-500 dark:text-gray-400'
+                            ? "text-green-600 dark:text-green-500 font-bold"
+                            : "text-slate-500 dark:text-gray-400"
                         } hidden sm:block">${label}</span>
                         <span class="text-[10px] ${
                           isDone
-                            ? 'text-green-600 dark:text-green-500 font-medium'
-                            : 'text-slate-400 dark:text-gray-600 font-medium'
-                        }">${isDone ? timeFinal : '--:--'}</span>
+                            ? "text-green-600 dark:text-green-500 font-medium"
+                            : "text-slate-400 dark:text-gray-600 font-medium"
+                        }">${isDone ? timeFinal : "--:--"}</span>
                         ${
                           isDone && durationFinal
                             ? `<span class="text-[9px] text-green-600 dark:text-green-500">Duración: ${durationFinal}</span>`
-                            : ''
+                            : ""
                         }
                       </div>
                     </div>
                   `;
                 }
-              }).join('')}
+              }).join("")}
             </div>
           </div>
         </div>
@@ -622,7 +644,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <!-- Footer pequeño con fecha -->
       <div class="bg-gray-50 dark:bg-[#2a1e1e] px-4 py-2.5 flex items-center justify-between text-[11px] text-slate-500 dark:text-gray-400">
         <span>
-          Creado: ${createdAt ? new Date(createdAt).toLocaleString() : 'Fecha desconocida'}
+          Creado: ${
+            createdAt
+              ? new Date(createdAt).toLocaleString()
+              : "Fecha desconocida"
+          }
         </span>
         <span class="flex items-center gap-1">
           <span class="material-symbols-outlined text-[14px]">lock</span>
@@ -636,10 +662,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function escapeHtml(str) {
     return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   // 🔁 Actualizar duraciones cada minuto (si hay pedidos cargados)

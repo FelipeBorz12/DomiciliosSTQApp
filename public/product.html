@@ -57,22 +57,22 @@
       }
     </style>
 
-    <!-- CSS general del sitio -->
+    <!-- Tu CSS general -->
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body
     class="font-display bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary"
   >
-    <!-- PANTALLA DE CARGA -->
+    <!-- LOADER DE LA PÁGINA DE PRODUCTO -->
     <div
-      id="page-loader"
+      id="product-page-loader"
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300"
     >
       <div class="flex flex-col items-center gap-4">
         <img
           src="/img/loader.gif"
           alt="Cargando Tierra Querida"
-          class="w-32 h-32 object-contain"
+          class="w-24 h-24 object-contain"
         />
         <p
           class="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase text-white/80 text-center"
@@ -85,7 +85,7 @@
     <div class="relative min-h-screen w-full flex flex-col pb-36">
       <!-- Top App Bar -->
       <div
-        class="sticky top-0 z-10 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 pb-2 justify-between border-b border-black/10 dark:border-white/5"
+        class="sticky top-0 z-10 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 pb-2 justify-between"
       >
         <button
           id="back-button"
@@ -101,11 +101,9 @@
         <div class="flex size-10 shrink-0 items-center"></div>
       </div>
 
-      <!-- BLOQUE PRINCIPAL: imagen + info -->
-      <section class="px-4 pt-4">
-        <div
-          class="product-detail-layout max-w-5xl mx-auto bg-surface-light/80 dark:bg-surface-dark/80 rounded-2xl px-4 py-5 shadow-lg shadow-black/40"
-        >
+      <!-- BLOQUE PRINCIPAL: imagen + info lado a lado en pantallas grandes -->
+      <section class="px-4 pt-2">
+        <div class="product-detail-layout max-w-5xl mx-auto">
           <!-- Imagen -->
           <div class="product-detail-image-wrapper">
             <div
@@ -118,15 +116,6 @@
 
           <!-- Info: título, descripción, precio -->
           <div class="product-detail-info">
-            <div class="inline-flex items-center gap-2 mb-2">
-              <span
-                class="inline-flex items-center px-3 py-1 rounded-full bg-black/10 dark:bg-white/10 text-[11px] font-semibold uppercase tracking-[0.16em]"
-                id="product-tag"
-              >
-                Producto Tierra Querida
-              </span>
-            </div>
-
             <h1
               id="product-name"
               class="tracking-tight text-[24px] md:text-[28px] lg:text-[32px] font-bold leading-tight text-left"
@@ -145,19 +134,12 @@
             >
               &nbsp;
             </p>
-
-            <p
-              id="product-helper"
-              class="mt-1 text-xs md:text-sm text-text-light-secondary dark:text-text-dark-secondary"
-            >
-              Personaliza tu pedido más abajo antes de agregarlo al carrito.
-            </p>
           </div>
         </div>
       </section>
 
-      <!-- Secciones de personalización -->
-      <section class="flex flex-col gap-4 px-4 max-w-5xl mx-auto w-full mt-5">
+      <!-- Secciones de personalización (debajo, centradas y con ancho limitado) -->
+      <section class="flex flex-col gap-4 px-4 max-w-5xl mx-auto w-full mt-4">
         <!-- Adiciones -->
         <div
           class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden"
@@ -323,80 +305,6 @@
           </div>
         </div>
 
-        <!-- Salsas para papas -->
-        <div
-          id="sauces-section"
-          class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden hidden"
-        >
-          <button
-            type="button"
-            class="accordion-header w-full flex justify-between items-center p-4"
-            data-target="#sauces-panel"
-          >
-            <h3 class="text-lg font-bold">Salsas para tus papas</h3>
-            <span
-              class="material-symbols-outlined transition-transform"
-              data-arrow="sauces"
-              >expand_more</span
-            >
-          </button>
-          <div
-            id="sauces-panel"
-            class="accordion-panel px-4 pb-4 flex flex-col gap-2"
-          >
-            <p
-              class="text-xs text-text-light-secondary dark:text-text-dark-secondary mb-2"
-            >
-              Elige las salsas que quieres incluir con tu porción de papas.
-            </p>
-
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                id="salsa-ajo"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-              />
-              <span>Salsa de ajo</span>
-            </label>
-
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                id="salsa-rosada"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-              />
-              <span>Salsa rosada</span>
-            </label>
-
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                id="salsa-bbq"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-              />
-              <span>BBQ</span>
-            </label>
-
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                id="salsa-picante"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-              />
-              <span>Salsa picante</span>
-            </label>
-
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                id="salsa-ketchup"
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-              />
-              <span>Ketchup</span>
-            </label>
-          </div>
-        </div>
-
         <!-- Término de la carne -->
         <div
           id="cooking-section"
@@ -496,7 +404,7 @@
       </div>
     </div>
 
-    <!-- Modal de imagen -->
+    <!-- Modal -->
     <div
       id="image-modal"
       class="fixed z-50 inset-0 flex items-center justify-center hidden"
@@ -518,7 +426,6 @@
       </div>
     </div>
 
-    <!-- JS del detalle -->
     <script type="module" src="/product.js"></script>
   </body>
 </html>

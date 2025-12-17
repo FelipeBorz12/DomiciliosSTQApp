@@ -1,10 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const ZONA_PRECIO = "PrecioOriente";
+  const ZONA_PRECIO = "PrecioOriente"; // zona de precios que estás usando
 
   // =============================
-  // LOADER
+  // LOADER DE LA PÁGINA
   // =============================
-  const pageLoader = document.getElementById("page-loader");
+  const pageLoader = document.getElementById("product-page-loader");
 
   function showLoader() {
     if (!pageLoader) return;
@@ -20,8 +20,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 300);
   }
 
-  // muestra loader desde el inicio
-  showLoader();
+  // =============================
+  // HEADER: usuario / carrito
+  // (estos selectores no siempre matchean aquí, pero son seguros)
+  // =============================
+  const userButton = document.querySelector(
+    "header .flex.flex-1.items-center.justify-start .icon-button"
+  );
+  const rightButtons = document.querySelectorAll(
+    "header .flex.flex-1.items-center.justify-end .icon-button"
+  );
+  const cartButton = rightButtons[0] || null;
+
+  if (userButton) {
+    userButton.addEventListener("click", () => {
+      window.location.href = "/login";
+    });
+  }
+
+  if (cartButton) {
+    cartButton.addEventListener("click", () => {
+      try {
+        const raw = localStorage.getItem("burgerCart");
+        if (!raw) {
+          alert("Tu carrito está vacío. Agrega un producto desde el menú.");
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          alert("Tu carrito está vacío. Agrega un producto desde el menú.");
+          return;
+        }
+        window.location.href = "/cart";
+      } catch (err) {
+        console.error("[product.js] Error leyendo carrito:", err);
+        alert(
+          "Hubo un problema leyendo tu carrito. Intenta agregar un producto de nuevo."
+        );
+      }
+    });
+  }
 
   // =============================
   // Helpers
@@ -48,8 +86,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const productNameEl = document.getElementById("product-name");
   const productDescriptionEl = document.getElementById("product-description");
   const productBasePriceEl = document.getElementById("product-base-price");
-  const productTagEl = document.getElementById("product-tag");
-  const productHelperEl = document.getElementById("product-helper");
 
   const extrasContainer = document.getElementById("extras-container");
   const extrasEmpty = document.getElementById("extras-empty");
@@ -57,7 +93,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const modifySection = document.getElementById("modify-section");
   const cookingSection = document.getElementById("cooking-section");
-  const saucesSection = document.getElementById("sauces-section");
 
   const qtyDecrease = document.getElementById("qty-decrease");
   const qtyIncrease = document.getElementById("qty-increase");
@@ -123,69 +158,27 @@ document.addEventListener("DOMContentLoaded", () => {
       productImage.style.backgroundImage = product.imagen
         ? `url('${product.imagen}')`
         : "";
-      if (product.Nombre) {
-        productImage.setAttribute("data-alt", product.Nombre);
-      }
     }
     if (productNameEl) {
-      productNameEl.textContent = product.Nombre || "Producto Tierra Querida";
+      productNameEl.textContent = product.Nombre;
     }
     if (productDescriptionEl) {
-      productDescriptionEl.textContent =
-        product.Descripcion || "Delicioso producto de nuestra carta.";
+      productDescriptionEl.textContent = product.Descripcion;
     }
     if (productBasePriceEl) {
       productBasePriceEl.textContent = `Precio base: ${formatPrice(priceBase)}`;
     }
 
+    // 1 = hamburguesa, 3 = combo → tienen adiciones / modificar / término
+    // 4 = papas, 6 = bebidas → NO adiciones, NO modificar, NO término
     const esHamburguesaOCombo = product.tipo === 1 || product.tipo === 3;
-    const esPapas = product.tipo === 4;
-    const esBebida = product.tipo === 6;
 
-    // Tag y helper
-    if (productTagEl) {
-      if (esHamburguesaOCombo) productTagEl.textContent = "Hamburguesa / Combo";
-      else if (esPapas) productTagEl.textContent = "Papas";
-      else if (esBebida) productTagEl.textContent = "Bebida";
-      else productTagEl.textContent = "Producto Tierra Querida";
-    }
-
-    if (productHelperEl) {
-      if (esPapas) {
-        productHelperEl.textContent =
-          "Elige las salsas para tus papas y agrega al carrito.";
-      } else if (esHamburguesaOCombo) {
-        productHelperEl.textContent =
-          "Puedes quitar ingredientes, elegir término de la carne y agregar adiciones.";
-      } else if (esBebida) {
-        productHelperEl.textContent =
-          "Selecciona la cantidad que deseas y agrégala al carrito.";
-      } else {
-        productHelperEl.textContent =
-          "Personaliza tu pedido más abajo antes de agregarlo al carrito.";
+    if (!esHamburguesaOCombo) {
+      if (extrasPanel && extrasPanel.parentElement) {
+        extrasPanel.parentElement.classList.add("hidden");
       }
-    }
-
-    // Visibilidad de secciones según tipo
-    const extrasWrapper = extrasPanel?.parentElement || null;
-
-    if (esHamburguesaOCombo) {
-      extrasWrapper && extrasWrapper.classList.remove("hidden");
-      modifySection && modifySection.classList.remove("hidden");
-      cookingSection && cookingSection.classList.remove("hidden");
-      saucesSection && saucesSection.classList.add("hidden");
-    } else if (esPapas) {
-      // Papas: adiciones + salsas, sin modificar hamburguesa ni término
-      extrasWrapper && extrasWrapper.classList.remove("hidden");
-      modifySection && modifySection.classList.add("hidden");
-      cookingSection && cookingSection.classList.add("hidden");
-      saucesSection && saucesSection.classList.remove("hidden");
-    } else {
-      // Bebidas u otros: solo info básica
-      extrasWrapper && extrasWrapper.classList.add("hidden");
-      modifySection && modifySection.classList.add("hidden");
-      cookingSection && cookingSection.classList.add("hidden");
-      saucesSection && saucesSection.classList.add("hidden");
+      if (modifySection) modifySection.classList.add("hidden");
+      if (cookingSection) cookingSection.classList.add("hidden");
     }
   }
 
@@ -226,9 +219,9 @@ document.addEventListener("DOMContentLoaded", () => {
             data-extra-price="${price}"
             class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
           />
-          <span class="text-base text-text-light-primary dark:text-text-dark-primary">
-            ${extra.Nombre}
-          </span>
+          <span class="text-base text-text-light-primary dark:text-text-dark-primary">${
+            extra.Nombre
+          }</span>
         </label>
         <span class="text-base font-medium text-text-light-secondary dark:text-text-dark-secondary">
           +${formatPrice(price)}
@@ -384,24 +377,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return selected;
   }
 
-  function getSelectedSauces() {
-    const sauces = [];
-    const mapping = [
-      ["salsa-ajo", "Salsa de ajo"],
-      ["salsa-rosada", "Salsa rosada"],
-      ["salsa-bbq", "BBQ"],
-      ["salsa-picante", "Salsa picante"],
-      ["salsa-ketchup", "Ketchup"],
-    ];
-    mapping.forEach(([id, label]) => {
-      const input = document.getElementById(id);
-      if (input && input.checked) {
-        sauces.push(label);
-      }
-    });
-    return sauces;
-  }
-
   // =============================
   // Agregar al carrito
   // =============================
@@ -420,7 +395,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const selectedExtras = getSelectedExtras();
         const modifications = getModifications();
         const cooking = getCooking();
-        const sauces = getSelectedSauces();
         const extrasTotal = selectedExtras.reduce(
           (acc, ex) => acc + Number(ex.precio || 0),
           0
@@ -436,7 +410,6 @@ document.addEventListener("DOMContentLoaded", () => {
           extras: selectedExtras,
           modifications,
           cooking,
-          sauces,
           quantity,
           total: grandTotal,
         };
@@ -452,6 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
         cart.push(lineItem);
         localStorage.setItem("burgerCart", JSON.stringify(cart));
 
+        // ir al carrito
         window.location.href = "/cart";
       } catch (err) {
         console.error("[product.js] Error guardando en carrito:", err);
@@ -484,7 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
     productImage.addEventListener("click", () => {
       const url = productImage.style.backgroundImage.slice(5, -2);
       const alt = productImage.getAttribute("data-alt");
-      if (url) openModal(url, alt);
+      openModal(url, alt);
     });
   }
 
@@ -514,6 +488,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // init
   // =============================
   async function init() {
+    showLoader();
+
     const { id } = parseQuery();
     if (!id || isNaN(id)) {
       alert("Producto inválido. Volviendo al inicio.");
@@ -538,12 +514,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       setQuantity(1);
-      hideLoader();
     } catch (err) {
       console.error("[product.js] Error inicializando detalle:", err);
-      hideLoader();
       alert("No se pudo cargar el producto, intenta de nuevo.");
       window.location.href = "/";
+    } finally {
+      // aquí ya está todo renderizado y las secciones ocultas si toca
+      hideLoader();
     }
   }
 
