@@ -84,58 +84,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // -----------------------------
   // Contador de carrito
   // -----------------------------
-  function migrateCartStorage() {
-    try {
-      const oldRaw = localStorage.getItem("cart");
-      const newRaw = localStorage.getItem("burgerCart");
-
-      let oldArr = [];
-      let newArr = [];
-
-      if (oldRaw) {
-        try {
-          const parsed = JSON.parse(oldRaw);
-          if (Array.isArray(parsed)) oldArr = parsed;
-        } catch {}
-      }
-
-      if (newRaw) {
-        try {
-          const parsed = JSON.parse(newRaw);
-          if (Array.isArray(parsed)) newArr = parsed;
-        } catch {}
-      }
-
-      // Si solo hay carrito viejo -> lo migramos tal cual
-      if (oldArr.length && !newArr.length) {
-        localStorage.setItem("burgerCart", JSON.stringify(oldArr));
-        localStorage.removeItem("cart");
-        return;
-      }
-
-      // Si hay en ambos, los combinamos y limpiamos "cart"
-      if (oldArr.length && newArr.length) {
-        const merged = [...newArr, ...oldArr];
-        localStorage.setItem("burgerCart", JSON.stringify(merged));
-        localStorage.removeItem("cart");
-        return;
-      }
-
-      // Si no hay nada útil en cart, lo borramos para que no moleste
-      if (!oldArr.length) {
-        localStorage.removeItem("cart");
-      }
-    } catch (e) {
-      console.error("[index.js] Error migrando carrito:", e);
-    }
-  }
-
-  // Contador de carrito usando SOLO burgerCart
+  // Soporta "cart" o "burgerCart" como clave en localStorage
   function updateCartCount() {
     try {
-      migrateCartStorage(); // aseguramos migración
+      let raw = localStorage.getItem("cart");
+      if (!raw) {
+        raw = localStorage.getItem("burgerCart");
+      }
 
-      const raw = localStorage.getItem("burgerCart");
       if (!raw) {
         if (cartCount) cartCount.textContent = "0";
         return;
@@ -157,10 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
         cartCount.textContent = String(totalItems);
       }
     } catch (err) {
-      console.error(
-        "[index.js] Error leyendo carrito en updateCartCount:",
-        err
-      );
+      console.error("[index.js] Error leyendo carrito en updateCartCount:", err);
       if (cartCount) cartCount.textContent = "0";
     }
   }
@@ -321,7 +274,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // CARRUSEL HERO (imagen izquierda + texto derecha)
   // =============================
-  const heroImages = [
+
+  // Fallback local (actual hardcode)
+  const DEFAULT_HERO_IMAGES = [
     {
       url: "https://lh3.googleusercontent.com/aida-public/AB6AXuASEb-HyXI6AJNvlivFv0Qp7nWz0FsGB4PuFIgOa46zbaQ2yZXx8x9piDRUnfXOZuee2ni2gf1RvTerVysshQ4ZQPusSy2H4zr-dNwTI-UYaS8hnsPq38o3uId47Lf_jQmHQLe0SZ3SMaadkC29NjD0_zp-Ui8wMCDwHqiJ7o7uqbJRWnKtFB7pgWwHJGm5kEA9n4LPu9ru_1fs6jtwgA6jupWr9PuzC070KqTxw6CIdmZ5XqSIofKuRx2nrvKW7pkk7BMvhZvqamo",
       alt: "Hamburguesa clásica",
@@ -347,6 +302,8 @@ document.addEventListener("DOMContentLoaded", () => {
       tag: "Recomendado del chef",
     },
   ];
+
+  let heroImages = [];
 
   const heroCarousel = document.getElementById("hero-carousel");
   const heroDots = document.getElementById("hero-dots");
@@ -399,7 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
       slide.innerHTML = `
         <div class="hero-slide-inner">
           <div class="hero-slide-image">
-            <img src="${item.url}" alt="${item.alt}" />
+            <img src="${item.url}" alt="${item.alt || ""}" />
           </div>
           <div class="hero-slide-text">
             ${
@@ -407,8 +364,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? `<p class="hero-tagline">${item.tag}</p>`
                 : `<p class="hero-tagline">Nuevo</p>`
             }
-            <h2 class="hero-title">${item.title}</h2>
-            <p class="hero-desc">${item.description}</p>
+            <h2 class="hero-title">${item.title || ""}</h2>
+            <p class="hero-desc">${item.description || ""}</p>
             <button type="button" class="hero-cta">
               <span>Ver menú</span>
               <span class="material-symbols-outlined">arrow_forward</span>
@@ -419,7 +376,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const imgEl = slide.querySelector("img");
       if (imgEl) {
-        imgEl.addEventListener("click", () => openModal(item.url, item.alt));
+        imgEl.addEventListener("click", () =>
+          openModal(item.url, item.alt || item.title || "")
+        );
       }
 
       const cta = slide.querySelector(".hero-cta");
@@ -478,6 +437,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (heroInterval) {
       window.clearInterval(heroInterval);
     }
+    if (!heroImages.length) return;
     heroInterval = window.setInterval(() => {
       const next = (currentSlide + 1) % heroImages.length;
       goToSlide(next);
@@ -489,12 +449,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   heroPrev?.addEventListener("click", () => {
+    if (!heroImages.length) return;
     const prev = (currentSlide - 1 + heroImages.length) % heroImages.length;
     goToSlide(prev);
     restartAutoSlide();
   });
 
   heroNext?.addEventListener("click", () => {
+    if (!heroImages.length) return;
     const next = (currentSlide + 1) % heroImages.length;
     goToSlide(next);
     restartAutoSlide();
@@ -520,8 +482,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  renderHeroSlides();
-  startHeroAutoSlide();
+  async function loadHeroFromApi() {
+    try {
+      const res = await fetch("/api/landing/hero");
+      if (!res.ok) throw new Error("Respuesta no OK");
+      const data = await res.json();
+
+      if (Array.isArray(data) && data.length > 0) {
+        heroImages = data.map((item) => ({
+          url: item.image_url,
+          alt: item.image_alt || item.title || "Banner Tierra Querida",
+          title: item.title,
+          description: item.description,
+          tag: item.tag || "",
+        }));
+      } else {
+        heroImages = DEFAULT_HERO_IMAGES.slice();
+      }
+    } catch (err) {
+      console.error("[index.js] Error cargando hero desde API:", err);
+      heroImages = DEFAULT_HERO_IMAGES.slice();
+    }
+
+    renderHeroSlides();
+    startHeroAutoSlide();
+  }
 
   // =============================
   // PRODUCTOS DESDE SUPABASE
@@ -586,7 +571,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const price =
-      item[zonaPrecio] ?? item.PrecioAreaMetrop ?? item.PrecioRestoPais ?? 0;
+      item[zonaPrecio] ??
+      item.PrecioAreaMetrop ??
+      item.PrecioRestoPais ??
+      0;
 
     let priceDisplay;
     try {
@@ -665,7 +653,10 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
     } else {
-      const visibleEnd = Math.min(startIndex + MAX_RENDER, allProducts.length);
+      const visibleEnd = Math.min(
+        startIndex + MAX_RENDER,
+        allProducts.length
+      );
       const slice = allProducts.slice(startIndex, visibleEnd);
 
       slice.forEach((item, idx) => {
@@ -730,10 +721,214 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // =============================
+  // ABOUT & INSTAGRAM desde API
+  // =============================
+
+  const aboutTaglineEl = document.getElementById("about-tagline");
+  const aboutTitleEl = document.getElementById("about-title");
+  const aboutParagraphsEl = document.getElementById("about-paragraphs");
+  const aboutBadgeTextEl = document.getElementById("about-badge-text");
+  const aboutImageEl = document.getElementById("about-image");
+  const aboutCtaEl = document.getElementById("about-cta-stores");
+  const socialInstagramEl = document.getElementById("social-instagram");
+  const instagramHandleEl = document.getElementById("instagram-handle");
+  const instagramGridEl = document.getElementById("instagram-grid");
+
+  const DEFAULT_ABOUT = {
+    tagline: "#Movimiento TQ",
+    title: "¿Quiénes Somos?",
+    body: [
+      "Hace 5 años, empezamos en una cocina pequeña con una idea grande: llevar hamburguesas honestas, hechas al momento, a cada rincón de esta Tierra Querida.",
+      "Sin letreros luminosos ni grandes campañas. Solo una plancha caliente, 4 amigos con ganas de emprender y cientos de clientes que fueron pasando la voz, mordida tras mordida.",
+      "Hoy seguimos siendo la misma cocina inquieta, pero con un sueño más grande: que cada pedido se sienta como comer en casa, sin perder el sabor callejero que nos trajo hasta aquí.",
+    ],
+    cta_text: "Pide aquí",
+    cta_href: "/stores",
+    badge_text: "+100 puntos de venta en Colombia",
+    image_url: "./img/empleados.png",
+    image_alt: "Equipo de Tierra Querida",
+    instagram_handle: "@tierraquerida20",
+    instagram_url: "https://www.instagram.com/tierraquerida20/",
+  };
+
+  const DEFAULT_INSTAGRAM_STORIES = [
+    {
+      image_url: "./img/ig-story-1.webp",
+      image_alt: "Cliente disfrutando una hamburguesa Tierra Querida",
+      caption: "",
+      href: "https://www.instagram.com/tierraquerida20/",
+    },
+    {
+      image_url: "./img/ig-story-2.webp",
+      image_alt: "Amigos comiendo papas y hamburguesas en Tierra Querida",
+      caption: "",
+      href: "https://www.instagram.com/tierraquerida20/",
+    },
+    {
+      image_url: "./img/ig-story-3.webp",
+      image_alt: "Caravana de Tierra Querida por las calles de la ciudad",
+      caption: "",
+      href: "https://www.instagram.com/tierraquerida20/",
+    },
+    {
+      image_url: "./img/ig-story-4.webp",
+      image_alt: "Vista aérea de Cartagena con punto Tierra Querida",
+      caption: "",
+      href: "https://www.instagram.com/tierraquerida20/",
+    },
+  ];
+
+  function renderAbout(about) {
+    if (aboutTaglineEl) {
+      aboutTaglineEl.childNodes[0].nodeValue = (about.tagline || "").trim() + " ";
+    }
+    if (aboutTitleEl) {
+      aboutTitleEl.textContent = about.title || "";
+    }
+    if (aboutBadgeTextEl) {
+      aboutBadgeTextEl.textContent =
+        about.badge_text || DEFAULT_ABOUT.badge_text;
+    }
+    if (aboutImageEl) {
+      aboutImageEl.src = about.image_url || DEFAULT_ABOUT.image_url;
+      aboutImageEl.alt = about.image_alt || DEFAULT_ABOUT.image_alt;
+    }
+    if (aboutCtaEl) {
+      aboutCtaEl.href = about.cta_href || DEFAULT_ABOUT.cta_href;
+      aboutCtaEl.firstElementChild &&
+        (aboutCtaEl.firstChild.nodeValue =
+          (about.cta_text || DEFAULT_ABOUT.cta_text) + " ");
+    }
+
+    if (aboutParagraphsEl) {
+      aboutParagraphsEl.innerHTML = "";
+      const bodyParts =
+        Array.isArray(about.body)
+          ? about.body
+          : typeof about.body === "string"
+          ? about.body.split(/\n\s*\n/)
+          : DEFAULT_ABOUT.body;
+
+      bodyParts
+        .filter((p) => p && p.trim().length)
+        .forEach((text) => {
+          const p = document.createElement("p");
+          p.className =
+            "text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300";
+          p.textContent = text.trim();
+          aboutParagraphsEl.appendChild(p);
+        });
+    }
+
+    if (instagramHandleEl) {
+      instagramHandleEl.textContent =
+        about.instagram_handle || DEFAULT_ABOUT.instagram_handle;
+    }
+    if (socialInstagramEl) {
+      socialInstagramEl.href =
+        about.instagram_url || DEFAULT_ABOUT.instagram_url;
+    }
+  }
+
+  async function loadAboutFromApi() {
+    try {
+      const res = await fetch("/api/landing/about");
+      if (!res.ok) throw new Error("Respuesta no OK");
+      const data = await res.json();
+
+      const about = {
+        tagline: data.tagline || DEFAULT_ABOUT.tagline,
+        title: data.title || DEFAULT_ABOUT.title,
+        body: data.body || DEFAULT_ABOUT.body,
+        cta_text: data.cta_text || DEFAULT_ABOUT.cta_text,
+        cta_href: data.cta_href || DEFAULT_ABOUT.cta_href,
+        badge_text: data.badge_text || DEFAULT_ABOUT.badge_text,
+        image_url: data.image_url || DEFAULT_ABOUT.image_url,
+        image_alt: data.image_alt || DEFAULT_ABOUT.image_alt,
+        instagram_handle:
+          data.instagram_handle || DEFAULT_ABOUT.instagram_handle,
+        instagram_url: data.instagram_url || DEFAULT_ABOUT.instagram_url,
+      };
+
+      renderAbout(about);
+    } catch (err) {
+      console.error("[index.js] Error cargando about desde API:", err);
+      renderAbout(DEFAULT_ABOUT);
+    }
+  }
+
+  function renderInstagramStories(stories) {
+    if (!instagramGridEl) return;
+
+    instagramGridEl.innerHTML = "";
+
+    stories.forEach((story) => {
+      const card = document.createElement("a");
+      card.href = story.href || DEFAULT_ABOUT.instagram_url;
+      card.target = "_blank";
+      card.rel = "noopener noreferrer";
+      card.className =
+        "group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl";
+
+      card.innerHTML = `
+        <img
+          src="${story.image_url}"
+          alt="${story.image_alt || ""}"
+          class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <div
+          class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
+        ></div>
+        <div
+          class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
+        >
+          <p class="text-white text-sm font-semibold">${story.caption || ""}</p>
+          <span
+            class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
+          >
+            Ver en Instagram
+          </span>
+        </div>
+      `;
+
+      instagramGridEl.appendChild(card);
+    });
+  }
+
+  async function loadInstagramFromApi() {
+    try {
+      const res = await fetch("/api/landing/instagram");
+      if (!res.ok) throw new Error("Respuesta no OK");
+      const data = await res.json();
+
+      let stories;
+      if (Array.isArray(data) && data.length > 0) {
+        stories = data.map((item) => ({
+          image_url: item.image_url,
+          image_alt: item.image_alt || "",
+          caption: item.caption || "",
+          href:
+            item.href ||
+            DEFAULT_ABOUT.instagram_url ||
+            "https://www.instagram.com/",
+        }));
+      } else {
+        stories = DEFAULT_INSTAGRAM_STORIES;
+      }
+
+      renderInstagramStories(stories);
+    } catch (err) {
+      console.error(
+        "[index.js] Error cargando historias de Instagram desde API:",
+        err
+      );
+      renderInstagramStories(DEFAULT_INSTAGRAM_STORIES);
+    }
+  }
+
+  // =============================
   // INICIALIZACIÓN
   // =============================
-  // Migrar carrito viejo -> nuevo
-  migrateCartStorage();
 
   // Categoría por defecto
   loadCategory(1);
@@ -741,6 +936,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Estado inicial del header
   updateCartCount();
   applyUserUI();
+
+  // Hero / About / Instagram desde API
+  loadHeroFromApi();
+  loadAboutFromApi();
+  loadInstagramFromApi();
 
   // Al volver con botón atrás (bfcache)
   window.addEventListener("pageshow", () => {

@@ -276,6 +276,7 @@
                 class="relative rounded-3xl overflow-hidden bg-black shadow-xl shadow-black/40"
               >
                 <img
+                  id="about-image"
                   src="./img/empleados.png"
                   alt="Equipo de Tierra Querida"
                   class="w-full h-full object-cover max-h-[420px]"
@@ -288,13 +289,14 @@
                 <span
                   class="inline-block h-2 w-2 rounded-full bg-emerald-400"
                 ></span>
-                <span>+100 puntos de venta en Colombia</span>
+                <span id="about-badge-text">+100 puntos de venta en Colombia</span>
               </div>
             </div>
 
             <!-- TEXTO -->
             <div class="space-y-5 sm:space-y-6" id="about-text-block">
               <p
+                id="about-tagline"
                 class="inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.28em] text-primary"
               >
                 #Movimiento TQ
@@ -304,34 +306,37 @@
               </p>
 
               <h2
+                id="about-title"
                 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-black dark:text-white"
               >
                 ¿Quiénes Somos?
               </h2>
 
-              <p
-                class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
-              >
-                Hace 5 años, empezamos en una cocina pequeña con una idea
-                grande: llevar hamburguesas honestas, hechas al momento, a cada
-                rincón de esta Tierra Querida.
-              </p>
+              <div id="about-paragraphs" class="space-y-3 sm:space-y-4">
+                <p
+                  class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
+                >
+                  Hace 5 años, empezamos en una cocina pequeña con una idea
+                  grande: llevar hamburguesas honestas, hechas al momento, a
+                  cada rincón de esta Tierra Querida.
+                </p>
 
-              <p
-                class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
-              >
-                Sin letreros luminosos ni grandes campañas. Solo una plancha
-                caliente, 4 amigos con ganas de emprender y cientos de clientes
-                que fueron pasando la voz, mordida tras mordida.
-              </p>
+                <p
+                  class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
+                >
+                  Sin letreros luminosos ni grandes campañas. Solo una plancha
+                  caliente, 4 amigos con ganas de emprender y cientos de
+                  clientes que fueron pasando la voz, mordida tras mordida.
+                </p>
 
-              <p
-                class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
-              >
-                Hoy seguimos siendo la misma cocina inquieta, pero con un sueño
-                más grande: que cada pedido se sienta como comer en casa, sin
-                perder el sabor callejero que nos trajo hasta aquí.
-              </p>
+                <p
+                  class="text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300"
+                >
+                  Hoy seguimos siendo la misma cocina inquieta, pero con un
+                  sueño más grande: que cada pedido se sienta como comer en
+                  casa, sin perder el sabor callejero que nos trajo hasta aquí.
+                </p>
+              </div>
 
               <div
                 class="flex flex-col sm:flex-row sm:items-center gap-4 pt-2 sm:pt-3"
@@ -390,121 +395,14 @@
             class="text-center text-2xl md:text-3xl font-extrabold tracking-tight text-black dark:text-white mb-6"
           >
             Síguenos en Instagram
-            <span class="text-primary">@tierraquerida20</span>
+            <span id="instagram-handle" class="text-primary">@tierraquerida20</span>
           </h2>
 
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <!-- Card 1 -->
-            <a
-              id="instagram-card-1"
-              href="https://www.instagram.com/tierraquerida20/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
-            >
-              <img
-                src="./img/ig-story-1.webp"
-                alt="Cliente disfrutando una hamburguesa Tierra Querida"
-                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div
-                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
-              ></div>
-              <div
-                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
-              >
-                <p class="text-white text-sm font-semibold"></p>
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
-                >
-                  Ver en Instagram
-                </span>
-              </div>
-            </a>
-
-            <!-- Card 2 -->
-            <a
-              id="instagram-card-2"
-              href="https://www.instagram.com/tierraquerida20/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
-            >
-              <img
-                src="./img/ig-story-2.webp"
-                alt="Amigos comiendo papas y hamburguesas en Tierra Querida"
-                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div
-                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
-              ></div>
-              <div
-                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
-              >
-                <p class="text-white text-sm font-semibold"></p>
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
-                >
-                  Ver en Instagram
-                </span>
-              </div>
-            </a>
-
-            <!-- Card 3 -->
-            <a
-              id="instagram-card-3"
-              href="https://www.instagram.com/tierraquerida20/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
-            >
-              <img
-                src="./img/ig-story-3.webp"
-                alt="Caravana de Tierra Querida por las calles de la ciudad"
-                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div
-                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
-              ></div>
-              <div
-                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
-              >
-                <p class="text-white text-sm font-semibold"></p>
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
-                >
-                  Ver en Instagram
-                </span>
-              </div>
-            </a>
-
-            <!-- Card 4 -->
-            <a
-              id="instagram-card-4"
-              href="https://www.instagram.com/tierraquerida20/"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl"
-            >
-              <img
-                src="./img/ig-story-4.webp"
-                alt="Vista aérea de Cartagena con punto Tierra Querida"
-                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div
-                class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
-              ></div>
-              <div
-                class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
-              >
-                <p class="text-white text-sm font-semibold"></p>
-                <span
-                  class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
-                >
-                  Ver en Instagram
-                </span>
-              </div>
-            </a>
+          <div
+            id="instagram-grid"
+            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <!-- Las cards se inyectan por JS -->
           </div>
         </div>
       </section>
@@ -725,7 +623,7 @@
             window.location.href = "/";
           }
         });
-        
+
         // Manejo del icono del carrito
         const cartIcon = document.getElementById("cart-icon");
         if (cartIcon) {
@@ -767,7 +665,7 @@
       })();
     </script>
 
-    <!-- JS del front (el index.js que ya tienes) -->
+    <!-- JS del front -->
     <script type="module" src="/index.js"></script>
   </body>
 </html>
