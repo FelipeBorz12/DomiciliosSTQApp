@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const phoneError = document.getElementById("phone-error");
   const emailError = document.getElementById("email-error");
 
-  // Método de pago
   const paymentMethodSelect = document.getElementById("payment-method");
   const paymentError = document.getElementById("payment-error");
   let paymentTouched = false;
@@ -38,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartBadgeDesktop = document.getElementById("cart-badge-desktop");
   const cartBadgeMobile = document.getElementById("cart-badge-mobile");
 
-  // NUEVO: guardar perfil (si existe en el HTML)
+  // NUEVO (si lo agregas al HTML)
   const saveProfileBtn = document.getElementById("save-profile-btn");
   const saveProfileStatus = document.getElementById("save-profile-status");
 
@@ -49,7 +48,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedPV = null;
   let isUserLoggedIn = false;
 
-  // ---- Helpers ----
+  // Para no romper selectedPV cuando sincronizas selects por geolocalización
+  let syncingPV = false;
+
+  // ---- Utils ----
   function debounce(fn, wait = 250) {
     let t;
     return (...args) => {
@@ -63,22 +65,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return "$" + n.toLocaleString("es-CO");
   }
 
-  function loadCart() {
-    try {
-      const raw = localStorage.getItem("burgerCart");
-      cartItems = raw ? (Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []) : [];
-    } catch (err) {
-      console.error("[confirm.js] Error leyendo burgerCart:", err);
-      cartItems = [];
-    }
+  function setSaveStatus(msg) {
+    if (!saveProfileStatus) return;
+    saveProfileStatus.textContent = msg;
+    saveProfileStatus.classList.remove("hidden");
+    clearTimeout(setSaveStatus._t);
+    setSaveStatus._t = setTimeout(() => {
+      saveProfileStatus.classList.add("hidden");
+    }, 2000);
   }
 
-  function syncBadges() {
-    const count = cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0);
-    if (cartBadgeDesktop) cartBadgeDesktop.textContent = String(count);
-    if (cartBadgeMobile) cartBadgeMobile.textContent = String(count);
-  }
-
+  // ---- LocalStorage ----
   function saveUserToLocal(data) {
     try {
       if (!data) return;
@@ -95,18 +92,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function normalizePhoneToPlus57(raw) {
-    if (!raw) return "";
-    let s = String(raw).trim().replace(/[^\d+]/g, "");
-    if (/^\+57\d{10}$/.test(s)) return s;
-    if (/^57\d{10}$/.test(s)) return `+${s}`;
-
-    const digits = s.replace(/\D/g, "");
-    if (/^\d{10}$/.test(digits)) return `+57${digits}`;
-    if (digits.length >= 10) return `+57${digits.slice(-10)}`;
-    return "";
+  // ---- Carrito ----
+  function loadCart() {
+    try {
+      const raw = localStorage.getItem("burgerCart");
+      cartItems = raw ? (Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []) : [];
+    } catch (err) {
+      console.error("[confirm.js] Error leyendo burgerCart:", err);
+      cartItems = [];
+    }
   }
 
+  function syncBadges() {
+    const count = cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0);
+    if (cartBadgeDesktop) cartBadgeDesktop.textContent = String(count);
+    if (cartBadgeMobile) cartBadgeMobile.textContent = String(count);
+  }
+
+  // ---- Validaciones ----
   function validatePhone(value) {
     if (!value) return false;
     return /^\+57\d{10}$/.test(value.trim());
@@ -115,142 +118,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function validateEmail(value) {
     if (!value) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-  }
-
-  // ---- Normaliza cualquier forma de usuario a { correo, perfil:{nombre,celular,direccionentrega} } ----
-  function normalizeUserData(anyData) {
-    if (!anyData) return null;
-
-    const root = anyData.user || anyData.data?.user || anyData.data || anyData;
-
-    const correo =
-      root.correo ||
-      root.email ||
-      root.user?.email ||
-      root.user?.correo ||
-      root.user_metadata?.email ||
-      root.user?.user_metadata?.email ||
-      "";
-
-    const perfilSrc =
-      root.perfil ||
-      root.profile ||
-      root.user_metadata ||
-      root.user?.user_metadata ||
-      root.user?.perfil ||
-      {};
-
-    const nombre = perfilSrc.nombre || perfilSrc.full_name || perfilSrc.name || root.nombre || "";
-    const celular = perfilSrc.celular || perfilSrc.phone || perfilSrc.telefono || root.celular || root.phone || "";
-    const direccionentrega =
-      perfilSrc.direccionentrega || perfilSrc.direccion || perfilSrc.address || root.direccion || "";
-
-    const normalized = {
-      correo: String(correo || "").trim(),
-      perfil: {
-        nombre: String(nombre || "").trim(),
-        celular: normalizePhoneToPlus57(celular),
-        direccionentrega: String(direccionentrega || "").trim(),
-      },
-    };
-
-    // si no hay correo, no sirve como sesión guardable
-    if (!normalized.correo) return null;
-    return normalized;
-  }
-
-  function hydrateUserInputs(data) {
-    const u = normalizeUserData(data);
-    if (!u) return;
-
-    // No pisar lo que el usuario ya escribió
-    if (nameInput && !nameInput.value.trim() && u.perfil?.nombre) nameInput.value = u.perfil.nombre;
-    if (emailInput && !emailInput.value.trim() && u.correo) emailInput.value = u.correo;
-    if (phoneInput && !phoneInput.value.trim() && u.perfil?.celular) phoneInput.value = u.perfil.celular;
-    if (addressInput && !addressInput.value.trim() && u.perfil?.direccionentrega)
-      addressInput.value = u.perfil.direccionentrega;
-  }
-
-  function getFormSnapshot() {
-    const name = nameInput?.value?.trim() || "";
-    const email = emailInput?.value?.trim() || "";
-    const phone = normalizePhoneToPlus57(phoneInput?.value?.trim() || "");
-    const address = addressInput?.value?.trim() || "";
-    return { name, email, celular: phone, address };
-  }
-
-  function mergeProfileIntoUser(existing, form) {
-    const u = existing && typeof existing === "object" ? existing : {};
-    u.perfil = u.perfil || {};
-
-    u.correo = form.email || u.correo || "";
-    u.perfil.nombre = form.name || u.perfil.nombre || "";
-    u.perfil.celular = form.celular || u.perfil.celular || "";
-    u.perfil.direccionentrega = form.address || u.perfil.direccionentrega || "";
-    return u;
-  }
-
-  async function fetchUserDataFromSupabase() {
-    // Importante: manda cookies para sesión
-    const res = await fetch("/api/auth/user", { credentials: "include" });
-    if (!res.ok) throw new Error(await res.text());
-    return await res.json();
-  }
-
-  // Endpoint opcional: si lo implementas, permite cargar perfil por correo
-  async function fetchUserByEmail(email) {
-    const res = await fetch(`/api/users/by-email?email=${encodeURIComponent(email)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data || null;
-  }
-
-  async function loadUser() {
-    try {
-      // 1) localStorage
-      const local = getLocalUserIfAny();
-      const localNorm = normalizeUserData(local);
-      if (localNorm) {
-        userData = localNorm;
-        isUserLoggedIn = true;
-        noUserWarning?.classList.add("hidden");
-        hydrateUserInputs(localNorm);
-
-        // refresca desde backend por si cambió
-        try {
-          const freshRaw = await fetchUserDataFromSupabase();
-          const fresh = normalizeUserData(freshRaw);
-          if (fresh) {
-            userData = fresh;
-            saveUserToLocal(fresh);
-            hydrateUserInputs(fresh);
-          }
-        } catch {}
-        return;
-      }
-
-      // 2) backend auth
-      const dataRaw = await fetchUserDataFromSupabase();
-      const data = normalizeUserData(dataRaw);
-      if (data) {
-        userData = data;
-        isUserLoggedIn = true;
-        noUserWarning?.classList.add("hidden");
-        hydrateUserInputs(data);
-        saveUserToLocal(data);
-        return;
-      }
-
-      // 3) no logueado
-      userData = null;
-      isUserLoggedIn = false;
-      noUserWarning?.classList.remove("hidden");
-    } catch (err) {
-      console.error("[confirm.js] Error cargando usuario:", err);
-      userData = null;
-      isUserLoggedIn = false;
-      noUserWarning?.classList.remove("hidden");
-    }
   }
 
   function computeSubtotal() {
@@ -263,6 +130,97 @@ document.addEventListener("DOMContentLoaded", () => {
     return "Normal";
   }
 
+  // ---- Hidratar inputs (acepta dos formatos) ----
+  function hydrateUserInputs(data) {
+    if (!data) return;
+
+    const correo = data.correo || data.email || "";
+    const perfil = data.perfil || {};
+
+    // Compat: localStorage (auth.js) guarda plano: nombre/celular/direccionentrega
+    const nombre = perfil.nombre || data.nombre || "";
+    const celular = perfil.celular || data.celular || "";
+    const direccion = perfil.direccionentrega || perfil.direccion || data.direccionentrega || data.direccion || "";
+
+    if (nameInput && nombre) nameInput.value = nombre;
+    if (emailInput && correo) emailInput.value = correo;
+
+    if (phoneInput && celular) {
+      const digits = String(celular).replace(/\D/g, "");
+      if (digits.length === 12 && digits.startsWith("57")) phoneInput.value = "+" + digits;
+      else if (digits.length === 10) phoneInput.value = "+57" + digits;
+      else if (String(celular).startsWith("+57")) phoneInput.value = String(celular);
+      else phoneInput.value = "+57" + digits;
+    }
+
+    if (addressInput && direccion) addressInput.value = direccion;
+  }
+
+  function getCorreoFromURL() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const c = params.get("correo");
+      return c ? c.trim() : "";
+    } catch {
+      return "";
+    }
+  }
+
+  async function fetchUserByCorreo(correo) {
+    const res = await fetch(`/api/auth/user?correo=${encodeURIComponent(correo)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data || null;
+  }
+
+  async function loadUser() {
+    try {
+      // 1) intenta localStorage
+      const local = getLocalUserIfAny();
+      const correoLocal = local?.correo ? String(local.correo).trim() : "";
+
+      // 2) URL param
+      const correoUrl = getCorreoFromURL();
+
+      // 3) si ya hay correo en local, úsalo
+      const correoBase = correoLocal || correoUrl || "";
+
+      if (correoBase) {
+        // muestra algo rápido con local, y luego refresca con BD
+        if (local?.correo && local.correo === correoBase) {
+          userData = local;
+          isUserLoggedIn = true;
+          noUserWarning?.classList.add("hidden");
+          hydrateUserInputs(local);
+        }
+
+        const fromDb = await fetchUserByCorreo(correoBase);
+        if (fromDb?.correo) {
+          userData = fromDb;
+          isUserLoggedIn = true;
+          noUserWarning?.classList.add("hidden");
+          hydrateUserInputs(fromDb);
+
+          // mezcla lo que hubiera local + perfil BD
+          const merged = { ...(local || {}), ...(fromDb || {}), perfil: fromDb.perfil || (local && local.perfil) || {} };
+          saveUserToLocal(merged);
+        }
+        return;
+      }
+
+      // 4) sin correo: no logueado (pero igual puede llenar manual)
+      userData = null;
+      isUserLoggedIn = false;
+      noUserWarning?.classList.remove("hidden");
+    } catch (err) {
+      console.error("[confirm.js] Error cargando usuario:", err);
+      userData = null;
+      isUserLoggedIn = false;
+      noUserWarning?.classList.remove("hidden");
+    }
+  }
+
+  // ---- WhatsApp message ----
   function buildOrderText(pedidoId = null) {
     const name = nameInput?.value?.trim() || "No especificado";
     const email = emailInput?.value?.trim() || "No especificado";
@@ -333,7 +291,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return header.join("\n");
   }
 
-  // ✅ Mensaje live, pero sin pisar edición manual
   function updateOrderTextLive(force = false) {
     if (!orderText) return;
     const userEdited = orderText.dataset.userEdited === "1";
@@ -341,7 +298,6 @@ document.addEventListener("DOMContentLoaded", () => {
     orderText.value = buildOrderText();
   }
 
-  // Si el usuario edita el textarea manualmente, respetar
   orderText?.addEventListener("input", () => {
     orderText.dataset.userEdited = "1";
   });
@@ -374,7 +330,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const addressOk = !!(addressInput && addressInput.value.trim());
 
     const cartOk = cartItems && cartItems.length > 0;
-    const pvOk = selectedPV && selectedPV.num_whatsapp;
+    const pvOk = !!(selectedPV && String(selectedPV.num_whatsapp || "").trim());
 
     const paymentOk = !!(paymentMethodSelect && paymentMethodSelect.value.trim());
 
@@ -431,7 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pvBarrioSelect.disabled = true;
   }
 
-  function onDeptChange({ keepSelection = false } = {}) {
+  function onDeptChange() {
     if (!pvDeptSelect || !pvMpioSelect || !pvBarrioSelect) return;
 
     const dept = pvDeptSelect.value;
@@ -439,7 +395,8 @@ document.addEventListener("DOMContentLoaded", () => {
     pvBarrioSelect.innerHTML = '<option value="">Barrio</option>';
     pvBarrioSelect.disabled = true;
 
-    if (!keepSelection) {
+    // 👇 NO borres selectedPV si estás sincronizando por geolocalización
+    if (!syncingPV) {
       selectedPV = null;
       updatePVCard();
     }
@@ -463,7 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pvMpioSelect.disabled = false;
   }
 
-  function onMpioChange({ keepSelection = false } = {}) {
+  function onMpioChange() {
     if (!pvDeptSelect || !pvMpioSelect || !pvBarrioSelect) return;
 
     const dept = pvDeptSelect.value;
@@ -471,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pvBarrioSelect.innerHTML = '<option value="">Barrio</option>';
 
-    if (!keepSelection) {
+    if (!syncingPV) {
       selectedPV = null;
       updatePVCard();
     }
@@ -583,21 +540,25 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          // 1) fija el PV
+          // 1) Set PV
           selectedPV = best;
+          updatePVCard();
 
-          // 2) sincroniza selects SIN borrar selectedPV
+          // 2) Sincroniza selects sin borrar selectedPV
+          syncingPV = true;
           if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
-            pvDeptSelect.value = best.Departamento;
-            onDeptChange({ keepSelection: true });
+            pvDeptSelect.value = best.Departamento || "";
+            onDeptChange();
 
-            pvMpioSelect.value = best.Municipio;
-            onMpioChange({ keepSelection: true });
+            pvMpioSelect.value = best.Municipio || "";
+            onMpioChange();
 
-            pvBarrioSelect.value = best.Barrio;
+            pvBarrioSelect.value = best.Barrio || "";
           }
+          syncingPV = false;
 
-          // 3) UI + mensaje
+          // 3) Reafirma selectedPV y refresca mensaje + validación
+          selectedPV = best;
           updatePVCard();
 
           if (orderText) orderText.dataset.userEdited = "0";
@@ -621,25 +582,42 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // ---- Guardar perfil (local) ----
+  // ---- Guardar perfil (local + opcional backend) ----
   async function saveProfile() {
-    const snap = getFormSnapshot();
+    const name = nameInput?.value?.trim() || "";
+    const email = emailInput?.value?.trim() || "";
+    const phone = phoneInput?.value?.trim() || "";
+    const address = addressInput?.value?.trim() || "";
 
-    if (!snap.name) return alert("Ingresa tu nombre.");
-    if (!validateEmail(snap.email)) return alert("Ingresa un correo válido.");
-    if (!validatePhone(snap.celular)) return alert("Tu celular debe ser +57 y 10 dígitos.");
-    if (!snap.address) return alert("Ingresa tu dirección.");
+    if (!name) return alert("Ingresa tu nombre.");
+    if (!validateEmail(email)) return alert("Ingresa un correo válido.");
+    if (!validatePhone(phone)) return alert("Tu celular debe ser +57 y 10 dígitos.");
+    if (!address) return alert("Ingresa tu dirección.");
 
-    userData = mergeProfileIntoUser(userData, snap);
-    saveUserToLocal(userData);
+    // Guarda en local para no pedirlo de nuevo
+    const merged = userData && typeof userData === "object" ? userData : {};
+    merged.correo = email;
+    merged.nombre = merged.nombre || name;
+    merged.celular = merged.celular || phone;
+    merged.direccionentrega = merged.direccionentrega || address;
+    merged.perfil = merged.perfil || {};
+    merged.perfil.nombre = name;
+    merged.perfil.celular = phone;
+    merged.perfil.direccionentrega = address;
 
-    if (saveProfileStatus) {
-      saveProfileStatus.classList.remove("hidden");
-      clearTimeout(saveProfileStatus._t);
-      saveProfileStatus._t = setTimeout(() => {
-        saveProfileStatus.classList.add("hidden");
-      }, 1800);
-    }
+    userData = merged;
+    saveUserToLocal(merged);
+
+    // ✅ Opcional: si creas endpoint PATCH /api/formulario (recomendado)
+    // try {
+    //   await fetch("/api/formulario", {
+    //     method: "PATCH",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ correo: email, nombre: name, celular: phone, direccionentrega: address }),
+    //   });
+    // } catch {}
+
+    setSaveStatus("✅ Datos actualizados");
 
     if (orderText) orderText.dataset.userEdited = "0";
     updateOrderTextLive(true);
@@ -697,9 +675,7 @@ document.addEventListener("DOMContentLoaded", () => {
             else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
             else if (data.pedido && data.pedido.id) pedidoId = data.pedido.id;
           }
-        } catch (jsonErr) {
-          console.warn("[confirm.js] No se pudo obtener id del pedido:", jsonErr);
-        }
+        } catch {}
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
@@ -721,9 +697,7 @@ document.addEventListener("DOMContentLoaded", () => {
             metodo_pago: paymentMethod,
           }),
         });
-      } catch (err) {
-        console.warn("[confirm.js] No se pudo actualizar pedido:", err);
-      }
+      } catch {}
     }
 
     // 4) Abrir WhatsApp
@@ -755,14 +729,13 @@ document.addEventListener("DOMContentLoaded", () => {
     updateOrderTextLive();
   }
 
-  // Auto-hidratar por email si es válido (endpoint opcional)
+  // Si escriben el email y existe en BD, autocompleta
   const tryHydrateByEmail = debounce(async () => {
     const emailVal = emailInput?.value?.trim() || "";
     if (!validateEmail(emailVal)) return;
 
     if (userData?.correo && userData.correo === emailVal) return;
 
-    // 1) localStorage coincide
     const local = getLocalUserIfAny();
     if (local?.correo === emailVal) {
       userData = local;
@@ -773,22 +746,16 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 2) backend por email (si existe endpoint)
-    try {
-      const found = await fetchUserByEmail(emailVal);
-      const normalized = normalizeUserData(found);
-      if (normalized) {
-        userData = normalized;
-        hydrateUserInputs(normalized);
-        saveUserToLocal(normalized);
-        if (orderText) orderText.dataset.userEdited = "0";
-        updateOrderTextLive(true);
-        validateForm();
-      }
-    } catch (e) {
-      console.warn("[confirm.js] fetchUserByEmail no disponible:", e);
+    const fromDb = await fetchUserByCorreo(emailVal);
+    if (fromDb?.correo) {
+      userData = fromDb;
+      hydrateUserInputs(fromDb);
+      saveUserToLocal(fromDb);
+      if (orderText) orderText.dataset.userEdited = "0";
+      updateOrderTextLive(true);
+      validateForm();
     }
-  }, 400);
+  }, 450);
 
   // ---- Eventos ----
   backButton?.addEventListener("click", () => {
@@ -796,7 +763,7 @@ document.addEventListener("DOMContentLoaded", () => {
     else window.location.href = "/cart";
   });
 
-  suggestPvBtn?.addEventListener("click", () => suggestNearestPV());
+  suggestPvBtn?.addEventListener("click", suggestNearestPV);
 
   refreshMessageBtn?.addEventListener("click", () => {
     if (orderText) orderText.dataset.userEdited = "0";
@@ -834,11 +801,9 @@ document.addEventListener("DOMContentLoaded", () => {
     updateOrderTextLive();
   });
 
-  pvBarrioSelect?.addEventListener("change", () => {
-    onBarrioChange();
-  });
+  pvBarrioSelect?.addEventListener("change", onBarrioChange);
 
-  sendWhatsappBtn?.addEventListener("click", () => sendOrder());
+  sendWhatsappBtn?.addEventListener("click", sendOrder);
 
   // ---- init ----
   async function init() {
@@ -864,7 +829,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
     }
 
-    // Mensaje inicial (autogenerado)
     if (orderText) orderText.dataset.userEdited = "0";
     updateOrderTextLive(true);
     validateForm();

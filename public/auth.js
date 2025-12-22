@@ -3,19 +3,90 @@
 function togglePasswordVisibility(button) {
   const inputName = button.dataset.target;
   if (!inputName) return;
+
   const form = button.closest("form");
   if (!form) return;
+
   const input = form.querySelector(`input[name="${inputName}"]`);
   if (!input) return;
 
-  if (input.type === "password") {
-    input.type = "text";
-    button.querySelector(".material-symbols-outlined").textContent =
-      "visibility";
+  const icon = button.querySelector(".material-symbols-outlined");
+
+  const isHidden = input.type === "password";
+  input.type = isHidden ? "text" : "password";
+
+  if (icon) icon.textContent = isHidden ? "visibility" : "visibility_off";
+  button.setAttribute("aria-pressed", String(isHidden));
+}
+
+function normalizeEmail(email) {
+  return (email || "").toString().trim().toLowerCase();
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+}
+
+function isStrongPassword(pw) {
+  // Ajusta a tu gusto: mínimo 8, letra y número
+  const s = (pw || "").toString();
+  if (s.length < 8) return false;
+  if (!/[A-Za-z]/.test(s)) return false;
+  if (!/\d/.test(s)) return false;
+  return true;
+}
+
+function setLoading(form, isLoading) {
+  if (!form) return;
+  const btn = form.querySelector('button[type="submit"]');
+  if (!btn) return;
+
+  btn.disabled = !!isLoading;
+  btn.dataset.loading = isLoading ? "1" : "0";
+
+  if (isLoading) {
+    btn.dataset.originalText = btn.textContent || "";
+    btn.textContent = "Procesando...";
   } else {
-    input.type = "password";
-    button.querySelector(".material-symbols-outlined").textContent =
-      "visibility_off";
+    if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+  }
+}
+
+function showMsg(el, msg) {
+  if (!el) return;
+  el.textContent = msg || "";
+  el.classList.remove("hidden");
+}
+
+function hideMsg(el) {
+  if (!el) return;
+  el.textContent = "";
+  el.classList.add("hidden");
+}
+
+async function postJSON(url, payload, { timeoutMs = 12000 } = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin", // importantísimo para cookies HttpOnly
+      body: JSON.stringify(payload),
+      signal: ctrl.signal,
+    });
+
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
+
+    return { ok: res.ok, status: res.status, data };
+  } finally {
+    clearTimeout(t);
   }
 }
 
@@ -30,50 +101,67 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginForm) {
     const errorEl = document.getElementById("login-error");
 
+    let busy = false;
+
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (errorEl) {
-        errorEl.classList.add("hidden");
-        errorEl.textContent = "";
-      }
+      if (busy) return;
+
+      hideMsg(errorEl);
 
       const formData = new FormData(loginForm);
-      const correo = formData.get("correo")?.toString().trim();
-      const contrasena = formData.get("contrasena")?.toString();
+      const correo = normalizeEmail(formData.get("correo")?.toString());
+      const contrasena = formData.get("contrasena")?.toString() || "";
+
+      if (!isValidEmail(correo)) {
+        return showMsg(errorEl, "Ingresa un correo válido.");
+      }
+      if (!contrasena) {
+        return showMsg(errorEl, "Ingresa tu contraseña.");
+      }
+
+      busy = true;
+      setLoading(loginForm, true);
 
       try {
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ correo, contrasena }),
+        const { ok, data } = await postJSON("/api/auth/login", {
+          correo,
+          contrasena,
         });
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "Error al iniciar sesión");
+        if (!ok) {
+          throw new Error(data?.message || "Error al iniciar sesión");
         }
 
-        const perfil = data.perfil || {};
-
+        // Guarda SOLO datos mínimos para UI (NO token, NO contraseña)
+        const perfil = data?.perfil || {};
         const userPayload = {
-          userId: data.userId,
-          rol: data.rol,
+          userId: data?.userId,
+          rol: data?.rol,
           correo,
-          nombre: perfil.nombre || "",
-          direccionentrega: perfil.direccionentrega || "",
-          celular: perfil.celular || null,
+          perfil: {
+            nombre: perfil?.nombre || "",
+            direccionentrega: perfil?.direccionentrega || "",
+            celular: perfil?.celular || null,
+            Departamento: perfil?.Departamento || "",
+            Municipio: perfil?.Municipio || "",
+            Barrio: perfil?.Barrio || "",
+          },
+          // útil para invalidar caché local si cambias estructura
+          v: 2,
         };
 
-        localStorage.setItem("burgerUser", JSON.stringify(userPayload));
+        try {
+          localStorage.setItem("burgerUser", JSON.stringify(userPayload));
+        } catch {}
 
         window.location.href = "/";
       } catch (err) {
         console.error("[Login] error:", err);
-        if (errorEl) {
-          errorEl.textContent =
-            err instanceof Error ? err.message : "Error al iniciar sesión";
-          errorEl.classList.remove("hidden");
-        }
+        showMsg(errorEl, err instanceof Error ? err.message : "Error al iniciar sesión");
+      } finally {
+        busy = false;
+        setLoading(loginForm, false);
       }
     });
   }
@@ -84,72 +172,61 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorEl = document.getElementById("register-error");
     const successEl = document.getElementById("register-success");
 
+    let busy = false;
+
     registerForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (errorEl) {
-        errorEl.classList.add("hidden");
-        errorEl.textContent = "";
-      }
-      if (successEl) {
-        successEl.classList.add("hidden");
-        successEl.textContent = "";
-      }
+      if (busy) return;
+
+      hideMsg(errorEl);
+      hideMsg(successEl);
 
       const formData = new FormData(registerForm);
 
+      const nombre = (formData.get("nombre") || "").toString().trim();
+      const correo = normalizeEmail(formData.get("correo")?.toString());
       const contrasena = formData.get("contrasena")?.toString() || "";
-      const confirmar = formData
-        .get("confirmarContrasena")
-        ?.toString() || "";
+      const confirmar = formData.get("confirmarContrasena")?.toString() || "";
 
-      if (contrasena !== confirmar) {
-        if (errorEl) {
-          errorEl.textContent = "Las contraseñas no coinciden.";
-          errorEl.classList.remove("hidden");
-        }
-        return;
+      if (!nombre) return showMsg(errorEl, "Ingresa tu nombre.");
+      if (!isValidEmail(correo)) return showMsg(errorEl, "Ingresa un correo válido.");
+      if (contrasena !== confirmar) return showMsg(errorEl, "Las contraseñas no coinciden.");
+      if (!isStrongPassword(contrasena)) {
+        return showMsg(
+          errorEl,
+          "La contraseña debe tener mínimo 8 caracteres e incluir letras y números."
+        );
       }
 
       const payload = {
-        nombre: formData.get("nombre")?.toString().trim(),
-        correo: formData.get("correo")?.toString().trim(),
-        tipodocumento: formData.get("tipodocumento")?.toString(),
-        documento: formData.get("documento")?.toString(),
-        celular: formData.get("celular")?.toString(),
-        direccionentrega: formData.get("direccionentrega")?.toString(),
-        Departamento: formData.get("Departamento")?.toString(),
-        Municipio: formData.get("Municipio")?.toString(),
-        Barrio: formData.get("Barrio")?.toString(),
+        nombre,
+        correo,
+        tipodocumento: formData.get("tipodocumento")?.toString() || "",
+        documento: formData.get("documento")?.toString() || "",
+        celular: formData.get("celular")?.toString() || "",
+        direccionentrega: formData.get("direccionentrega")?.toString() || "",
+        Departamento: formData.get("Departamento")?.toString() || "",
+        Municipio: formData.get("Municipio")?.toString() || "",
+        Barrio: formData.get("Barrio")?.toString() || "",
         contrasena,
       };
 
+      busy = true;
+      setLoading(registerForm, true);
+
       try {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const { ok, data } = await postJSON("/api/auth/register", payload);
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "Error al registrar usuario");
-        }
+        if (!ok) throw new Error(data?.message || "Error al registrar usuario");
 
-        if (successEl) {
-          successEl.textContent = "Registro exitoso. Redirigiendo…";
-          successEl.classList.remove("hidden");
-        }
-
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 1200);
+        showMsg(successEl, "Registro exitoso. Redirigiendo…");
+        setTimeout(() => (window.location.href = "/login"), 900);
       } catch (err) {
         console.error("[Register] error:", err);
-        if (errorEl) {
-          errorEl.textContent =
-            err instanceof Error ? err.message : "Error al registrar";
-          errorEl.classList.remove("hidden");
-        }
+        showMsg(errorEl, err instanceof Error ? err.message : "Error al registrar");
+      } finally {
+        busy = false;
+        setLoading(registerForm, false);
       }
     });
   }
@@ -160,44 +237,34 @@ document.addEventListener("DOMContentLoaded", () => {
     const errorEl = document.getElementById("recover-error");
     const successEl = document.getElementById("recover-success");
 
+    let busy = false;
+
     recoverForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (errorEl) {
-        errorEl.classList.add("hidden");
-        errorEl.textContent = "";
-      }
-      if (successEl) {
-        successEl.classList.add("hidden");
-        successEl.textContent = "";
-      }
+      if (busy) return;
+
+      hideMsg(errorEl);
+      hideMsg(successEl);
 
       const formData = new FormData(recoverForm);
-      const correo = formData.get("correo")?.toString().trim();
+      const correo = normalizeEmail(formData.get("correo")?.toString());
+
+      if (!isValidEmail(correo)) return showMsg(errorEl, "Ingresa un correo válido.");
+
+      busy = true;
+      setLoading(recoverForm, true);
 
       try {
-        const res = await fetch("/api/auth/recover", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ correo }),
-        });
+        const { ok, data } = await postJSON("/api/auth/recover", { correo });
+        if (!ok) throw new Error(data?.message || "Error al procesar solicitud");
 
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "Error al procesar solicitud");
-        }
-
-        if (successEl) {
-          successEl.textContent =
-            "Si el correo existe, te enviaremos instrucciones.";
-          successEl.classList.remove("hidden");
-        }
+        showMsg(successEl, "Si el correo existe, te enviaremos instrucciones.");
       } catch (err) {
         console.error("[Recover] error:", err);
-        if (errorEl) {
-          errorEl.textContent =
-            err instanceof Error ? err.message : "Error al procesar solicitud";
-          errorEl.classList.remove("hidden");
-        }
+        showMsg(errorEl, err instanceof Error ? err.message : "Error al procesar solicitud");
+      } finally {
+        busy = false;
+        setLoading(recoverForm, false);
       }
     });
   }
