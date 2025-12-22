@@ -163,7 +163,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
 
     if (userError) {
       console.error('[POST /api/auth/register] error usuarios:', userError);
-      if (userError.code === '23505') {
+      if ((userError as any).code === '23505') {
         return res.status(400).json({ message: 'El correo ya está registrado' });
       }
       return res.status(500).json({ message: 'Error al crear usuario' });
@@ -219,7 +219,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       return res.status(500).json({ message: 'Error al buscar usuario' });
     }
 
-    if (!user || user.Contrasena !== contrasena) {
+    if (!user || (user as any).Contrasena !== contrasena) {
       return res.status(401).json({ message: 'Credenciales inválidas' });
     }
 
@@ -236,10 +236,10 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     }
 
     res.json({
-      userId: user.id,
-      rol: user.Rol,
+      userId: (user as any).id,
+      rol: (user as any).Rol,
       perfil: form || null,
-      correo: user.correo,
+      correo: (user as any).correo,
     });
   } catch (err) {
     console.error('[POST /api/auth/login] error inesperado:', err);
@@ -266,12 +266,7 @@ app.post('/api/auth/recover', async (req: Request, res: Response) => {
       return res.status(500).json({ message: 'Error en el servidor' });
     }
 
-    console.log(
-      '[Recover] Solicitud de recuperación para:',
-      correo,
-      'existe?',
-      !!user
-    );
+    console.log('[Recover] Solicitud de recuperación para:', correo, 'existe?', !!user);
 
     return res.json({
       message: 'Si el correo existe, te enviaremos instrucciones.',
@@ -304,8 +299,6 @@ app.get('/api/puntos-venta', async (_req: Request, res: Response) => {
 });
 
 // -------------------- API LANDING (HERO / ABOUT / INSTAGRAM) --------------------
-
-// HERO (carrusel principal)
 app.get('/api/landing/hero', async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
@@ -325,13 +318,10 @@ app.get('/api/landing/hero', async (_req: Request, res: Response) => {
     return res.json(data || []);
   } catch (err) {
     console.error('[GET /api/landing/hero] error inesperado:', err);
-    return res
-      .status(500)
-      .json({ message: 'Error inesperado en el servidor (hero)' });
+    return res.status(500).json({ message: 'Error inesperado en el servidor (hero)' });
   }
 });
 
-// ABOUT (sección ¿Quiénes somos?)
 app.get('/api/landing/about', async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
@@ -354,13 +344,10 @@ app.get('/api/landing/about', async (_req: Request, res: Response) => {
     return res.json(data || null);
   } catch (err) {
     console.error('[GET /api/landing/about] error inesperado:', err);
-    return res
-      .status(500)
-      .json({ message: 'Error inesperado en el servidor (about)' });
+    return res.status(500).json({ message: 'Error inesperado en el servidor (about)' });
   }
 });
 
-// INSTAGRAM / STORIES
 app.get('/api/landing/instagram', async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
@@ -380,9 +367,7 @@ app.get('/api/landing/instagram', async (_req: Request, res: Response) => {
     return res.json(data || []);
   } catch (err) {
     console.error('[GET /api/landing/instagram] error inesperado:', err);
-    return res.status(500).json({
-      message: 'Error inesperado en el servidor (instagram)',
-    });
+    return res.status(500).json({ message: 'Error inesperado en el servidor (instagram)' });
   }
 });
 
@@ -394,9 +379,7 @@ app.get('/api/pedidos', async (req: Request, res: Response) => {
     const correo = (req.query.correo as string) || '';
 
     if (!correo) {
-      return res
-        .status(400)
-        .json({ message: 'El parámetro "correo" es obligatorio' });
+      return res.status(400).json({ message: 'El parámetro "correo" es obligatorio' });
     }
 
     console.log('[GET /api/pedidos] Buscando pedidos para correo:', correo);
@@ -426,7 +409,7 @@ app.get('/api/pedidos', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/pedidos
+// ✅ POST /api/pedidos (ahora acepta metodo_pago y permite resumen_pedido = "")
 app.post('/api/pedidos', async (req: Request, res: Response) => {
   try {
     const {
@@ -435,11 +418,15 @@ app.post('/api/pedidos', async (req: Request, res: Response) => {
       direccion_cliente,
       celular_cliente,
       puntoventa,
+      metodo_pago, // ✅ NUEVO
     } = req.body;
 
-    if (!nombre_cliente || !resumen_pedido || !direccion_cliente || !celular_cliente) {
+    // ✅ OJO: resumen_pedido puede ser "" (lo insertas vacío y luego haces PATCH)
+    const resumenMissing = resumen_pedido === undefined || resumen_pedido === null;
+
+    if (!nombre_cliente || resumenMissing || !direccion_cliente || !celular_cliente) {
       return res.status(400).json({
-        message: 'Correo, resumen, dirección y celular son obligatorios',
+        message: 'Correo, resumen (puede ser vacío), dirección y celular son obligatorios',
       });
     }
 
@@ -448,11 +435,12 @@ app.post('/api/pedidos', async (req: Request, res: Response) => {
       .insert([
         {
           nombre_cliente,
-          resumen_pedido,
+          resumen_pedido: String(resumen_pedido ?? ''),
           direccion_cliente,
           celular_cliente,
           estado: 'Recibido',
           puntoventa: puntoventa || '',
+          metodo_pago: metodo_pago || null, // ✅ guarda el método
         },
       ])
       .select('id')
@@ -467,6 +455,47 @@ app.post('/api/pedidos', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[POST /api/pedidos] error inesperado:', err);
     res.status(500).json({ message: 'Error inesperado en el servidor' });
+  }
+});
+
+// ✅ PATCH /api/pedidos/:id (para actualizar resumen_pedido y/o metodo_pago)
+app.patch('/api/pedidos/:id', async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || Number.isNaN(id)) {
+      return res.status(400).json({ message: 'ID inválido' });
+    }
+
+    const { resumen_pedido, metodo_pago } = req.body;
+
+    const updates: any = {};
+    if (resumen_pedido !== undefined) updates.resumen_pedido = String(resumen_pedido);
+    if (metodo_pago !== undefined) updates.metodo_pago = metodo_pago ? String(metodo_pago) : null;
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No hay campos para actualizar' });
+    }
+
+    const { data, error } = await supabase
+      .from('pedidos')
+      .update(updates)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      console.error('[PATCH /api/pedidos/:id] error supabase:', error);
+      return res.status(500).json({ message: 'Error al actualizar pedido' });
+    }
+
+    if (!data) {
+      return res.status(404).json({ message: 'Pedido no encontrado' });
+    }
+
+    return res.json({ message: 'Pedido actualizado', id: data.id });
+  } catch (err) {
+    console.error('[PATCH /api/pedidos/:id] error inesperado:', err);
+    return res.status(500).json({ message: 'Error inesperado en el servidor' });
   }
 });
 
@@ -500,7 +529,7 @@ app.get('/api/auth/user', async (req: Request, res: Response) => {
       .select(
         'nombre, celular, direccionentrega, "Departamento", "Municipio", "Barrio"'
       )
-      .eq('correo', user.correo)
+      .eq('correo', (user as any).correo)
       .maybeSingle();
 
     if (formError) {
@@ -508,10 +537,10 @@ app.get('/api/auth/user', async (req: Request, res: Response) => {
     }
 
     res.json({
-      userId: user.id,
-      rol: user.Rol,
+      userId: (user as any).id,
+      rol: (user as any).Rol,
       perfil: form || null,
-      correo: user.correo,
+      correo: (user as any).correo,
     });
   } catch (err) {
     console.error('[GET /api/auth/user] error inesperado:', err);

@@ -3,44 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Detalle de producto</title>
+    <title>Tierra Querida - Detalle de Producto</title>
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#ec1313",
-              "background-light": "#f8f6f6",
-              "background-dark": "#221010",
-              "surface-light": "#ffffff",
-              "surface-dark": "#120808",
-              "text-light-primary": "#1A1A1A",
-              "text-dark-primary": "#f8f6f6",
-              "text-light-secondary": "#6b7280",
-              "text-dark-secondary": "#9ca3af",
-              "accent-yellow": "#FFC93C",
-            },
-            fontFamily: {
-              display: ["Plus Jakarta Sans", "sans-serif"],
-            },
-            borderRadius: {
-              DEFAULT: "0.25rem",
-              lg: "0.5rem",
-              xl: "0.75rem",
-              full: "9999px",
-            },
-          },
-        },
-      };
+    <!-- Forzar dark -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+    <script>
+      (function () {
+        const root = document.documentElement;
+        const forceDark = () => {
+          if (!root.classList.contains("dark")) root.classList.add("dark");
+        };
+        forceDark();
+        const obs = new MutationObserver(forceDark);
+        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+      })();
     </script>
 
-    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
     <link
@@ -48,22 +31,57 @@
       rel="stylesheet"
     />
 
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#e02424",
+              "background-dark": "#171111",
+              "surface-dark": "#261c1c",
+              "surface-dark-hover": "#3a2a2a",
+              "border-dark": "#382929",
+            },
+            fontFamily: {
+              display: ["Plus Jakarta Sans", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              lg: "1.5rem",
+              xl: "2rem",
+              "2xl": "2.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
     <style>
-      .material-symbols-outlined {
-        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      html {
+        scroll-behavior: smooth;
       }
       body {
         min-height: max(884px, 100dvh);
       }
     </style>
 
-    <!-- Tu CSS general -->
     <link rel="stylesheet" href="/styles.css" />
   </head>
+
   <body
-    class="font-display bg-background-light dark:bg-background-dark text-text-light-primary dark:text-text-dark-primary"
+    class="bg-background-dark text-white font-display overflow-x-hidden selection:bg-primary selection:text-white"
   >
-    <!-- LOADER DE LA PÁGINA DE PRODUCTO -->
+    <!-- LOADER -->
     <div
       id="product-page-loader"
       class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300"
@@ -82,309 +100,523 @@
       </div>
     </div>
 
-    <div class="relative min-h-screen w-full flex flex-col pb-36">
-      <!-- Top App Bar -->
-      <div
-        class="sticky top-0 z-10 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4 pb-2 justify-between"
+    <div class="relative flex min-h-screen w-full flex-col pb-28">
+      <!-- HEADER (navbar igual al de arriba) -->
+      <header
+        class="sticky top-0 z-50 w-full backdrop-blur-md bg-black/60 border-b border-white/10"
       >
-        <button
-          id="back-button"
-          class="text-text-light-primary dark:text-text-dark-primary flex size-10 shrink-0 items-center justify-center rounded-full bg-black/10 dark:bg-white/5"
+        <div
+          class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between gap-4"
         >
-          <span class="material-symbols-outlined text-3xl">arrow_back</span>
-        </button>
-        <h2
-          class="text-text-light-primary dark:text-text-dark-primary text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center"
-        >
-          Detalle del producto
-        </h2>
-        <div class="flex size-10 shrink-0 items-center"></div>
-      </div>
+          <!-- Marca -->
+          <div class="flex items-center gap-3">
+            <a
+              class="flex items-center gap-3 hover:opacity-90 transition-opacity"
+              href="/"
+            >
+              <div
+                class="size-10 bg-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-red-900/30"
+              >
+                <span class="material-symbols-outlined">lunch_dining</span>
+              </div>
+              <span class="text-lg sm:text-xl font-extrabold tracking-tight">
+                Tierra Querida
+              </span>
+            </a>
+          </div>
 
-      <!-- BLOQUE PRINCIPAL: imagen + info lado a lado en pantallas grandes -->
-      <section class="px-4 pt-2">
-        <div class="product-detail-layout max-w-5xl mx-auto">
+          <!-- Links (desktop) -->
+          <nav class="hidden md:flex items-center gap-10">
+            <a
+              class="text-sm font-bold text-white/80 hover:text-white transition-colors"
+              href="/#products-section"
+              >Menú</a
+            >
+            <a
+              class="text-sm font-bold text-white/80 hover:text-white transition-colors"
+              href="/#about-section"
+              >Nosotros</a
+            >
+            <a
+              class="text-sm font-bold text-white/80 hover:text-white transition-colors"
+              href="/#contact-section"
+              >Contacto</a
+            >
+          </nav>
+
+          <!-- Acciones -->
+          <div class="flex items-center gap-4">
+            <!-- Volver (solo móvil, para no romper product.js) -->
+            <button
+              id="back-button"
+              class="md:hidden p-2 rounded-full hover:bg-white/10 transition-colors"
+              aria-label="Volver"
+              type="button"
+            >
+              <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+
+            <!-- Cuenta -->
+            <a
+              href="/login"
+              class="p-2 rounded-full hover:bg-white/10 transition-colors"
+              aria-label="Cuenta"
+            >
+              <span class="material-symbols-outlined">person</span>
+            </a>
+
+            <!-- Carrito -->
+            <button
+              id="cart-icon"
+              class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-5 h-10 rounded-full transition-all shadow-lg shadow-red-900/25"
+              type="button"
+              aria-label="Carrito"
+            >
+              <span class="material-symbols-outlined text-[20px]"
+                >shopping_bag</span
+              >
+
+              <!-- Conteo (lo mantenemos por tu JS, pero oculto para que no duplique) -->
+              <span id="cart-count" class="hidden">0</span>
+
+              <!-- Badge visible (único contador en UI) -->
+              <span
+                class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-red-800/35 border border-white/15 text-xs font-extrabold"
+                aria-label="Cantidad en carrito"
+              >
+                <span id="cart-count-badge">0</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main
+        class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-8 flex flex-col gap-10"
+      >
+        <!-- Breadcrumb -->
+        <nav class="flex items-center text-sm text-white/50 gap-2">
+          <a class="hover:text-primary transition-colors" href="/">Inicio</a>
+          <span class="material-symbols-outlined text-[14px]"
+            >chevron_right</span
+          >
+          <a
+            id="breadcrumb-category"
+            class="hover:text-primary transition-colors"
+            href="/#products-section"
+            >Menú</a
+          >
+          <span class="material-symbols-outlined text-[14px]"
+            >chevron_right</span
+          >
+          <span id="breadcrumb-product" class="text-white font-medium"
+            >Cargando...</span
+          >
+        </nav>
+
+        <!-- Layout principal -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           <!-- Imagen -->
-          <div class="product-detail-image-wrapper">
+          <div class="lg:col-span-7 relative">
             <div
-              id="product-image"
-              class="product-detail-image cursor-pointer"
-              data-alt="Imagen del producto"
-              style="background-image: url('');"
-            ></div>
+              class="sticky top-28 w-full rounded-[2.5rem] overflow-hidden aspect-square lg:aspect-[4/3] group shadow-2xl shadow-black/50 border border-white/5"
+            >
+              <div
+                id="product-image"
+                class="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105 cursor-pointer"
+                data-alt="Imagen del producto"
+                style="background-image: url('')"
+              ></div>
+
+              <div
+                class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10 pointer-events-none"
+              ></div>
+
+              <!-- Badges opcionales (si luego quieres poner tag) -->
+              <div id="product-badges" class="absolute top-6 left-6 flex gap-2">
+                <!-- badges por JS si quieres -->
+              </div>
+            </div>
           </div>
 
-          <!-- Info: título, descripción, precio -->
-          <div class="product-detail-info">
-            <h1
-              id="product-name"
-              class="tracking-tight text-[24px] md:text-[28px] lg:text-[32px] font-bold leading-tight text-left"
-            >
-              Cargando...
-            </h1>
-            <p
-              id="product-description"
-              class="text-text-light-secondary dark:text-text-dark-secondary text-sm md:text-base font-normal leading-normal pt-2"
-            >
-              &nbsp;
-            </p>
-            <p
-              id="product-base-price"
-              class="mt-3 text-lg md:text-xl lg:text-2xl font-bold text-primary"
-            >
-              &nbsp;
-            </p>
+          <!-- Info / Personalización -->
+          <div class="lg:col-span-5 flex flex-col gap-8">
+            <!-- Título/desc/precio -->
+            <div class="space-y-4 border-b border-white/10 pb-6">
+              <span
+                id="product-topline"
+                class="text-primary font-extrabold tracking-[0.2em] text-xs uppercase"
+              >
+                Nuestra selección
+              </span>
+
+              <h1
+                id="product-name"
+                class="text-4xl lg:text-5xl font-extrabold leading-[1.1] text-white"
+              >
+                Cargando...
+              </h1>
+
+              <p
+                id="product-description"
+                class="text-white/70 text-lg leading-relaxed font-medium"
+              >
+                &nbsp;
+              </p>
+
+              <div class="flex items-center justify-between pt-2">
+                <span
+                  id="product-price"
+                  class="text-3xl font-extrabold text-white tracking-tight"
+                  >$0</span
+                >
+                <!-- ✅ SIN calificaciones -->
+              </div>
+
+              <!-- (mantengo este id si tu JS lo busca, pero oculto) -->
+              <p id="product-base-price" class="hidden"></p>
+            </div>
+
+            <!-- Personalización (acordeones estilo nuevo) -->
+            <div class="flex flex-col gap-4">
+              <!-- Término -->
+              <div
+                id="cooking-section"
+                class="bg-surface-dark hover:bg-surface-dark-hover rounded-2xl border border-white/5 overflow-hidden transition-all duration-300"
+              >
+                <button
+                  type="button"
+                  class="accordion-header w-full flex items-center justify-between p-5 cursor-pointer select-none"
+                  data-target="#cooking-panel"
+                >
+                  <div class="flex items-center gap-3">
+                    <span
+                      class="size-8 rounded-full bg-white/5 flex items-center justify-center text-primary"
+                    >
+                      <span class="material-symbols-outlined text-[20px]"
+                        >skillet</span
+                      >
+                    </span>
+                    <div class="text-left">
+                      <h3 class="font-extrabold text-white text-sm">
+                        Término de la carne
+                      </h3>
+                      <p class="text-xs text-white/40 font-semibold">
+                        Selecciona tu preferencia
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    class="material-symbols-outlined text-white/50 transition-transform"
+                    data-arrow="cooking"
+                    >expand_more</span
+                  >
+                </button>
+
+                <div
+                  id="cooking-panel"
+                  class="accordion-panel px-5 pb-5 pt-0 space-y-2"
+                >
+                  <p class="text-xs text-white/40 font-semibold mb-2">
+                    Aplica para hamburguesas y combos.
+                  </p>
+
+                  <label
+                    class="flex items-center justify-between p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:border-primary/50 cursor-pointer transition-colors"
+                  >
+                    <span class="text-sm text-white/70 hover:text-white"
+                      >Normal</span
+                    >
+                    <input
+                      type="radio"
+                      name="cooking"
+                      value="normal"
+                      class="text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                      checked
+                    />
+                  </label>
+
+                  <label
+                    class="flex items-center justify-between p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:border-primary/50 cursor-pointer transition-colors"
+                  >
+                    <span class="text-sm text-white/70 hover:text-white"
+                      >Medio hecha</span
+                    >
+                    <input
+                      type="radio"
+                      name="cooking"
+                      value="medio"
+                      class="text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                  </label>
+
+                  <label
+                    class="flex items-center justify-between p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:border-primary/50 cursor-pointer transition-colors"
+                  >
+                    <span class="text-sm text-white/70 hover:text-white"
+                      >Bien cocida</span
+                    >
+                    <input
+                      type="radio"
+                      name="cooking"
+                      value="bien_cocida"
+                      class="text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <!-- Adiciones -->
+              <div
+                class="bg-surface-dark hover:bg-surface-dark-hover rounded-2xl border border-white/5 overflow-hidden transition-all duration-300"
+              >
+                <button
+                  type="button"
+                  class="accordion-header w-full flex items-center justify-between p-5 cursor-pointer select-none"
+                  data-target="#extras-panel"
+                >
+                  <div class="flex items-center gap-3">
+                    <span
+                      class="size-8 rounded-full bg-white/5 flex items-center justify-center text-primary"
+                    >
+                      <span class="material-symbols-outlined text-[20px]"
+                        >add_circle</span
+                      >
+                    </span>
+                    <div class="text-left">
+                      <h3 class="font-extrabold text-white text-sm">
+                        Adiciones
+                      </h3>
+                      <p class="text-xs text-white/40 font-semibold">
+                        Personaliza tu pedido
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    class="material-symbols-outlined text-white/50 transition-transform"
+                    data-arrow="extras"
+                    >expand_more</span
+                  >
+                </button>
+
+                <div
+                  id="extras-panel"
+                  class="accordion-panel px-5 pb-5 pt-0 space-y-3"
+                >
+                  <p id="extras-empty" class="text-sm text-white/50">
+                    Cargando adiciones...
+                  </p>
+                  <div id="extras-container" class="flex flex-col gap-2"></div>
+                </div>
+              </div>
+
+              <!-- Modificar -->
+              <div
+                id="modify-section"
+                class="bg-surface-dark hover:bg-surface-dark-hover rounded-2xl border border-white/5 overflow-hidden transition-all duration-300"
+              >
+                <button
+                  type="button"
+                  class="accordion-header w-full flex items-center justify-between p-5 cursor-pointer select-none"
+                  data-target="#modify-panel"
+                >
+                  <div class="flex items-center gap-3">
+                    <span
+                      class="size-8 rounded-full bg-white/5 flex items-center justify-center text-primary"
+                    >
+                      <span class="material-symbols-outlined text-[20px]"
+                        >block</span
+                      >
+                    </span>
+                    <div class="text-left">
+                      <h3 class="font-extrabold text-white text-sm">
+                        Modificar ingredientes
+                      </h3>
+                      <p class="text-xs text-white/40 font-semibold">
+                        Ajustes a tu gusto
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    class="material-symbols-outlined text-white/50 transition-transform"
+                    data-arrow="modify"
+                    >expand_more</span
+                  >
+                </button>
+
+                <div
+                  id="modify-panel"
+                  class="accordion-panel px-5 pb-5 pt-0 space-y-2"
+                >
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-tomate"
+                  >
+                    <input
+                      id="no-tomate"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin tomate</span>
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-pepinillos"
+                  >
+                    <input
+                      id="no-pepinillos"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin pepinillos</span>
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-lechuga"
+                  >
+                    <input
+                      id="no-lechuga"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin lechuga</span>
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-queso-americano"
+                  >
+                    <input
+                      id="no-queso-americano"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70"
+                      >Sin queso americano</span
+                    >
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-salsa-ajo"
+                  >
+                    <input
+                      id="no-salsa-ajo"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin salsa de ajo</span>
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-tocineta"
+                  >
+                    <input
+                      id="no-tocineta"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin tocineta</span>
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-salsa-pan"
+                  >
+                    <input
+                      id="no-salsa-pan"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin salsa de pan</span>
+                  </label>
+
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:bg-red-900/10 cursor-pointer transition-colors"
+                    for="no-queso-cheddar"
+                  >
+                    <input
+                      id="no-queso-cheddar"
+                      type="checkbox"
+                      class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
+                    />
+                    <span class="text-sm text-white/70">Sin queso cheddar</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- (espacio para que el sticky bottom no tape) -->
+            <div class="h-4"></div>
           </div>
         </div>
-      </section>
 
-      <!-- Secciones de personalización (debajo, centradas y con ancho limitado) -->
-      <section class="flex flex-col gap-4 px-4 max-w-5xl mx-auto w-full mt-4">
-        <!-- Adiciones -->
-        <div
-          class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden"
-        >
-          <button
-            type="button"
-            class="accordion-header w-full flex justify-between items-center p-4"
-            data-target="#extras-panel"
-          >
-            <h3 class="text-lg font-bold">Adiciones</h3>
-            <span
-              class="material-symbols-outlined transition-transform"
-              data-arrow="extras"
-              >expand_more</span
-            >
-          </button>
+        <!-- Sugerencias -->
+        <section class="mt-8 pt-10 border-t border-white/5">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-3xl font-extrabold text-white mb-1">
+                También te puede interesar
+              </h3>
+              <p class="text-white/50">Opciones que combinan perfecto</p>
+            </div>
+
+            <div class="flex gap-2">
+              <button
+                id="related-prev"
+                class="size-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                type="button"
+                aria-label="Anterior"
+              >
+                <span class="material-symbols-outlined">arrow_back</span>
+              </button>
+              <button
+                id="related-next"
+                class="size-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                type="button"
+                aria-label="Siguiente"
+              >
+                <span class="material-symbols-outlined">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+
           <div
-            id="extras-panel"
-            class="accordion-panel px-4 pb-4 flex flex-col gap-4"
+            id="related-viewport"
+            class="flex gap-5 overflow-x-auto no-scrollbar pb-2"
           >
-            <p
-              id="extras-empty"
-              class="text-sm text-text-light-secondary dark:text-text-dark-secondary"
-            >
-              Cargando adiciones...
-            </p>
-            <div id="extras-container" class="flex flex-col gap-4"></div>
+            <!-- Cards por JS -->
           </div>
-        </div>
+        </section>
+      </main>
 
-        <!-- Modificar hamburguesa / combo -->
-        <div
-          id="modify-section"
-          class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden"
-        >
-          <button
-            type="button"
-            class="accordion-header w-full flex justify-between items-center p-4"
-            data-target="#modify-panel"
-          >
-            <h3 class="text-lg font-bold">Modificar hamburguesa / combo</h3>
-            <span
-              class="material-symbols-outlined transition-transform"
-              data-arrow="modify"
-              >expand_more</span
-            >
-          </button>
-          <div
-            id="modify-panel"
-            class="accordion-panel px-4 pb-4 flex flex-col gap-3"
-          >
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-tomate"
-              >
-                <input
-                  id="no-tomate"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin tomate</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-pepinillos"
-              >
-                <input
-                  id="no-pepinillos"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin pepinillos</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-lechuga"
-              >
-                <input
-                  id="no-lechuga"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin lechuga</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-queso-americano"
-              >
-                <input
-                  id="no-queso-americano"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin queso americano</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-salsa-ajo"
-              >
-                <input
-                  id="no-salsa-ajo"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin salsa de ajo</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-tocineta"
-              >
-                <input
-                  id="no-tocineta"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin tocineta</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-salsa-pan"
-              >
-                <input
-                  id="no-salsa-pan"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin salsa de pan</span>
-              </label>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <label
-                class="flex items-center space-x-3 flex-1 cursor-pointer"
-                for="no-queso-cheddar"
-              >
-                <input
-                  id="no-queso-cheddar"
-                  type="checkbox"
-                  class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
-                />
-                <span>Sin queso cheddar</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- Término de la carne -->
-        <div
-          id="cooking-section"
-          class="bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden"
-        >
-          <button
-            type="button"
-            class="accordion-header w-full flex justify-between items-center p-4"
-            data-target="#cooking-panel"
-          >
-            <h3 class="text-lg font-bold">Término de la carne</h3>
-            <span
-              class="material-symbols-outlined transition-transform"
-              data-arrow="cooking"
-              >expand_more</span
-            >
-          </button>
-          <div
-            id="cooking-panel"
-            class="accordion-panel px-4 pb-4 flex flex-col gap-2"
-          >
-            <p
-              class="text-xs text-text-light-secondary dark:text-text-dark-secondary mb-2"
-            >
-              Aplica para hamburguesas y combos.
-            </p>
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="radio"
-                name="cooking"
-                value="normal"
-                class="h-4 w-4 border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
-                checked
-              />
-              <span>Normal</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="radio"
-                name="cooking"
-                value="medio"
-                class="h-4 w-4 border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
-              />
-              <span>Medio hecha</span>
-            </label>
-            <label class="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="radio"
-                name="cooking"
-                value="bien_cocida"
-                class="h-4 w-4 border-gray-300 dark:border-gray-600 text-primary focus:ring-primary"
-              />
-              <span>Bien cocida</span>
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <!-- Barra flotante con cantidad y botón -->
+      <!-- Barra flotante (cantidad + agregar) -->
       <div
-        class="fixed bottom-0 left-0 right-0 bg-surface-light dark:bg-surface-dark p-4 border-t border-gray-200 dark:border-gray-800"
+        class="fixed bottom-0 left-0 right-0 bg-[#171111]/90 backdrop-blur-md border-t border-border-dark p-4 z-40"
       >
-        <div class="max-w-md mx-auto flex items-center gap-4">
+        <div class="max-w-[640px] mx-auto flex items-center gap-4">
           <div
-            class="flex items-center gap-3 bg-background-light dark:bg-background-dark px-3 py-2 rounded-full"
+            class="flex items-center bg-surface-dark rounded-full p-1 border border-white/10 h-14"
           >
             <button
               id="qty-decrease"
-              class="flex items-center justify-center size-8 rounded-full text-text-light-primary dark:text-text-dark-primary text-2xl font-bold"
+              class="size-12 rounded-full flex items-center justify-center hover:bg-white/10 text-white transition-colors"
+              type="button"
+              aria-label="Disminuir"
             >
               <span class="material-symbols-outlined">remove</span>
             </button>
-            <span
-              id="qty-value"
-              class="text-lg font-bold w-4 text-center text-text-light-primary dark:text-text-dark-primary"
+            <span id="qty-value" class="w-12 text-center font-extrabold text-lg"
               >1</span
             >
             <button
               id="qty-increase"
-              class="flex items-center justify-center size-8 rounded-full bg-accent-yellow text-text-light-primary text-2xl font-bold"
+              class="size-12 rounded-full flex items-center justify-center hover:bg-white/10 text-white transition-colors"
+              type="button"
+              aria-label="Aumentar"
             >
               <span class="material-symbols-outlined">add</span>
             </button>
@@ -392,37 +624,45 @@
 
           <button
             id="add-to-cart-btn"
-            class="flex-1 bg-primary text-white font-bold py-3 rounded-full flex flex-col items-center justify-center text-sm md:text-base"
+            class="flex-1 h-14 bg-primary hover:bg-red-600 text-white font-extrabold rounded-full shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.99] flex flex-col items-center justify-center"
+            type="button"
           >
-            <span id="add-to-cart-label">Agregar - $0</span>
+            <span id="add-to-cart-label" class="text-sm sm:text-base"
+              >Agregar - $0</span
+            >
             <span
               id="add-to-cart-sub"
-              class="text-xs text-white/80 font-normal mt-0.5"
+              class="text-xs text-white/80 font-medium mt-0.5"
             ></span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Modal imagen -->
     <div
       id="image-modal"
-      class="fixed z-50 inset-0 flex items-center justify-center hidden"
+      class="fixed z-50 inset-0 hidden items-center justify-center"
     >
+      <div id="modal-backdrop" class="fixed inset-0 bg-black/80"></div>
+
       <div
-        class="fixed inset-0 bg-black bg-opacity-75"
-        id="modal-backdrop"
-      ></div>
-      <div
-        class="relative bg-white dark:bg-background-dark p-4 rounded-lg shadow-lg max-w-4xl w-full max-h-full overflow-auto"
+        class="relative bg-[#120a0a] p-4 rounded-2xl shadow-2xl border border-white/10 max-w-4xl w-[92vw] max-h-[90vh] overflow-auto"
       >
         <button
           id="close-modal"
-          class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-500"
+          class="absolute top-3 right-3 text-white/70 hover:text-primary transition-colors"
+          type="button"
+          aria-label="Cerrar"
         >
           <span class="material-symbols-outlined">close</span>
         </button>
-        <img id="modal-image" src="" alt="Imagen ampliada" class="w-full h-auto" />
+        <img
+          id="modal-image"
+          src=""
+          alt="Imagen ampliada"
+          class="w-full h-auto rounded-xl"
+        />
       </div>
     </div>
 

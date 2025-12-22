@@ -699,3 +699,236 @@ body {
   height: 500px;
   width: 100%;
 }
+
+/* Dark mode para dropdown (select.dropdown) */
+.dark select.dropdown {
+  background-color: #1f2937;
+  color: #e5e7eb;
+  border-color: #374151;
+}
+
+.dark select.dropdown option {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+/* ===========================
+   FIX: HERO imágenes gigantes (móvil)
+   =========================== */
+
+.hero-slide-image {
+  min-height: 240px; /* reserva alto en móvil para evitar cambios */
+}
+
+@media (min-width: 768px) {
+  .hero-slide-image {
+    min-height: 0;
+  }
+}
+
+.hero-slide-image img {
+  height: auto;        /* ✅ evita estiramiento */
+  max-height: 260px;   /* ✅ limita en móvil */
+}
+
+@media (min-width: 768px) {
+  .hero-slide-image img {
+    max-height: 320px;
+  }
+}
+
+/* ===========================
+   Fluidez: swap productos sin “saltos”
+   =========================== */
+
+.products-swap {
+  transition: opacity 180ms ease, transform 180ms ease;
+  will-change: opacity, transform;
+}
+
+.products-swap--loading {
+  opacity: 0.55;
+  transform: translateY(4px);
+}
+
+/* ===========================
+   Accesibilidad / rendimiento
+   =========================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .products-swap,
+  .hero-slide,
+  .hero-slide-image img,
+  .group {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+/* Suaviza la actualización del carrusel sin afectar rendimiento */
+#products-container {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+#products-container.is-updating {
+  opacity: 0.55;
+  transform: translateY(2px);
+}
+
+/* ===========================
+   MENÚ LATERAL / OVERLAY
+   =========================== */
+
+.menu {
+  position: fixed;
+  top: 72px; /* header aprox */
+  right: -260px;
+  width: 260px;
+  height: calc(100% - 72px);
+  background-color: #111827;
+  color: white;
+  transition: right 0.3s ease;
+  z-index: 1000;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.menu.open {
+  right: 0;
+}
+
+.menu ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 3rem;
+}
+
+.menu ul li {
+  padding: 15px;
+  border-bottom: 1px solid #374151;
+}
+
+.menu ul li a,
+.menu ul li button {
+  color: white;
+  text-decoration: none;
+  font-size: 0.95rem;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.close-menu {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
+  z-index: 999;
+}
+
+.overlay.active {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .menu {
+    width: 25vw;
+    max-width: 400px;
+    right: -25vw;
+  }
+  .menu.open {
+    right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .menu {
+    width: 100%;
+    right: -100%;
+  }
+  .menu.open {
+    right: 0;
+  }
+  .menu ul li {
+    text-align: center;
+  }
+}
+
+/* ===========================
+   MODAL (ZOOM)
+   =========================== */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.open {
+  display: flex;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.modal-content {
+  position: relative;
+  z-index: 1;
+  max-width: 92vw;
+  max-height: 92vh;
+  background: #111827;
+  border-radius: 0.9rem;
+  padding: 1rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-image {
+  max-width: 86vw;
+  max-height: 74vh;
+  object-fit: contain;
+  border-radius: 0.6rem;
+  transition: transform 0.25s ease;
+  cursor: zoom-in;
+}
+
+.modal-image.zoomed {
+  transform: scale(1.3);
+  cursor: zoom-out;
+}
+
+.modal-caption {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #e5e7eb;
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  border: none;
+  background: transparent;
+  color: #f9fafb;
+  font-size: 1.25rem;
+  cursor: pointer;
+}

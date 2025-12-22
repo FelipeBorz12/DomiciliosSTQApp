@@ -3,41 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Historial de Pedidos</title>
+    <title>Historial de Pedidos - Tierra Querida</title>
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#ec1313",
-              "primary-dark": "#c41010",
-              "background-light": "#f8f6f6",
-              "background-dark": "#181111",
-              "surface-dark": "#261a1a",
-              "surface-light": "#ffffff",
-            },
-            fontFamily: {
-              display: ["Plus Jakarta Sans", "sans-serif"],
-              body: ["Noto Sans", "sans-serif"],
-            },
-            borderRadius: {
-              DEFAULT: "0.5rem",
-              lg: "0.75rem",
-              xl: "1rem",
-              full: "9999px",
-            },
-          },
-        },
-      };
-    </script>
-
-    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&family=Noto+Sans:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
       rel="stylesheet"
     />
     <link
@@ -45,218 +16,370 @@
       rel="stylesheet"
     />
 
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#e02424",
+              "background-light": "#f8f6f6",
+              "background-dark": "#171111",
+              "surface-dark": "#261c1c",
+              "surface-dark-hover": "#3a2a2a",
+              whatsapp: "#25D366",
+            },
+            fontFamily: {
+              display: ["Plus Jakarta Sans", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              lg: "1.5rem",
+              xl: "2rem",
+              "2xl": "2.5rem",
+              full: "9999px",
+            },
+            animation: {
+              "fade-in": "fadeIn 0.35s ease-out",
+              "slide-up": "slideUp 0.4s ease-out",
+            },
+            keyframes: {
+              fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+              slideUp: {
+                "0%": { transform: "translateY(16px)", opacity: "0" },
+                "100%": { transform: "translateY(0)", opacity: "1" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
     <style>
-      .material-symbols-outlined {
-        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-      }
-      body {
-        min-height: max(884px, 100dvh);
-      }
-      .hide-scrollbar::-webkit-scrollbar {
+      .no-scrollbar::-webkit-scrollbar {
         display: none;
       }
-      .hide-scrollbar {
+      .no-scrollbar {
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
+      html {
+        scroll-behavior: smooth;
+      }
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 24;
+      }
     </style>
 
-    <!-- CSS general -->
     <link rel="stylesheet" href="/styles.css" />
   </head>
+
   <body
-    class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col antialiased selection:bg-primary selection:text-white"
+    class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-white font-display overflow-x-hidden selection:bg-primary selection:text-white"
   >
-    <!-- HEADER / TOP BAR -->
-    <header
-      class="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-200 dark:border-[#392828]"
-    >
-      <div class="flex items-center justify-between p-4 pb-2">
-        <button
-          id="back-button"
-          class="text-slate-900 dark:text-white flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-[#392828] transition-colors"
-        >
-          <span class="material-symbols-outlined">arrow_back</span>
-        </button>
-        <h2
-          class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-10"
-        >
-          Historial de pedidos
-        </h2>
-      </div>
-
-      <!-- Chips de filtro -->
-      <div
-        class="flex gap-3 px-4 pb-3 pt-2 overflow-x-auto hide-scrollbar w-full"
+    <div class="relative flex min-h-screen w-full flex-col">
+      <!-- TOP NAV -->
+      <header
+        class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 dark:bg-[#171111]/80 border-b border-gray-200 dark:border-[#382929]"
       >
-        <button
-          class="filter-chip flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-primary pl-3 pr-4 shadow-lg shadow-primary/20 transition-transform active:scale-95"
-          data-filter="all"
-        >
-          <span class="material-symbols-outlined text-white text-[18px]"
-            >apps</span
-          >
-          <span class="text-white text-sm font-bold leading-normal">Todos</span>
-        </button>
-
-        <button
-          class="filter-chip flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-[#392828] border border-gray-200 dark:border-transparent pl-3 pr-4 hover:bg-gray-100 dark:hover:bg-[#4a3535] transition-colors"
-          data-filter="en-proceso"
-        >
-          <span
-            class="material-symbols-outlined text-slate-500 dark:text-gray-400 text-[18px]"
-            >timelapse</span
-          >
-          <span
-            class="text-slate-700 dark:text-gray-200 text-sm font-medium leading-normal"
-            >En proceso</span
-          >
-        </button>
-
-        <button
-          class="filter-chip flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-[#392828] border border-gray-200 dark:border-transparent pl-3 pr-4 hover:bg-gray-100 dark:hover:bg-[#4a3535] transition-colors"
-          data-filter="listo"
-        >
-          <span
-            class="material-symbols-outlined text-slate-500 dark:text-gray-400 text-[18px]"
-            >restaurant</span
-          >
-          <span
-            class="text-slate-700 dark:text-gray-200 text-sm font-medium leading-normal"
-            >Listo</span
-          >
-        </button>
-
-        <button
-          class="filter-chip flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-[#392828] border border-gray-200 dark:border-transparent pl-3 pr-4 hover:bg-gray-100 dark:hover:bg-[#4a3535] transition-colors"
-          data-filter="camino"
-        >
-          <span
-            class="material-symbols-outlined text-slate-500 dark:text-gray-400 text-[18px]"
-            >local_shipping</span
-          >
-          <span
-            class="text-slate-700 dark:text-gray-200 text-sm font-medium leading-normal"
-            >En camino</span
-          >
-        </button>
-
-        <button
-          class="filter-chip flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-full bg-white dark:bg-[#392828] border border-gray-200 dark:border-transparent pl-3 pr-4 hover:bg-gray-100 dark:hover:bg-[#4a3535] transition-colors"
-          data-filter="entregado"
-        >
-          <span
-            class="material-symbols-outlined text-slate-500 dark:text-gray-400 text-[18px]"
-            >check_circle</span
-          >
-          <span
-            class="text-slate-700 dark:text-gray-200 text-sm font-medium leading-normal"
-            >Entregado</span
-          >
-        </button>
-      </div>
-    </header>
-
-    <!-- BARRA AVISO + BUSCADOR -->
-    <section
-      class="px-4 pt-3 pb-2 bg-background-light dark:bg-background-dark sticky top-[116px] z-40"
-    >
-      <!-- Aviso -->
-      <div
-        class="mb-3 flex items-start gap-2 rounded-xl bg-amber-50 dark:bg-[#2a1e1e] border border-amber-200/60 dark:border-amber-500/30 px-3 py-2"
-      >
-        <span
-          class="material-symbols-outlined text-amber-500 text-[18px] mt-0.5"
-          >info</span
-        >
-        <p class="text-xs text-amber-800 dark:text-amber-200 leading-snug">
-          Los pedidos se conservan en el historial durante
-          <span class="font-semibold">30 días</span> desde su creación. Luego
-          se eliminan automáticamente.
-        </p>
-      </div>
-
-      <!-- Estado de sesión -->
-      <div id="session-info" class="hidden mb-2">
         <div
-          class="flex items-center gap-2 rounded-xl bg-white dark:bg-[#2a1e1e] border border-gray-200 dark:border-[#392828] px-3 py-2"
+          class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between gap-4"
         >
-          <span
-            class="material-symbols-outlined text-emerald-500 text-[18px]"
-            >verified_user</span
-          >
-          <div class="flex flex-col">
-            <span
-              class="text-xs font-semibold text-slate-700 dark:text-gray-100"
-              >Sesión iniciada</span
+          <div class="flex items-center gap-3">
+            <button
+              id="back-button"
+              class="size-10 rounded-full hover:bg-gray-100 dark:hover:bg-surface-dark transition-colors flex items-center justify-center"
+              title="Volver"
             >
-            <span
-              id="session-email-label"
-              class="text-xs text-slate-500 dark:text-gray-400"
-            ></span>
+              <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+
+            <a
+              class="flex items-center gap-3 hover:opacity-80 transition-opacity"
+              href="/"
+              aria-label="Inicio"
+            >
+              <div
+                class="size-10 bg-primary rounded-full flex items-center justify-center text-white"
+              >
+                <span class="material-symbols-outlined">lunch_dining</span>
+              </div>
+              <div class="hidden sm:block">
+                <h2 class="text-lg font-extrabold leading-none">Tierra Querida</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
+                  Historial de pedidos
+                </p>
+              </div>
+            </a>
+          </div>
+
+          <nav class="hidden md:flex items-center gap-8">
+            <a
+              class="text-sm font-bold hover:text-primary transition-colors"
+              href="/#products-section"
+              >Menú</a
+            >
+            <a
+              class="text-sm font-bold hover:text-primary transition-colors"
+              href="/stores"
+              >Ubicaciones</a
+            >
+            <a
+              class="text-sm font-bold hover:text-primary transition-colors"
+              href="/history"
+              >Historial</a
+            >
+          </nav>
+
+          <div class="flex items-center gap-3 flex-1 justify-end md:flex-none">
+            <button
+              id="user-btn"
+              class="p-2 hover:bg-gray-100 dark:hover:bg-surface-dark rounded-full transition-colors hidden sm:flex items-center justify-center"
+              title="Cuenta"
+            >
+              <span class="material-symbols-outlined">person</span>
+            </button>
+
+            <a
+              href="/cart"
+              class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-4 h-10 rounded-full transition-all group"
+              aria-label="Carrito"
+            >
+              <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+              <span
+                id="cart-count-desktop"
+                class="font-extrabold text-sm hidden sm:block"
+                >0</span
+              >
+              <span
+                id="cart-count-mobile"
+                class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-primary sm:hidden"
+                >0</span
+              >
+            </a>
           </div>
         </div>
-      </div>
+      </header>
 
-      <!-- Buscar por correo (solo si NO hay sesión iniciada) -->
-      <div id="email-search-wrapper" class="mb-1">
-        <form id="email-search-form" class="space-y-2">
-          <label class="block text-xs font-semibold mb-1">
-            Buscar pedidos por correo
-          </label>
-          <div class="flex gap-2">
-            <div class="flex-1">
-              <div
-                class="flex w-full items-stretch rounded-xl h-11 shadow-sm overflow-hidden"
+      <!-- STICKY HEADER (TITLE + FILTERS) -->
+      <section
+        class="sticky top-[74px] z-40 w-full bg-background-light/95 dark:bg-background-dark/95 backdrop-blur border-b border-gray-200 dark:border-[#382929]"
+      >
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+            <div>
+              <h1 class="text-2xl md:text-3xl font-extrabold">Historial de Pedidos</h1>
+              <p class="text-xs text-gray-500 dark:text-gray-400 hidden md:block">
+                Revisa el estado de tus órdenes y consulta detalles.
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+              <button
+                class="filter-chip whitespace-nowrap px-4 py-2 rounded-full bg-primary text-white text-sm font-extrabold shadow-lg shadow-primary/30 hover:scale-[1.02] transition-transform"
+                data-filter="all"
               >
-                <div
-                  class="text-slate-400 dark:text-[#b99d9d] flex bg-white dark:bg-[#2a1e1e] items-center justify-center pl-3 border border-r-0 border-gray-200 dark:border-transparent"
+                Todos
+                <span
+                  id="count-all"
+                  class="ml-2 bg-white/20 text-white text-[10px] px-2 py-0.5 rounded-full font-extrabold"
+                  >0</span
                 >
-                  <span class="material-symbols-outlined text-[18px]"
-                    >alternate_email</span
-                  >
+              </button>
+
+              <button
+                class="filter-chip whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#382929] text-gray-700 dark:text-gray-200 text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-surface-dark-hover transition-colors"
+                data-filter="en-proceso"
+              >
+                En proceso
+                <span
+                  id="count-en-proceso"
+                  class="ml-2 bg-orange-500/15 text-orange-500 text-[10px] px-2 py-0.5 rounded-full font-extrabold border border-orange-500/20"
+                  >0</span
+                >
+              </button>
+
+              <button
+                class="filter-chip whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#382929] text-gray-700 dark:text-gray-200 text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-surface-dark-hover transition-colors"
+                data-filter="listo"
+              >
+                Listo
+                <span
+                  id="count-listo"
+                  class="ml-2 bg-emerald-500/15 text-emerald-500 text-[10px] px-2 py-0.5 rounded-full font-extrabold border border-emerald-500/20"
+                  >0</span
+                >
+              </button>
+
+              <button
+                class="filter-chip whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#382929] text-gray-700 dark:text-gray-200 text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-surface-dark-hover transition-colors"
+                data-filter="camino"
+              >
+                En camino
+                <span
+                  id="count-camino"
+                  class="ml-2 bg-blue-500/15 text-blue-400 text-[10px] px-2 py-0.5 rounded-full font-extrabold border border-blue-500/20"
+                  >0</span
+                >
+              </button>
+
+              <button
+                class="filter-chip whitespace-nowrap px-4 py-2 rounded-full bg-white dark:bg-surface-dark border border-gray-200 dark:border-[#382929] text-gray-700 dark:text-gray-200 text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-surface-dark-hover transition-colors"
+                data-filter="entregado"
+              >
+                Entregados
+                <span
+                  id="count-entregado"
+                  class="ml-2 bg-green-500/15 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-extrabold border border-green-500/20"
+                  >0</span
+                >
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <main class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-8 flex flex-col gap-6">
+        <!-- TOP INFO + SEARCH -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
+          <!-- Info -->
+          <div class="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6 flex items-start gap-4">
+            <div class="p-2 bg-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
+              <span class="material-symbols-outlined">history_toggle_off</span>
+            </div>
+            <div>
+              <h3 class="font-extrabold text-blue-700 dark:text-blue-300 text-sm mb-1">
+                Historial temporal
+              </h3>
+              <p class="text-xs text-blue-600/80 dark:text-blue-400/80 leading-relaxed">
+                Por seguridad, los pedidos se consultan por correo.
+                Si haces pedidos como invitado, guarda tu correo para poder verlos luego.
+              </p>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div
+            class="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl p-6 border border-gray-100 dark:border-[#382929] shadow-sm"
+          >
+            <!-- sesión -->
+            <div id="session-info" class="hidden mb-4">
+              <div class="flex items-center gap-3 rounded-2xl bg-background-light dark:bg-background-dark border border-gray-200 dark:border-[#382929] px-4 py-3">
+                <span class="material-symbols-outlined text-emerald-400">verified_user</span>
+                <div>
+                  <p class="text-sm font-extrabold">Sesión detectada</p>
+                  <p id="session-email-label" class="text-xs text-gray-500 dark:text-gray-400"></p>
                 </div>
-                <input
-                  id="email-input"
-                  type="email"
-                  class="flex w-full min-w-0 flex-1 rounded-r-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-l-0 border-gray-200 dark:border-transparent bg-white dark:bg-[#2a1e1e] h-full placeholder:text-slate-400 dark:placeholder:text-[#b99d9d] px-3 text-sm font-medium leading-normal transition-all"
-                  placeholder="tucorreo@ejemplo.com"
-                />
               </div>
             </div>
-            <button
-              type="submit"
-              class="h-11 px-4 rounded-xl bg-primary text-white text-sm font-bold flex items-center justify-center hover:bg-primary-dark transition-colors"
-            >
-              Buscar
-            </button>
+
+            <!-- buscador -->
+            <div id="email-search-wrapper">
+              <form id="email-search-form" class="flex flex-col md:flex-row md:items-center gap-3">
+                <div class="flex-1">
+                  <label class="block text-xs font-extrabold uppercase text-gray-500 mb-1">Buscar por correo</label>
+                  <div class="relative">
+                    <span class="material-symbols-outlined absolute left-4 top-2.5 text-gray-400">alternate_email</span>
+                    <input
+                      id="email-input"
+                      class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl pl-12 pr-4 py-2.5 text-sm font-semibold transition-colors"
+                      placeholder="ejemplo@correo.com"
+                      type="email"
+                      autocomplete="email"
+                    />
+                  </div>
+                  <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Tip: si vienes desde WhatsApp, este correo suele venir ya cargado.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  class="bg-surface-dark dark:bg-white text-white dark:text-black px-6 h-11 rounded-xl font-extrabold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-lg">search</span>
+                  Buscar
+                </button>
+              </form>
+            </div>
+
+            <p id="load-status-message" class="text-xs text-gray-500 dark:text-gray-400 mt-4 hidden"></p>
           </div>
-          <p
-            id="email-help-text"
-            class="text-[11px] text-slate-500 dark:text-gray-400"
+        </div>
+
+        <!-- ORDERS -->
+        <section class="flex flex-col gap-4" id="orders-container">
+          <!-- JS inyecta -->
+        </section>
+
+        <!-- load more (placeholder UI) -->
+        <div class="flex justify-center py-2">
+          <button
+            id="load-more-btn"
+            class="hidden flex-col items-center gap-2 text-gray-400 hover:text-primary transition-colors group"
+            type="button"
           >
-            Si tienes sesión iniciada, se cargarán automáticamente tus pedidos y
-            este buscador no aparecerá.
-          </p>
-        </form>
-      </div>
+            <span class="material-symbols-outlined animate-bounce">expand_more</span>
+            <span class="text-xs font-extrabold uppercase tracking-wider group-hover:underline">
+              Cargar más
+            </span>
+          </button>
+        </div>
+      </main>
 
-      <!-- Mensaje de estado de carga -->
-      <p
-        id="load-status-message"
-        class="text-xs text-slate-500 dark:text-gray-400 mt-1 hidden"
-      ></p>
-    </section>
+      <footer class="bg-surface-dark border-t border-[#382929] py-12">
+        <div class="max-w-[1440px] mx-auto px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div class="col-span-1 md:col-span-2">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="size-8 bg-primary rounded-full flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-sm">lunch_dining</span>
+              </div>
+              <h2 class="text-lg font-extrabold text-white">Tierra Querida</h2>
+            </div>
+            <p class="text-gray-400 text-sm max-w-xs">
+              Las mejores hamburguesas de la ciudad, hechas con ingredientes locales y mucha pasión.
+            </p>
+          </div>
 
-    <!-- LISTA PRINCIPAL -->
-    <main
-      class="flex-1 px-4 pb-8 space-y-4 max-w-5xl mx-auto w-full pt-3"
-      id="orders-container"
-    >
-      <!-- JS inyecta las tarjetas de pedidos -->
-    </main>
+          <div>
+            <h3 class="font-extrabold text-white mb-4">Enlaces</h3>
+            <ul class="flex flex-col gap-2 text-sm text-gray-400">
+              <li><a class="hover:text-primary transition-colors" href="/#products-section">Menú</a></li>
+              <li><a class="hover:text-primary transition-colors" href="/stores">Ubicaciones</a></li>
+              <li><a class="hover:text-primary transition-colors" href="/history">Historial</a></li>
+            </ul>
+          </div>
 
-    <!-- JS -->
+          <div>
+            <h3 class="font-extrabold text-white mb-4">Contacto</h3>
+            <ul class="flex flex-col gap-2 text-sm text-gray-400">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs">location_on</span> Colombia
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs">call</span> +57 300 000 0000
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs">mail</span> hola@tierraquerida.com
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div
+          class="max-w-[1440px] mx-auto px-6 lg:px-12 mt-12 pt-8 border-t border-[#382929] flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500"
+        >
+          <p>© 2025 Tierra Querida. Todos los derechos reservados.</p>
+          <div class="flex gap-4">
+            <span class="cursor-pointer hover:text-white">Facebook</span>
+            <span class="cursor-pointer hover:text-white">Instagram</span>
+            <span class="cursor-pointer hover:text-white">Twitter</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
     <script type="module" src="/history.js"></script>
   </body>
 </html>

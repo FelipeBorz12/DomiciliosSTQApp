@@ -1,28 +1,42 @@
 // public/cart.js
+document.addEventListener("DOMContentLoaded", () => {
+  const DELIVERY_FEE = 5000;
 
-document.addEventListener('DOMContentLoaded', () => {
-  const DELIVERY_FEE = 5000; // costo de domicilio (ajústalo si quieres)
+  // ----- DOM -----
+  const backButton = document.getElementById("cart-back-button");
 
-  // ----- Elementos DOM -----
-  const backButton = document.getElementById('cart-back-button');
-  const cartEmptyMessage = document.getElementById('cart-empty-message');
-  const cartItemsContainer = document.getElementById('cart-items');
-  const addMoreItemsBtn = document.getElementById('add-more-items-btn');
+  const cartEmptyMessage = document.getElementById("cart-empty-message");
+  const cartGrid = document.getElementById("cart-grid");
+  const cartItemsContainer = document.getElementById("cart-items");
+  const addMoreItemsBtn = document.getElementById("add-more-items-btn");
 
-  const orderSummarySection = document.getElementById('order-summary');
-  const summarySubtotal = document.getElementById('summary-subtotal');
-  const summaryDelivery = document.getElementById('summary-delivery');
-  const summaryTotal = document.getElementById('summary-total');
+  const cartCountLabel = document.getElementById("cart-count-label");
+  const cartBadgeDesktop = document.getElementById("cart-badge-desktop");
+  const cartBadgeMobile = document.getElementById("cart-badge-mobile");
 
-  const shippingDelivery = document.getElementById('shipping-delivery');
-  const shippingPickup = document.getElementById('shipping-pickup');
+  const orderSummarySection = document.getElementById("order-summary");
+  const summarySubtotal = document.getElementById("summary-subtotal");
+  const summaryDelivery = document.getElementById("summary-delivery");
+  const summaryTotal = document.getElementById("summary-total");
 
-  const checkoutButton = document.getElementById('checkout-button');
+  // Radios ocultos
+  const shippingDelivery = document.getElementById("shipping-delivery");
+  const shippingPickup = document.getElementById("shipping-pickup");
+
+  // Botones visuales toggle
+  const shippingToggleDelivery = document.getElementById(
+    "shipping-toggle-delivery"
+  );
+  const shippingTogglePickup = document.getElementById(
+    "shipping-toggle-pickup"
+  );
+
+  const checkoutButton = document.getElementById("checkout-button");
 
   // Modal eliminar
-  const deleteModal = document.getElementById('delete-modal');
-  const deleteCancelBtn = document.getElementById('delete-cancel');
-  const deleteConfirmBtn = document.getElementById('delete-confirm');
+  const deleteModal = document.getElementById("delete-modal");
+  const deleteCancelBtn = document.getElementById("delete-cancel");
+  const deleteConfirmBtn = document.getElementById("delete-confirm");
 
   // ----- Estado -----
   let cartItems = [];
@@ -31,33 +45,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // ----- Helpers -----
   function formatPrice(value) {
     const n = Number(value || 0);
-    return '$' + n.toLocaleString('es-CO');
+    return "$" + n.toLocaleString("es-CO");
   }
 
   function loadCart() {
     try {
-      const raw = localStorage.getItem('burgerCart');
+      const raw = localStorage.getItem("burgerCart");
       if (!raw) {
         cartItems = [];
         return;
       }
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        cartItems = parsed;
-      } else {
-        cartItems = [];
-      }
+      cartItems = Array.isArray(parsed) ? parsed : [];
     } catch (err) {
-      console.error('[cart.js] Error leyendo burgerCart:', err);
+      console.error("[cart.js] Error leyendo burgerCart:", err);
       cartItems = [];
     }
   }
 
   function saveCart() {
     try {
-      localStorage.setItem('burgerCart', JSON.stringify(cartItems));
+      localStorage.setItem("burgerCart", JSON.stringify(cartItems));
     } catch (err) {
-      console.error('[cart.js] Error guardando burgerCart:', err);
+      console.error("[cart.js] Error guardando burgerCart:", err);
     }
   }
 
@@ -68,10 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function computeSubtotal() {
-    return cartItems.reduce(
-      (acc, item) => acc + Number(item.total || 0),
-      0
-    );
+    return cartItems.reduce((acc, item) => acc + Number(item.total || 0), 0);
   }
 
   function isDeliverySelected() {
@@ -82,7 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!summarySubtotal || !summaryDelivery || !summaryTotal) return;
 
     const subtotal = computeSubtotal();
-    const delivery = isDeliverySelected() && cartItems.length > 0 ? DELIVERY_FEE : 0;
+    const delivery =
+      isDeliverySelected() && cartItems.length > 0 ? DELIVERY_FEE : 0;
     const total = subtotal + delivery;
 
     summarySubtotal.textContent = formatPrice(subtotal);
@@ -96,32 +104,43 @@ document.addEventListener('DOMContentLoaded', () => {
     checkoutButton.disabled = !hasItems;
   }
 
+  function syncBadges() {
+    const count = cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0);
+    const labelCount = cartItems.length;
+
+    if (cartCountLabel) cartCountLabel.textContent = `(${labelCount} productos)`;
+    if (cartBadgeDesktop) cartBadgeDesktop.textContent = String(count);
+    if (cartBadgeMobile) cartBadgeMobile.textContent = String(count);
+  }
+
   function showEmptyState() {
-    if (cartEmptyMessage) cartEmptyMessage.classList.remove('hidden');
-    if (orderSummarySection) orderSummarySection.classList.add('hidden');
+    cartEmptyMessage?.classList.remove("hidden");
+    cartGrid?.classList.add("hidden");
+    orderSummarySection?.classList.add("hidden");
     updateCheckoutButtonState();
+    syncBadges();
   }
 
   function hideEmptyState() {
-    if (cartEmptyMessage) cartEmptyMessage.classList.add('hidden');
-    if (orderSummarySection) orderSummarySection.classList.remove('hidden');
+    cartEmptyMessage?.classList.add("hidden");
+    cartGrid?.classList.remove("hidden");
+    orderSummarySection?.classList.remove("hidden");
     updateCheckoutButtonState();
+    syncBadges();
   }
 
   function openDeleteModal(index) {
     deleteIndex = index;
-    if (deleteModal) {
-      deleteModal.classList.remove('hidden');
-      deleteModal.classList.add('flex');
-    }
+    if (!deleteModal) return;
+    deleteModal.classList.remove("hidden");
+    deleteModal.classList.add("flex");
   }
 
   function closeDeleteModal() {
     deleteIndex = null;
-    if (deleteModal) {
-      deleteModal.classList.add('hidden');
-      deleteModal.classList.remove('flex');
-    }
+    if (!deleteModal) return;
+    deleteModal.classList.add("hidden");
+    deleteModal.classList.remove("flex");
   }
 
   function handleQtyMinus(index) {
@@ -133,14 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (qty > 1) {
       const newQty = qty - 1;
       const unitPrice = getUnitPrice(item);
-
       item.quantity = newQty;
       item.total = unitPrice * newQty;
 
       saveCart();
       renderCart();
     } else {
-      // qty == 1 → pedir confirmación para eliminar
       openDeleteModal(index);
     }
   }
@@ -169,10 +186,45 @@ document.addEventListener('DOMContentLoaded', () => {
     renderCart();
   }
 
+  function cookingLabel(value) {
+    if (value === "medio") return "Medio hecha";
+    if (value === "bien_cocida") return "Bien cocida";
+    return "Normal";
+  }
+
+  function buildDetailsLine(item) {
+    const parts = [];
+
+    // Para hamburguesas/combos
+    if (item.tipo === 1 || item.tipo === 3) {
+      parts.push(`Término: ${cookingLabel(item.cooking)}`);
+    }
+
+    // Modificaciones
+    if (Array.isArray(item.modifications) && item.modifications.length) {
+      parts.push(item.modifications.join(", "));
+    }
+
+    // Adiciones (con nombre y precio)
+    if (Array.isArray(item.extras) && item.extras.length) {
+      const exText = item.extras
+        .map((ex) => {
+          const n = ex?.nombre || "";
+          const p = Number(ex?.precio || 0);
+          return n ? `${n} (${formatPrice(p)})` : "";
+        })
+        .filter(Boolean)
+        .join(", ");
+      if (exText) parts.push(`Adiciones: ${exText}`);
+    }
+
+    return parts.join(" · ");
+  }
+
   function renderCart() {
     if (!cartItemsContainer) return;
 
-    cartItemsContainer.innerHTML = '';
+    cartItemsContainer.innerHTML = "";
 
     if (!cartItems || cartItems.length === 0) {
       showEmptyState();
@@ -182,123 +234,90 @@ document.addEventListener('DOMContentLoaded', () => {
     hideEmptyState();
 
     cartItems.forEach((item, index) => {
-      const unitPrice = getUnitPrice(item);
       const qty = Number(item.quantity || 1);
       const lineTotal = Number(item.total || 0);
+      const details = buildDetailsLine(item);
 
-      const wrapper = document.createElement('div');
-      wrapper.className =
-        'flex items-start gap-4 py-3 border-b border-black/5 dark:border-white/10';
+      const card = document.createElement("article");
+      card.className =
+        "group bg-surface-dark hover:bg-surface-dark-hover p-4 rounded-2xl flex flex-col gap-4 transition-all duration-300 border border-transparent hover:border-primary/20 relative overflow-hidden";
 
-      wrapper.innerHTML = `
-        <div class="flex flex-1 items-start gap-4">
+      card.innerHTML = `
+        <div class="flex justify-between items-start w-full gap-3">
+          <div class="min-w-0">
+            <h3 class="text-xl font-bold text-white truncate">
+              ${item.nombre || "Producto"}
+            </h3>
+
+            ${
+              details
+                ? `<p class="text-gray-400 text-sm mt-1 leading-relaxed">${details}</p>`
+                : `<p class="text-gray-500 text-sm mt-1">Sin personalizaciones</p>`
+            }
+          </div>
+
           <button
-            class="delete-item-btn flex size-12 shrink-0 items-center justify-center rounded-lg bg-black/5 text-black/60 dark:bg-white/10 dark:text-white/60"
+            class="delete-item-btn text-gray-500 hover:text-red-500 transition-colors p-2 hover:bg-white/5 rounded-full z-10"
             data-index="${index}"
+            aria-label="Eliminar"
+            type="button"
           >
             <span class="material-symbols-outlined">delete</span>
           </button>
-          <div class="flex flex-col justify-center text-sm">
-            <p class="font-medium text-black dark:text-white line-clamp-1">
-              ${item.nombre || 'Producto'}
-            </p>
-            <p class="text-xs text-black/60 dark:text-white/60 mt-0.5">
-              Precio unitario: ${formatPrice(unitPrice)}
-            </p>
-            ${
-              Array.isArray(item.extras) && item.extras.length
-                ? `<p class="text-xs text-black/70 dark:text-white/70 mt-0.5">
-                     Adiciones: ${item.extras
-                       .map(
-                         (ex) =>
-                           `${ex.nombre} (${formatPrice(ex.precio || 0)})`
-                       )
-                       .join(', ')}
-                   </p>`
-                : ''
-            }
-            ${
-              Array.isArray(item.modifications) && item.modifications.length
-                ? `<p class="text-xs text-black/70 dark:text-white/70 mt-0.5">
-                     Personalización: ${item.modifications.join(', ')}
-                   </p>`
-                : ''
-            }
-            ${
-              item.tipo === 1 || item.tipo === 3
-                ? `<p class="text-xs text-black/70 dark:text-white/70 mt-0.5">
-                     Término de cocción: ${
-                       item.cooking === 'medio'
-                         ? 'Medio hecha'
-                         : item.cooking === 'bien_cocida'
-                         ? 'Bien cocida'
-                         : 'Normal'
-                     }
-                   </p>`
-                : ''
-            }
-            <p class="text-xs text-black/80 dark:text-white/80 mt-1">
-              Subtotal de este producto: <span class="font-semibold">${formatPrice(
-                lineTotal
-              )}</span>
-            </p>
-          </div>
         </div>
-        <div class="shrink-0 flex flex-col items-center gap-2">
-          <div class="flex items-center gap-3 text-black dark:text-white">
+
+        <div class="flex justify-between items-end">
+          <p class="text-xl font-bold text-primary">${formatPrice(lineTotal)}</p>
+
+          <div class="flex items-center bg-background-dark rounded-full p-1 border border-[#382929]">
             <button
-              class="qty-minus-btn flex h-8 w-8 items-center justify-center rounded-full bg-black/5 text-lg dark:bg-white/10"
+              class="qty-minus-btn size-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors text-white"
               data-index="${index}"
+              aria-label="Restar"
+              type="button"
             >
-              -
+              <span class="material-symbols-outlined text-[16px]">remove</span>
             </button>
-            <span class="w-5 text-center text-base font-medium">${qty}</span>
+
+            <span class="w-8 text-center font-bold text-sm text-white">${qty}</span>
+
             <button
-              class="qty-plus-btn flex h-8 w-8 items-center justify-center rounded-full bg-primary text-lg text-white"
+              class="qty-plus-btn size-8 rounded-full flex items-center justify-center bg-white text-black hover:bg-gray-200 transition-colors shadow-lg"
               data-index="${index}"
+              aria-label="Sumar"
+              type="button"
             >
-              +
+              <span class="material-symbols-outlined text-[16px]">add</span>
             </button>
           </div>
         </div>
       `;
 
-      cartItemsContainer.appendChild(wrapper);
+      cartItemsContainer.appendChild(card);
     });
 
-    // Enlazar eventos de eliminar
-    const deleteButtons = cartItemsContainer.querySelectorAll('.delete-item-btn');
-    deleteButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget;
-        if (!target || !target.getAttribute) return;
-        const indexAttr = target.getAttribute('data-index');
-        const index = Number(indexAttr);
+    // Eventos eliminar
+    cartItemsContainer.querySelectorAll(".delete-item-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const index = Number(e.currentTarget.getAttribute("data-index"));
         if (Number.isNaN(index)) return;
         openDeleteModal(index);
       });
     });
 
-    // Enlazar eventos de cantidad
-    const minusButtons = cartItemsContainer.querySelectorAll('.qty-minus-btn');
-    minusButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget;
-        if (!target || !target.getAttribute) return;
-        const indexAttr = target.getAttribute('data-index');
-        const index = Number(indexAttr);
+    // Eventos qty -
+    cartItemsContainer.querySelectorAll(".qty-minus-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const index = Number(e.currentTarget.getAttribute("data-index"));
         if (Number.isNaN(index)) return;
         handleQtyMinus(index);
       });
     });
 
-    const plusButtons = cartItemsContainer.querySelectorAll('.qty-plus-btn');
-    plusButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget;
-        if (!target || !target.getAttribute) return;
-        const indexAttr = target.getAttribute('data-index');
-        const index = Number(indexAttr);
+    // Eventos qty +
+    cartItemsContainer.querySelectorAll(".qty-plus-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const index = Number(e.currentTarget.getAttribute("data-index"));
         if (Number.isNaN(index)) return;
         handleQtyPlus(index);
       });
@@ -306,65 +325,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateSummary();
     updateCheckoutButtonState();
+    syncBadges();
+  }
+
+  // ----- Toggle shipping visual -----
+  function setShipping(mode) {
+    const isDelivery = mode === "delivery";
+
+    if (shippingDelivery) shippingDelivery.checked = isDelivery;
+    if (shippingPickup) shippingPickup.checked = !isDelivery;
+
+    if (shippingToggleDelivery) {
+      shippingToggleDelivery.className =
+        "flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-xs shadow-md transition-all " +
+        (isDelivery ? "bg-primary text-white" : "text-gray-400 hover:text-white hover:bg-white/5");
+    }
+
+    if (shippingTogglePickup) {
+      shippingTogglePickup.className =
+        "flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-bold text-xs shadow-md transition-all " +
+        (!isDelivery ? "bg-primary text-white" : "text-gray-400 hover:text-white hover:bg-white/5");
+    }
+
+    updateSummary();
   }
 
   // ----- Eventos generales -----
-  if (backButton) {
-    backButton.addEventListener('click', () => {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = '/';
-      }
-    });
-  }
+  backButton?.addEventListener("click", () => {
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = "/";
+  });
 
-  if (addMoreItemsBtn) {
-    addMoreItemsBtn.addEventListener('click', () => {
-      window.location.href = '/';
-    });
-  }
+  addMoreItemsBtn?.addEventListener("click", () => {
+    window.location.href = "/";
+  });
 
-  if (shippingDelivery) {
-    shippingDelivery.addEventListener('change', () => {
-      updateSummary();
-    });
-  }
-
-  if (shippingPickup) {
-    shippingPickup.addEventListener('change', () => {
-      updateSummary();
-    });
-  }
+  shippingToggleDelivery?.addEventListener("click", () => setShipping("delivery"));
+  shippingTogglePickup?.addEventListener("click", () => setShipping("pickup"));
 
   // Modal eliminar
-  if (deleteCancelBtn) {
-    deleteCancelBtn.addEventListener('click', () => {
-      closeDeleteModal();
-    });
-  }
+  deleteCancelBtn?.addEventListener("click", () => closeDeleteModal());
+  deleteConfirmBtn?.addEventListener("click", () => deleteItemConfirmed());
 
-  if (deleteConfirmBtn) {
-    deleteConfirmBtn.addEventListener('click', () => {
-      deleteItemConfirmed();
-    });
-  }
+  // Checkout → /confirm
+  checkoutButton?.addEventListener("click", () => {
+    if (!cartItems || cartItems.length === 0) {
+      alert("Tu carrito está vacío. Agrega productos antes de confirmar el pedido.");
+      return;
+    }
+    window.location.href = "/confirm";
+  });
 
-  // Confirmar pedido → ir a /confirm
-  if (checkoutButton) {
-    checkoutButton.addEventListener('click', () => {
-      if (!cartItems || cartItems.length === 0) {
-        alert('Tu carrito está vacío. Agrega productos antes de confirmar el pedido.');
-        return;
-      }
-      // confirm.html lee burgerCart desde localStorage
-      window.location.href = '/confirm';
-    });
-  }
-
-  // ----- init -----
+  // init
   function init() {
     loadCart();
+    setShipping("delivery");
     renderCart();
   }
 

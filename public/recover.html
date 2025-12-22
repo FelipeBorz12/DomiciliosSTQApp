@@ -1,10 +1,26 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html  lang="es">
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Recuperar contraseña</title>
 
+    <!-- ✅ Forzar SIEMPRE el tema oscuro SIN depender del modo del dispositivo -->
+    <script>
+      (function () {
+        const root = document.documentElement;
+
+        const forceDark = () => {
+          if (!root.classList.contains("dark")) root.classList.add("dark");
+        };
+
+        forceDark();
+
+        // Si algún script intenta quitar "dark", lo volvemos a poner
+        const obs = new MutationObserver(forceDark);
+        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+      })();
+    </script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
       tailwind.config = {

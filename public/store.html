@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -8,6 +8,22 @@
     />
     <title>Puntos de Venta</title>
 
+    <!-- ✅ Forzar SIEMPRE el tema oscuro SIN depender del modo del dispositivo -->
+    <script>
+      (function () {
+        const root = document.documentElement;
+
+        const forceDark = () => {
+          if (!root.classList.contains("dark")) root.classList.add("dark");
+        };
+
+        forceDark();
+
+        // Si algún script intenta quitar "dark", lo volvemos a poner
+        const obs = new MutationObserver(forceDark);
+        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+      })();
+    </script>
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script id="tailwind-config">
@@ -177,7 +193,58 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
+    <footer class="bg-surface-dark border-t border-border-dark py-12">
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div class="col-span-1 md:col-span-2">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="size-9 bg-primary rounded-full flex items-center justify-center text-white">
+                <span class="material-symbols-outlined text-sm">lunch_dining</span>
+              </div>
+              <h2 class="text-lg font-extrabold">Tierra Querida</h2>
+            </div>
+            <p class="text-white/60 text-sm max-w-xs">
+              Las mejores hamburguesas, hechas con ingredientes locales y mucha pasión.
+            </p>
+          </div>
 
+          <div>
+            <h3 class="font-extrabold text-white mb-4">Enlaces</h3>
+            <ul class="flex flex-col gap-2 text-sm text-white/60">
+              <li><a class="hover:text-primary transition-colors" href="#products-section">Menú</a></li>
+              <li><a class="hover:text-primary transition-colors" href="/stores">Ubicaciones</a></li>
+              <li><a class="hover:text-primary transition-colors" href="/history">Histórico</a></li>
+              <li><a class="hover:text-primary transition-colors" href="#">Política de Privacidad</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 class="font-extrabold text-white mb-4">Contacto</h3>
+            <ul class="flex flex-col gap-2 text-sm text-white/60">
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs">location_on</span>
+                Colombia
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs">call</span>
+                +57 300 000 0000
+              </li>
+              <li class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-xs">mail</span>
+                hola@tierraquerida.com
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 mt-10 pt-8 border-t border-border-dark flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40">
+          <p>© 2025 Tierra Querida. Todos los derechos reservados.</p>
+          <div class="flex gap-4">
+            <span class="cursor-pointer hover:text-white">Facebook</span>
+            <span class="cursor-pointer hover:text-white">Instagram</span>
+            <span class="cursor-pointer hover:text-white">Twitter</span>
+          </div>
+        </div>
+      </footer>
     <!-- Tu lógica de puntos de venta -->
     <script src="/store.js" defer></script>
   </body>

@@ -4,11 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // HEADER / MENÚ / USUARIO / CARRITO
   // =============================
   const userButton = document.getElementById("user-icon");
-  const cartButton = document.getElementById("cart-icon");
   const menuIcon = document.getElementById("menu-icon");
   const menu = document.getElementById("menu");
   const overlay = document.getElementById("overlay");
   const cartCount = document.getElementById("cart-count");
+  const cartCountBadge = document.getElementById("cart-count-badge");
   const logoutButton = document.getElementById("logout-button");
   const closeMenuButton = document.getElementById("close-menu");
   const userNameHeader = document.getElementById("user-name-header");
@@ -25,9 +25,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const userPhoneInput = document.getElementById("user-phone-input");
   const userAddressInput = document.getElementById("user-address-input");
 
-  // -----------------------------
+  // =============================
   // Helpers localStorage / toast
-  // -----------------------------
+  // =============================
   function getStoredUser() {
     try {
       const raw = localStorage.getItem("burgerUser");
@@ -50,16 +50,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!toast) return;
     toast.textContent = message;
     toast.classList.remove("hidden");
-    toast.classList.add("opacity-100");
-    setTimeout(() => {
-      toast.classList.add("hidden");
-      toast.classList.remove("opacity-100");
-    }, 2200);
+    setTimeout(() => toast.classList.add("hidden"), 2200);
   }
 
-  // -----------------------------
+  // =============================
   // Menú lateral
-  // -----------------------------
+  // =============================
   function openMenu() {
     if (!menu || !overlay) return;
     menu.classList.add("open");
@@ -74,32 +70,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function toggleMenu() {
     if (!menu) return;
-    if (menu.classList.contains("open")) {
-      closeMenu();
-    } else {
-      openMenu();
-    }
+    if (menu.classList.contains("open")) closeMenu();
+    else openMenu();
   }
 
-  // -----------------------------
-  // Contador de carrito
-  // -----------------------------
-  // Soporta "cart" o "burgerCart" como clave en localStorage
+  // =============================
+  // Contador carrito
+  // =============================
   function updateCartCount() {
     try {
-      let raw = localStorage.getItem("cart");
-      if (!raw) {
-        raw = localStorage.getItem("burgerCart");
-      }
+      let raw = localStorage.getItem("burgerCart");
+      if (!raw) raw = localStorage.getItem("cart");
 
       if (!raw) {
         if (cartCount) cartCount.textContent = "0";
+        if (cartCountBadge) cartCountBadge.textContent = "0";
         return;
       }
 
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) {
         if (cartCount) cartCount.textContent = "0";
+        if (cartCountBadge) cartCountBadge.textContent = "0";
         return;
       }
 
@@ -109,18 +101,17 @@ document.addEventListener("DOMContentLoaded", () => {
         return acc + q;
       }, 0);
 
-      if (cartCount) {
-        cartCount.textContent = String(totalItems);
-      }
+      if (cartCount) cartCount.textContent = String(totalItems);
+      if (cartCountBadge) cartCountBadge.textContent = String(totalItems);
     } catch (err) {
-      console.error("[index.js] Error leyendo carrito en updateCartCount:", err);
       if (cartCount) cartCount.textContent = "0";
+      if (cartCountBadge) cartCountBadge.textContent = "0";
     }
   }
 
-  // -----------------------------
-  // UI según usuario logueado
-  // -----------------------------
+  // =============================
+  // UI según usuario
+  // =============================
   function applyUserUI() {
     const user = getStoredUser();
     if (user && user.correo) {
@@ -143,7 +134,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function openUserModal() {
     const user = getStoredUser();
     if (!userModal || !user) {
-      // Si no está logueado, lo mandamos a login
       window.location.href = "/login";
       return;
     }
@@ -168,24 +158,21 @@ document.addEventListener("DOMContentLoaded", () => {
     userModal.classList.remove("flex");
   }
 
+  // =============================
   // Eventos header / menú
-  if (menuIcon) {
-    menuIcon.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleMenu();
-    });
-  }
-  if (closeMenuButton) {
-    closeMenuButton.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeMenu();
-    });
-  }
-  if (overlay) {
-    overlay.addEventListener("click", () => {
-      closeMenu();
-    });
-  }
+  // =============================
+  menuIcon?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  closeMenuButton?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeMenu();
+  });
+
+  overlay?.addEventListener("click", closeMenu);
+
   document.addEventListener("click", (e) => {
     if (!menu || !menuIcon) return;
     if (
@@ -197,123 +184,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // IMPORTANTE: el click del carrito se maneja en el script del modal
-  // empty-cart-modal en index.html. Aquí NO lo tocamos para no duplicar
-  // comportamiento.
+  userButton?.addEventListener("click", () => {
+    const user = getStoredUser();
+    if (!user) window.location.href = "/login";
+    else openUserModal();
+  });
 
-  if (userButton) {
-    userButton.addEventListener("click", () => {
-      const user = getStoredUser();
-      if (!user) {
-        window.location.href = "/login";
-      } else {
-        openUserModal();
-      }
-    });
-  }
+  userModalClose?.addEventListener("click", closeUserModal);
 
-  if (userModalClose) {
-    userModalClose.addEventListener("click", () => {
+  userModal?.addEventListener("click", (e) => {
+    if (e.target === userModal) closeUserModal();
+  });
+
+  logoutButton?.addEventListener("click", () => {
+    setStoredUser(null);
+    applyUserUI();
+    closeMenu();
+    showToast("Sesión cerrada.");
+    setTimeout(() => (window.location.href = "/"), 500);
+  });
+
+  userForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const user = getStoredUser();
+    if (!user) {
       closeUserModal();
-    });
-  }
-  if (userModal) {
-    userModal.addEventListener("click", (e) => {
-      if (e.target === userModal) {
-        closeUserModal();
-      }
-    });
-  }
+      window.location.href = "/login";
+      return;
+    }
 
-  if (logoutButton) {
-    logoutButton.addEventListener("click", () => {
-      setStoredUser(null);
-      applyUserUI();
-      closeMenu();
-      showToast("Sesión cerrada.");
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
-    });
-  }
+    const nombre = userNameInput?.value?.trim() || "";
+    const phoneRaw = userPhoneInput?.value?.trim() || "";
+    const direccion = userAddressInput?.value?.trim() || "";
 
-  if (userForm) {
-    userForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const user = getStoredUser();
-      if (!user) {
-        closeUserModal();
-        window.location.href = "/login";
-        return;
-      }
-      const nombre = userNameInput?.value?.trim() || "";
-      const phoneRaw = userPhoneInput?.value?.trim() || "";
-      const direccion = userAddressInput?.value?.trim() || "";
+    let celularLimpio = phoneRaw.replace(/\D/g, "");
+    if (celularLimpio.startsWith("57")) celularLimpio = celularLimpio.slice(2);
 
-      let celularLimpio = phoneRaw.replace(/\D/g, "");
-      if (celularLimpio.startsWith("57")) {
-        celularLimpio = celularLimpio.slice(2);
-      }
-      if (celularLimpio && celularLimpio.length !== 10) {
-        showToast("El celular debe tener 10 dígitos después de +57.");
-        return;
-      }
+    if (celularLimpio && celularLimpio.length !== 10) {
+      showToast("El celular debe tener 10 dígitos después de +57.");
+      return;
+    }
 
-      user.perfil = user.perfil || {};
-      user.perfil.nombre = nombre;
-      user.perfil.celular = celularLimpio || null;
-      user.perfil.direccionentrega = direccion;
+    user.perfil = user.perfil || {};
+    user.perfil.nombre = nombre;
+    user.perfil.celular = celularLimpio || null;
+    user.perfil.direccionentrega = direccion;
 
-      setStoredUser(user);
-      applyUserUI();
-      showToast("Perfil actualizado localmente.");
-      closeUserModal();
-    });
-  }
+    setStoredUser(user);
+    applyUserUI();
+    showToast("Perfil actualizado.");
+    closeUserModal();
+  });
 
   // =============================
-  // CARRUSEL HERO (imagen izquierda + texto derecha)
+  // MODAL ZOOM HERO
   // =============================
-
-  // Fallback local (actual hardcode)
-  const DEFAULT_HERO_IMAGES = [
-    {
-      url: "https://lh3.googleusercontent.com/aida-public/AB6AXuASEb-HyXI6AJNvlivFv0Qp7nWz0FsGB4PuFIgOa46zbaQ2yZXx8x9piDRUnfXOZuee2ni2gf1RvTerVysshQ4ZQPusSy2H4zr-dNwTI-UYaS8hnsPq38o3uId47Lf_jQmHQLe0SZ3SMaadkC29NjD0_zp-Ui8wMCDwHqiJ7o7uqbJRWnKtFB7pgWwHJGm5kEA9n4LPu9ru_1fs6jtwgA6jupWr9PuzC070KqTxw6CIdmZ5XqSIofKuRx2nrvKW7pkk7BMvhZvqamo",
-      alt: "Hamburguesa clásica",
-      title: "Hamburguesa clásica de la casa",
-      description:
-        "Pan brioche, carne 100% res, queso americano y vegetales frescos. Simple, contundente y perfecta para cualquier antojo.",
-      tag: "Favorita de siempre",
-    },
-    {
-      url: "https://lh3.googleusercontent.com/aida-public/AB6AXuBCIJdajBCiOGKvR6jQFEAA5D8TeOdEQz-KCoWOZvboPDAvf-mSb8_DGtiJKTjvxzFDBoRsyqMOcWIUaOrVLHn5JK07YHXo6Zpw1umMVCb8B2E4ol66ZDg_97kUjAsG_0CImrHnppTvtEDhdSMj4OUiBFP1lz-zLWiodNhrkAFgtiaK1qbEUQ7sycUIgYoU2T-rKeHg1bVgy808NyTZf2oyS_qHH66lXfJPaKvEBowgcRDaEhWWb_P53HapQMDtzyUU3XLNgGwsOME",
-      alt: "Hamburguesa crispy",
-      title: "Crispy burger dorada y crocante",
-      description:
-        "Pollo apanado extra crocante, doble queso, ensalada fresca y salsas de la casa. La textura que pide el cuerpo.",
-      tag: "Edición especial",
-    },
-    {
-      url: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlDqWB6Fwl4shFIrDQwpKwhJejim4QrnPrqqOVGFp75VMzQ6m5-Dw_wxRHpw96gxRSMuSyrsBE37Yy9RAEvSsj8XpSzn583CniqYPOOaCMoZiyt_vWrOpBuxOm084mO7tWyQY_D03FZTwDefpfTjvpYXzxjsH9u6c45UsK9dlZDHF4hIo-RLspFLhJCqujRKn9n5TtBKGlbWZAJEkUgeGBGbaRo1H_BSORim6r_A0_pgbAOH_4H_j9K4K5EjYAga_elG1EQY-t9v8",
-      alt: "Hamburguesa gourmet",
-      title: "Tierra Querida gourmet",
-      description:
-        "Doble carne, tocineta ahumada, mix de quesos y reducción de cebolla caramelizada. Para cuando quieres darte un premio serio.",
-      tag: "Recomendado del chef",
-    },
-  ];
-
-  let heroImages = [];
-
-  const heroCarousel = document.getElementById("hero-carousel");
-  const heroDots = document.getElementById("hero-dots");
-  const heroPrev = document.getElementById("hero-prev");
-  const heroNext = document.getElementById("hero-next");
-
-  let currentSlide = 0;
-  let heroInterval;
-
-  // Modal imagen hero
   const imgModal = document.getElementById("image-modal");
   const modalBackdrop = imgModal?.querySelector(".modal-backdrop");
   const modalClose = imgModal?.querySelector(".modal-close");
@@ -323,8 +248,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function openModal(url, alt) {
     if (!imgModal || !modalImage || !modalCaption) return;
     modalImage.src = url;
-    modalImage.alt = alt;
-    modalCaption.textContent = alt;
+    modalImage.alt = alt || "";
+    modalCaption.textContent = alt || "";
     imgModal.classList.add("open");
     imgModal.classList.remove("hidden");
   }
@@ -338,148 +263,189 @@ document.addEventListener("DOMContentLoaded", () => {
     modalImage.classList.remove("zoomed");
   }
 
-  function renderHeroSlides() {
-    if (!heroCarousel || !heroDots) return;
+  modalClose?.addEventListener("click", closeModal);
+  modalBackdrop?.addEventListener("click", closeModal);
+  modalImage?.addEventListener("click", () =>
+    modalImage.classList.toggle("zoomed")
+  );
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
 
-    heroCarousel.innerHTML = "";
+  // =============================
+  // HERO (nuevo layout) - landing_hero
+  // =============================
+  const heroFeature = document.getElementById("hero-feature");
+  const heroSideA = document.getElementById("hero-side-a");
+  const heroSideB = document.getElementById("hero-side-b");
+  const heroDots = document.getElementById("hero-dots");
+  const heroPrev = document.getElementById("hero-prev");
+  const heroNext = document.getElementById("hero-next");
+
+  const DEFAULT_HERO = [
+    {
+      title: "Especial de temporada",
+      description: "Ingredientes frescos y sabor real.",
+      tag: "Edición limitada",
+      image_url:
+        "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=1600&q=75",
+    },
+    {
+      title: "Bebidas exóticas",
+      description: "Solo por temporada.",
+      tag: "Nuevo",
+      image_url:
+        "https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=1600&q=75",
+    },
+    {
+      title: "Postres de temporada",
+      description: "Dulces para cerrar perfecto.",
+      tag: "Recomendado",
+      image_url:
+        "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&w=1600&q=75",
+    },
+  ];
+
+  let heroItems = [];
+  let heroIndex = 0;
+  let heroTimer;
+
+  function safeHero(i) {
+    const n = heroItems.length || 1;
+    return ((i % n) + n) % n;
+  }
+
+  function buildHeroHTML(item, opts = {}) {
+    const title = item?.title || "";
+    const desc = item?.description || "";
+    const tag = item?.tag || "Nuevo";
+    const img = item?.image_url || "";
+    const isFeatured = !!opts.featured;
+
+    // overlay tipo diseño nuevo
+    const overlay = isFeatured
+      ? "linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.20) 60%),"
+      : "linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.20) 70%),";
+
+    return `
+      <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+           style="background-image:${overlay} url('${img}');">
+      </div>
+
+      <div class="relative h-full flex flex-col justify-end p-6 sm:p-8 lg:p-12 items-start gap-3">
+        <span class="bg-primary text-white text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+          ${tag}
+        </span>
+
+        <h1 class="${
+          isFeatured ? "text-3xl sm:text-4xl lg:text-5xl" : "text-2xl"
+        } font-extrabold leading-tight max-w-lg">
+          ${title}
+        </h1>
+
+        <p class="text-white/80 max-w-md text-sm sm:text-base font-medium">
+          ${desc}
+        </p>
+
+        ${
+          isFeatured
+            ? `<button class="mt-1 bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-full font-extrabold text-sm flex items-center gap-2 transition-colors" type="button" id="hero-cta">
+                 Descubrir ahora
+                 <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+               </button>`
+            : `<span class="text-primary font-extrabold text-sm flex items-center hover:underline">
+                 Ver más <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+               </span>`
+        }
+      </div>
+    `;
+  }
+
+  function renderHeroDots() {
+    if (!heroDots) return;
     heroDots.innerHTML = "";
 
-    heroImages.forEach((item, index) => {
-      const slide = document.createElement("div");
-      slide.className = "hero-slide";
-      slide.dataset.index = index.toString();
-
-      if (index === 0) {
-        slide.classList.add("hero-slide--active");
-      }
-
-      slide.innerHTML = `
-        <div class="hero-slide-inner">
-          <div class="hero-slide-image">
-            <img src="${item.url}" alt="${item.alt || ""}" />
-          </div>
-          <div class="hero-slide-text">
-            ${
-              item.tag
-                ? `<p class="hero-tagline">${item.tag}</p>`
-                : `<p class="hero-tagline">Nuevo</p>`
-            }
-            <h2 class="hero-title">${item.title || ""}</h2>
-            <p class="hero-desc">${item.description || ""}</p>
-            <button type="button" class="hero-cta">
-              <span>Ver menú</span>
-              <span class="material-symbols-outlined">arrow_forward</span>
-            </button>
-          </div>
-        </div>
-      `;
-
-      const imgEl = slide.querySelector("img");
-      if (imgEl) {
-        imgEl.addEventListener("click", () =>
-          openModal(item.url, item.alt || item.title || "")
-        );
-      }
-
-      const cta = slide.querySelector(".hero-cta");
-      if (cta) {
-        cta.addEventListener("click", () => {
-          const productsSection = document.querySelector(".products-section");
-          if (productsSection) {
-            productsSection.scrollIntoView({ behavior: "smooth" });
-          }
-        });
-      }
-
-      heroCarousel.appendChild(slide);
-
+    heroItems.forEach((_, i) => {
       const dot = document.createElement("button");
+      dot.type = "button";
       dot.className =
-        "w-2.5 h-2.5 rounded-full transition-colors bg-white/40 hover:bg-white focus:outline-none";
-      dot.dataset.index = index.toString();
+        "h-2.5 w-2.5 rounded-full transition-colors " +
+        (i === heroIndex ? "bg-white" : "bg-white/40 hover:bg-white/70");
       dot.addEventListener("click", () => {
-        goToSlide(index);
-        restartAutoSlide();
+        heroIndex = i;
+        renderHero();
+        restartHero();
       });
       heroDots.appendChild(dot);
     });
-
-    updateDots();
   }
 
-  function goToSlide(index) {
-    if (!heroCarousel) return;
-    const slides = heroCarousel.querySelectorAll(".hero-slide");
+  function renderHero() {
+    if (!heroFeature || heroItems.length === 0) return;
 
-    slides.forEach((slide, i) => {
-      if (i === index) {
-        slide.classList.add("hero-slide--active");
-      } else {
-        slide.classList.remove("hero-slide--active");
-      }
+    const featured = heroItems[heroIndex];
+    const side1 = heroItems[safeHero(heroIndex + 1)];
+    const side2 = heroItems[safeHero(heroIndex + 2)];
+
+    heroFeature.innerHTML = buildHeroHTML(featured, { featured: true });
+
+    heroSideA &&
+      (heroSideA.innerHTML = buildHeroHTML(side1, { featured: false }));
+    heroSideB &&
+      (heroSideB.innerHTML = buildHeroHTML(side2, { featured: false }));
+
+    // CTA: scroll a menú
+    heroFeature.querySelector("#hero-cta")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      document
+        .getElementById("products-section")
+        ?.scrollIntoView({ behavior: "smooth" });
     });
 
-    currentSlide = index;
-    updateDots();
-  }
-
-  function updateDots() {
-    if (!heroDots) return;
-    const dots = heroDots.querySelectorAll("button");
-    dots.forEach((dot, i) => {
-      dot.className =
-        "w-2.5 h-2.5 rounded-full transition-colors " +
-        (i === currentSlide ? "bg-white" : "bg-white/40");
+    // Click en hero: modal zoom (buena para “zoom”)
+    heroFeature.addEventListener("click", () => {
+      openModal(featured.image_url, featured.title);
     });
+
+    // Click side cards: cambia slide
+    heroSideA?.addEventListener("click", () => {
+      heroIndex = safeHero(heroIndex + 1);
+      renderHero();
+      restartHero();
+    });
+    heroSideB?.addEventListener("click", () => {
+      heroIndex = safeHero(heroIndex + 2);
+      renderHero();
+      restartHero();
+    });
+
+    renderHeroDots();
   }
 
-  function startHeroAutoSlide() {
-    if (heroInterval) {
-      window.clearInterval(heroInterval);
-    }
-    if (!heroImages.length) return;
-    heroInterval = window.setInterval(() => {
-      const next = (currentSlide + 1) % heroImages.length;
-      goToSlide(next);
-    }, 5000);
+  function startHero() {
+    if (heroTimer) clearInterval(heroTimer);
+    if (heroItems.length <= 1) return;
+
+    heroTimer = setInterval(() => {
+      heroIndex = safeHero(heroIndex + 1);
+      renderHero();
+    }, 5200);
   }
 
-  function restartAutoSlide() {
-    startHeroAutoSlide();
+  function restartHero() {
+    startHero();
   }
 
   heroPrev?.addEventListener("click", () => {
-    if (!heroImages.length) return;
-    const prev = (currentSlide - 1 + heroImages.length) % heroImages.length;
-    goToSlide(prev);
-    restartAutoSlide();
+    heroIndex = safeHero(heroIndex - 1);
+    renderHero();
+    restartHero();
   });
 
   heroNext?.addEventListener("click", () => {
-    if (!heroImages.length) return;
-    const next = (currentSlide + 1) % heroImages.length;
-    goToSlide(next);
-    restartAutoSlide();
-  });
-
-  modalClose?.addEventListener("click", () => {
-    closeModal();
-  });
-
-  modalBackdrop?.addEventListener("click", () => {
-    if (window.innerWidth >= 1024) {
-      closeModal();
-    }
-  });
-
-  modalImage?.addEventListener("click", () => {
-    modalImage.classList.toggle("zoomed");
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal();
-    }
+    heroIndex = safeHero(heroIndex + 1);
+    renderHero();
+    restartHero();
   });
 
   async function loadHeroFromApi() {
@@ -488,56 +454,225 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error("Respuesta no OK");
       const data = await res.json();
 
-      if (Array.isArray(data) && data.length > 0) {
-        heroImages = data.map((item) => ({
-          url: item.image_url,
-          alt: item.image_alt || item.title || "Banner Tierra Querida",
-          title: item.title,
-          description: item.description,
-          tag: item.tag || "",
-        }));
-      } else {
-        heroImages = DEFAULT_HERO_IMAGES.slice();
-      }
+      // Esperado: rows activos ordenados por order_index (idealmente el backend ya lo hace)
+      heroItems = Array.isArray(data) && data.length ? data : DEFAULT_HERO;
     } catch (err) {
-      console.error("[index.js] Error cargando hero desde API:", err);
-      heroImages = DEFAULT_HERO_IMAGES.slice();
+      console.error("[hero] Error API:", err);
+      heroItems = DEFAULT_HERO;
     }
 
-    renderHeroSlides();
-    startHeroAutoSlide();
+    heroIndex = 0;
+    renderHero();
+    startHero();
   }
 
   // =============================
-  // PRODUCTOS DESDE SUPABASE
-  // Carrusel: máx 4 completos + 5º asomado
+  // PRODUCTOS + SEARCH (header-search)
   // =============================
-  const zonaPrecio = "PrecioOriente"; // ajusta a tu zona si quieres
+  const zonaPrecio = "PrecioOriente";
   const productsContainer = document.getElementById("products-container");
   const tabButtons = document.querySelectorAll(".tab-btn");
   const productsPrevBtn = document.getElementById("products-prev");
   const productsNextBtn = document.getElementById("products-next");
   const productsFadeRight = document.getElementById("products-fade-right");
 
+  const productsWrapper = document.getElementById("products-carousel-wrapper");
+  const productsViewport = document.getElementById("products-viewport");
+
   const MAX_VISIBLE_FULL = 4;
-  const MAX_RENDER = 5; // 4 completos + 1 a la mitad
+  const MAX_RENDER = 5;
+
+  // =============================
+  // SEARCH MULTI-CATEGORÍA (cache + auto-tab + auto-scroll)
+  // =============================
+  const SEARCH_TIPOS = [1, 3, 4, 6]; // hamburguesas, combos, papas, bebidas
+  const productsCache = new Map(); // tipo -> array productos
+  let searchSeq = 0; // evita carreras async
+
+  // Mapa tipo -> botón (para activar tab programáticamente)
+  const tabByTipo = new Map();
+  tabButtons.forEach((b) => {
+    const t = Number(b.dataset.tipo);
+    if (Number.isFinite(t)) tabByTipo.set(t, b);
+  });
+
+  function setActiveTab(tipo) {
+    tabButtons.forEach((b) => b.classList.remove("tab-btn--active"));
+    const btn = tabByTipo.get(Number(tipo));
+    if (btn) btn.classList.add("tab-btn--active");
+  }
+
+  function scrollToProductsSection() {
+    const section = document.getElementById("products-section");
+    if (!section) return;
+
+    // offset por header sticky
+    const header = document.querySelector("header");
+    const headerH = header
+      ? Math.ceil(header.getBoundingClientRect().height)
+      : 0;
+
+    const y =
+      window.scrollY + section.getBoundingClientRect().top - headerH - 12;
+    window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+
+    // opcional: llevar el carrusel al inicio
+    productsViewport?.scrollTo({ left: 0, behavior: "smooth" });
+  }
+
+  async function fetchMenuCached(tipo) {
+    const t = Number(tipo);
+    if (productsCache.has(t)) return productsCache.get(t);
+
+    const products = await fetchMenu(t);
+    const arr = Array.isArray(products) ? products : [];
+    productsCache.set(t, arr);
+    return arr;
+  }
+
+  function countMatches(list, term) {
+    const t = normalizeText(term).trim();
+    if (!t) return 0;
+
+    let c = 0;
+    for (const p of list) {
+      const name = normalizeText(p?.Nombre);
+      const desc = normalizeText(p?.Descripcion);
+      if (name.includes(t) || desc.includes(t)) c++;
+    }
+    return c;
+  }
+
+  async function pickBestTipoForTerm(term) {
+    // elegimos el tipo con más matches (si empatan, el primero del orden)
+    let bestTipo = currentTipo;
+    let bestCount = 0;
+
+    for (const tipo of SEARCH_TIPOS) {
+      const list = await fetchMenuCached(tipo);
+      const m = countMatches(list, term);
+      if (m > bestCount) {
+        bestCount = m;
+        bestTipo = tipo;
+      }
+    }
+
+    return { bestTipo, bestCount };
+  }
 
   let allProducts = [];
+  let allProductsRaw = [];
   let currentTipo = 1;
   let startIndex = 0;
+
+  // Search
+  let searchTerm = "";
+  const searchInput = document.getElementById("header-search");
+
+  function normalizeText(str) {
+    return (str || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function debounce(fn, wait = 160) {
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  function applySearchFilter(resetIndex = true) {
+    const term = normalizeText(searchTerm).trim();
+
+    if (!term) {
+      allProducts = allProductsRaw.slice();
+    } else {
+      allProducts = allProductsRaw.filter((p) => {
+        const name = normalizeText(p?.Nombre);
+        const desc = normalizeText(p?.Descripcion);
+        return name.includes(term) || desc.includes(term);
+      });
+    }
+
+    if (resetIndex) startIndex = 0;
+    renderProductsCarousel();
+  }
+
+  if (searchInput) {
+    const onSearch = debounce(async () => {
+      const mySeq = ++searchSeq;
+
+      searchTerm = searchInput.value || "";
+      const term = normalizeText(searchTerm).trim();
+
+      // Siempre al buscar: baja a productos
+      scrollToProductsSection();
+
+      // si está vacío, solo aplica filtro normal en la categoría actual
+      if (!term) {
+        applySearchFilter(true);
+        return;
+      }
+
+      // decide la mejor categoría para ese término
+      const { bestTipo, bestCount } = await pickBestTipoForTerm(term);
+
+      // si el usuario escribió más y esta búsqueda quedó vieja, no hagas nada
+      if (mySeq !== searchSeq) return;
+
+      // si no hay matches en ninguna, deja la categoría actual y muestra vacío
+      if (!bestCount) {
+        applySearchFilter(true);
+        return;
+      }
+
+      // si hay matches en otra categoría, cámbiate automáticamente
+      if (Number(bestTipo) !== Number(currentTipo)) {
+        setActiveTab(bestTipo);
+        await loadCategory(bestTipo);
+        if (mySeq !== searchSeq) return; // por si tardó el fetch
+      } else {
+        // misma categoría: solo filtra
+        applySearchFilter(true);
+      }
+
+      // asegurar carrusel al inicio con los resultados
+      productsViewport?.scrollTo({ left: 0, behavior: "smooth" });
+    }, 180);
+
+    searchInput.addEventListener("input", onSearch);
+  }
+
+  function lockHeight(el) {
+    if (!el) return;
+    const h = Math.ceil(el.getBoundingClientRect().height);
+    el.style.minHeight = h ? `${h}px` : "360px";
+  }
+
+  function unlockHeight(el) {
+    if (!el) return;
+    el.style.minHeight = "";
+  }
+
+  function setProductsLoading(isLoading) {
+    if (!productsViewport) return;
+    productsViewport.style.opacity = isLoading ? "0.6" : "1";
+    productsViewport.style.transform = isLoading
+      ? "translateY(2px)"
+      : "translateY(0)";
+    productsViewport.style.transition =
+      "opacity 180ms ease, transform 180ms ease";
+  }
 
   async function fetchMenu(tipo) {
     const url =
       typeof tipo === "number" ? `/api/menu?tipo=${tipo}` : "/api/menu";
     const res = await fetch(url);
-    if (!res.ok) {
-      console.error("Error al cargar menú", res.status);
-      if (productsContainer) {
-        productsContainer.innerHTML =
-          '<p class="text-center text-sm text-red-500 mt-4">Error al cargar el menú. Intenta de nuevo.</p>';
-      }
-      return [];
-    }
+    if (!res.ok) return [];
     return await res.json();
   }
 
@@ -548,19 +683,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const moreToRight = startIndex + MAX_VISIBLE_FULL < allProducts.length;
     productsNextBtn.disabled = !moreToRight;
 
-    if (productsFadeRight) {
+    if (productsFadeRight)
       productsFadeRight.style.opacity = moreToRight ? "1" : "0";
-    }
   }
 
   function buildProductCard(item, isHalf) {
     const card = document.createElement("article");
+
     card.className = [
       "group relative flex flex-col rounded-2xl overflow-hidden",
       "bg-[#020617] text-white",
       "border border-white/5 shadow-lg shadow-black/40",
-      "min-w-[230px] max-w-[260px] flex-shrink-0",
-      "backdrop-blur-sm",
+      "min-w-[260px] sm:min-w-[260px] max-w-[280px] flex-shrink-0",
       isHalf ? "opacity-70 translate-x-3 scale-[0.98]" : "",
     ].join(" ");
 
@@ -571,10 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const price =
-      item[zonaPrecio] ??
-      item.PrecioAreaMetrop ??
-      item.PrecioRestoPais ??
-      0;
+      item[zonaPrecio] ?? item.PrecioAreaMetrop ?? item.PrecioRestoPais ?? 0;
 
     let priceDisplay;
     try {
@@ -590,7 +721,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const imgSrc = item.imagen || "/img/placeholder-product.webp";
 
     card.innerHTML = `
-      <div class="relative w-full aspect-[4/3] overflow-hidden bg-black/40">
+      <div class="relative w-full aspect-[16/10] overflow-hidden bg-black/40">
         <img
           loading="lazy"
           src="${imgSrc}"
@@ -598,17 +729,13 @@ document.addEventListener("DOMContentLoaded", () => {
           class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div class="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
-        <div class="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">
-          <span class="material-symbols-outlined text-[16px]">local_fire_department</span>
-          Popular
-        </div>
       </div>
 
       <div class="flex flex-col gap-1.5 px-3 pt-3 pb-3">
         <h3 class="text-[15px] sm:text-[16px] font-extrabold text-white leading-snug line-clamp-2">
-          ${item.Nombre || "Hamburguesa"}
+          ${item.Nombre || "Producto"}
         </h3>
-        <p class="text-[12px] sm:text-[13px] text-gray-300 leading-snug line-clamp-3">
+        <p class="text-[12px] sm:text-[13px] text-white/70 leading-snug line-clamp-3">
           ${item.Descripcion || ""}
         </p>
         <div class="mt-3 flex items-center justify-between">
@@ -616,7 +743,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ${priceDisplay}
           </span>
           <button
-            class="product-go-detail inline-flex items-center gap-1 rounded-full bg-primary text-white text-[12px] sm:text-[13px] font-bold px-3 py-1.5 hover:brightness-110 transition-colors"
+            class="product-go-detail inline-flex items-center gap-1 rounded-full bg-primary text-white text-[12px] sm:text-[13px] font-extrabold px-3 py-1.5 hover:brightness-110 transition-colors"
+            type="button"
           >
             <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
             Ver detalle
@@ -625,13 +753,10 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `;
 
-    const detailBtn = card.querySelector(".product-go-detail");
-    if (detailBtn) {
-      detailBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        window.location.href = `/product?id=${item.id}`;
-      });
-    }
+    card.querySelector(".product-go-detail")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      window.location.href = `/product?id=${item.id}`;
+    });
 
     card.addEventListener("click", () => {
       window.location.href = `/product?id=${item.id}`;
@@ -642,21 +767,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderProductsCarousel() {
     if (!productsContainer) return;
-
     productsContainer.innerHTML = "";
 
     if (!allProducts || allProducts.length === 0) {
       productsContainer.innerHTML = `
-        <div class="w-full flex flex-col items-center justify-center py-8 text-center text-sm text-gray-300">
+        <div class="w-full flex flex-col items-center justify-center py-8 text-center text-sm text-white/70">
           <span class="material-symbols-outlined text-4xl mb-2">fastfood</span>
           <p>No hay productos disponibles en esta categoría.</p>
         </div>
       `;
     } else {
-      const visibleEnd = Math.min(
-        startIndex + MAX_RENDER,
-        allProducts.length
-      );
+      const visibleEnd = Math.min(startIndex + MAX_RENDER, allProducts.length);
       const slice = allProducts.slice(startIndex, visibleEnd);
 
       slice.forEach((item, idx) => {
@@ -665,8 +786,7 @@ document.addEventListener("DOMContentLoaded", () => {
           visibleEnd < allProducts.length &&
           slice.length === MAX_RENDER;
 
-        const card = buildProductCard(item, isHalf);
-        productsContainer.appendChild(card);
+        productsContainer.appendChild(buildProductCard(item, isHalf));
       });
     }
 
@@ -677,22 +797,37 @@ document.addEventListener("DOMContentLoaded", () => {
     currentTipo = tipo ?? 1;
     startIndex = 0;
 
+    // ✅ si ya está en cache, úsalo sin “loading”
+    if (productsCache.has(currentTipo)) {
+      allProductsRaw = productsCache.get(currentTipo) || [];
+      applySearchFilter(true);
+      return;
+    }
+
+    lockHeight(productsWrapper);
+    setProductsLoading(true);
+
     if (productsContainer) {
       productsContainer.innerHTML = `
         <div class="flex gap-4 w-full">
-          <div class="flex-1 h-40 rounded-2xl bg-gray-200/70 dark:bg-[#18181b] animate-pulse"></div>
-          <div class="flex-1 h-40 rounded-2xl bg-gray-200/70 dark:bg-[#18181b] animate-pulse hidden sm:block"></div>
-          <div class="flex-1 h-40 rounded-2xl bg-gray-200/70 dark:bg-[#18181b] animate-pulse hidden md:block"></div>
+          <div class="min-w-[260px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse"></div>
+          <div class="min-w-[260px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse hidden sm:block"></div>
+          <div class="min-w-[260px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse hidden md:block"></div>
         </div>
       `;
     }
 
     const products = await fetchMenu(currentTipo);
-    allProducts = Array.isArray(products) ? products : [];
-    renderProductsCarousel();
+    allProductsRaw = Array.isArray(products) ? products : [];
+    productsCache.set(currentTipo, allProductsRaw); // ✅ guarda cache
+    applySearchFilter(true);
+
+    requestAnimationFrame(() => {
+      setProductsLoading(false);
+      unlockHeight(productsWrapper);
+    });
   }
 
-  // Eventos tabs
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       tabButtons.forEach((b) => b.classList.remove("tab-btn--active"));
@@ -704,7 +839,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Flechas carrusel de productos
   productsPrevBtn?.addEventListener("click", () => {
     if (startIndex <= 0) return;
     startIndex = Math.max(0, startIndex - MAX_VISIBLE_FULL);
@@ -721,9 +855,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // =============================
-  // ABOUT & INSTAGRAM desde API
+  // ABOUT (landing_about)
   // =============================
-
   const aboutTaglineEl = document.getElementById("about-tagline");
   const aboutTitleEl = document.getElementById("about-title");
   const aboutParagraphsEl = document.getElementById("about-paragraphs");
@@ -732,102 +865,60 @@ document.addEventListener("DOMContentLoaded", () => {
   const aboutCtaEl = document.getElementById("about-cta-stores");
   const socialInstagramEl = document.getElementById("social-instagram");
   const instagramHandleEl = document.getElementById("instagram-handle");
-  const instagramGridEl = document.getElementById("instagram-grid");
 
   const DEFAULT_ABOUT = {
     tagline: "#Movimiento TQ",
-    title: "¿Quiénes Somos?",
-    body: [
-      "Hace 5 años, empezamos en una cocina pequeña con una idea grande: llevar hamburguesas honestas, hechas al momento, a cada rincón de esta Tierra Querida.",
-      "Sin letreros luminosos ni grandes campañas. Solo una plancha caliente, 4 amigos con ganas de emprender y cientos de clientes que fueron pasando la voz, mordida tras mordida.",
-      "Hoy seguimos siendo la misma cocina inquieta, pero con un sueño más grande: que cada pedido se sienta como comer en casa, sin perder el sabor callejero que nos trajo hasta aquí.",
-    ],
+    title: "¿Quiénes somos?",
+    body: "Hace 5 años empezamos en una cocina pequeña con una idea grande: llevar hamburguesas honestas a cada rincón.\n\nHoy seguimos siendo la misma cocina inquieta, pero con un sueño más grande: que cada pedido se sienta como comer en casa.",
+    image_url: "./img/empleados.png",
+    badge_text: "+100 puntos de venta en Colombia",
     cta_text: "Pide aquí",
     cta_href: "/stores",
-    badge_text: "+100 puntos de venta en Colombia",
-    image_url: "./img/empleados.png",
-    image_alt: "Equipo de Tierra Querida",
     instagram_handle: "@tierraquerida20",
-    instagram_url: "https://www.instagram.com/tierraquerida20/",
   };
 
-  const DEFAULT_INSTAGRAM_STORIES = [
-    {
-      image_url: "./img/ig-story-1.webp",
-      image_alt: "Cliente disfrutando una hamburguesa Tierra Querida",
-      caption: "",
-      href: "https://www.instagram.com/tierraquerida20/",
-    },
-    {
-      image_url: "./img/ig-story-2.webp",
-      image_alt: "Amigos comiendo papas y hamburguesas en Tierra Querida",
-      caption: "",
-      href: "https://www.instagram.com/tierraquerida20/",
-    },
-    {
-      image_url: "./img/ig-story-3.webp",
-      image_alt: "Caravana de Tierra Querida por las calles de la ciudad",
-      caption: "",
-      href: "https://www.instagram.com/tierraquerida20/",
-    },
-    {
-      image_url: "./img/ig-story-4.webp",
-      image_alt: "Vista aérea de Cartagena con punto Tierra Querida",
-      caption: "",
-      href: "https://www.instagram.com/tierraquerida20/",
-    },
-  ];
-
   function renderAbout(about) {
-    if (aboutTaglineEl) {
-      aboutTaglineEl.childNodes[0].nodeValue = (about.tagline || "").trim() + " ";
-    }
-    if (aboutTitleEl) {
-      aboutTitleEl.textContent = about.title || "";
-    }
-    if (aboutBadgeTextEl) {
+    if (aboutTaglineEl)
+      aboutTaglineEl.textContent = (
+        about.tagline || DEFAULT_ABOUT.tagline
+      ).trim();
+    if (aboutTitleEl)
+      aboutTitleEl.textContent = about.title || DEFAULT_ABOUT.title;
+
+    if (aboutBadgeTextEl)
       aboutBadgeTextEl.textContent =
         about.badge_text || DEFAULT_ABOUT.badge_text;
-    }
-    if (aboutImageEl) {
+
+    if (aboutImageEl)
       aboutImageEl.src = about.image_url || DEFAULT_ABOUT.image_url;
-      aboutImageEl.alt = about.image_alt || DEFAULT_ABOUT.image_alt;
-    }
+
     if (aboutCtaEl) {
       aboutCtaEl.href = about.cta_href || DEFAULT_ABOUT.cta_href;
-      aboutCtaEl.firstElementChild &&
-        (aboutCtaEl.firstChild.nodeValue =
-          (about.cta_text || DEFAULT_ABOUT.cta_text) + " ");
+      const span = aboutCtaEl.querySelector("span");
+      if (span) span.textContent = about.cta_text || DEFAULT_ABOUT.cta_text;
     }
 
     if (aboutParagraphsEl) {
       aboutParagraphsEl.innerHTML = "";
-      const bodyParts =
-        Array.isArray(about.body)
-          ? about.body
-          : typeof about.body === "string"
-          ? about.body.split(/\n\s*\n/)
-          : DEFAULT_ABOUT.body;
-
-      bodyParts
-        .filter((p) => p && p.trim().length)
-        .forEach((text) => {
+      const raw = about.body || DEFAULT_ABOUT.body;
+      const parts = typeof raw === "string" ? raw.split(/\n\s*\n/) : [];
+      (parts.length ? parts : DEFAULT_ABOUT.body.split(/\n\s*\n/)).forEach(
+        (t) => {
           const p = document.createElement("p");
-          p.className =
-            "text-sm sm:text-base leading-relaxed text-gray-700 dark:text-gray-300";
-          p.textContent = text.trim();
+          p.className = "text-white/70 text-sm md:text-base leading-relaxed";
+          p.textContent = t.trim();
           aboutParagraphsEl.appendChild(p);
-        });
+        }
+      );
     }
 
-    if (instagramHandleEl) {
+    if (instagramHandleEl)
       instagramHandleEl.textContent =
         about.instagram_handle || DEFAULT_ABOUT.instagram_handle;
-    }
-    if (socialInstagramEl) {
-      socialInstagramEl.href =
-        about.instagram_url || DEFAULT_ABOUT.instagram_url;
-    }
+    if (socialInstagramEl)
+      socialInstagramEl.href = `https://www.instagram.com/${(
+        about.instagram_handle || DEFAULT_ABOUT.instagram_handle
+      ).replace("@", "")}/`;
   }
 
   async function loadAboutFromApi() {
@@ -836,62 +927,53 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error("Respuesta no OK");
       const data = await res.json();
 
-      const about = {
-        tagline: data.tagline || DEFAULT_ABOUT.tagline,
-        title: data.title || DEFAULT_ABOUT.title,
-        body: data.body || DEFAULT_ABOUT.body,
-        cta_text: data.cta_text || DEFAULT_ABOUT.cta_text,
-        cta_href: data.cta_href || DEFAULT_ABOUT.cta_href,
-        badge_text: data.badge_text || DEFAULT_ABOUT.badge_text,
-        image_url: data.image_url || DEFAULT_ABOUT.image_url,
-        image_alt: data.image_alt || DEFAULT_ABOUT.image_alt,
-        instagram_handle:
-          data.instagram_handle || DEFAULT_ABOUT.instagram_handle,
-        instagram_url: data.instagram_url || DEFAULT_ABOUT.instagram_url,
-      };
-
-      renderAbout(about);
+      // tu tabla landing_about: {title, tagline, body, image_url, badge_text, cta_text, cta_href, instagram_handle}
+      renderAbout({
+        tagline: data.tagline,
+        title: data.title,
+        body: data.body,
+        image_url: data.image_url,
+        badge_text: data.badge_text,
+        cta_text: data.cta_text,
+        cta_href: data.cta_href,
+        instagram_handle: data.instagram_handle,
+      });
     } catch (err) {
-      console.error("[index.js] Error cargando about desde API:", err);
+      console.error("[about] Error API:", err);
       renderAbout(DEFAULT_ABOUT);
     }
   }
 
+  // =============================
+  // INSTAGRAM (landing_instagram)
+  // =============================
+  const instagramGridEl = document.getElementById("instagram-grid");
+
   function renderInstagramStories(stories) {
     if (!instagramGridEl) return;
-
     instagramGridEl.innerHTML = "";
 
     stories.forEach((story) => {
-      const card = document.createElement("a");
-      card.href = story.href || DEFAULT_ABOUT.instagram_url;
-      card.target = "_blank";
-      card.rel = "noopener noreferrer";
-      card.className =
-        "group relative aspect-[9/16] overflow-hidden rounded-3xl bg-black/50 shadow-xl";
+      const a = document.createElement("a");
+      a.href = story.href || "https://www.instagram.com/tierraquerida20/";
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.className =
+        "min-w-[200px] md:min-w-[240px] aspect-square rounded-xl bg-[#261c1c] overflow-hidden relative group snap-start border border-white/5";
 
-      card.innerHTML = `
+      a.innerHTML = `
         <img
+          loading="lazy"
           src="${story.image_url}"
-          alt="${story.image_alt || ""}"
-          class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          alt="${story.caption || "Instagram Tierra Querida"}"
+          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
-        <div
-          class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"
-        ></div>
-        <div
-          class="absolute inset-x-0 bottom-0 p-3 flex items-center justify-between"
-        >
-          <p class="text-white text-sm font-semibold">${story.caption || ""}</p>
-          <span
-            class="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[11px] font-semibold text-white backdrop-blur-sm group-hover:bg-white/20"
-          >
-            Ver en Instagram
-          </span>
+        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span class="material-symbols-outlined text-white">favorite</span>
         </div>
       `;
 
-      instagramGridEl.appendChild(card);
+      instagramGridEl.appendChild(a);
     });
   }
 
@@ -901,57 +983,40 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error("Respuesta no OK");
       const data = await res.json();
 
-      let stories;
-      if (Array.isArray(data) && data.length > 0) {
-        stories = data.map((item) => ({
-          image_url: item.image_url,
-          image_alt: item.image_alt || "",
-          caption: item.caption || "",
-          href:
-            item.href ||
-            DEFAULT_ABOUT.instagram_url ||
-            "https://www.instagram.com/",
-        }));
-      } else {
-        stories = DEFAULT_INSTAGRAM_STORIES;
-      }
+      // tu tabla landing_instagram: {image_url, caption, href, order_index, is_active}
+      const stories =
+        Array.isArray(data) && data.length
+          ? data.map((item) => ({
+              image_url: item.image_url,
+              caption: item.caption || "",
+              href: item.href || "https://www.instagram.com/tierraquerida20/",
+            }))
+          : [];
 
       renderInstagramStories(stories);
     } catch (err) {
-      console.error(
-        "[index.js] Error cargando historias de Instagram desde API:",
-        err
-      );
-      renderInstagramStories(DEFAULT_INSTAGRAM_STORIES);
+      console.error("[instagram] Error API:", err);
+      renderInstagramStories([]);
     }
   }
 
   // =============================
   // INICIALIZACIÓN
   // =============================
-
-  // Categoría por defecto
   loadCategory(1);
-
-  // Estado inicial del header
   updateCartCount();
   applyUserUI();
 
-  // Hero / About / Instagram desde API
   loadHeroFromApi();
   loadAboutFromApi();
   loadInstagramFromApi();
 
-  // Al volver con botón atrás (bfcache)
   window.addEventListener("pageshow", () => {
     updateCartCount();
     applyUserUI();
   });
 
-  // Si el carrito cambia en otra pestaña
   window.addEventListener("storage", (e) => {
-    if (e.key === "cart" || e.key === "burgerCart") {
-      updateCartCount();
-    }
+    if (e.key === "cart" || e.key === "burgerCart") updateCartCount();
   });
 });

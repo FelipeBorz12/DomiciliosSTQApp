@@ -1,8 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const ZONA_PRECIO = "PrecioOriente"; // zona de precios que estás usando
+  const ZONA_PRECIO = "PrecioOriente";
 
   // =============================
-  // LOADER DE LA PÁGINA
+  // LOADER
   // =============================
   const pageLoader = document.getElementById("product-page-loader");
 
@@ -21,45 +21,52 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =============================
-  // HEADER: usuario / carrito
-  // (estos selectores no siempre matchean aquí, pero son seguros)
+  // Header carrito + contador
   // =============================
-  const userButton = document.querySelector(
-    "header .flex.flex-1.items-center.justify-start .icon-button"
-  );
-  const rightButtons = document.querySelectorAll(
-    "header .flex.flex-1.items-center.justify-end .icon-button"
-  );
-  const cartButton = rightButtons[0] || null;
+  const cartIcon = document.getElementById("cart-icon");
+  const cartCount = document.getElementById("cart-count");
+  const cartCountBadge = document.getElementById("cart-count-badge");
 
-  if (userButton) {
-    userButton.addEventListener("click", () => {
-      window.location.href = "/login";
-    });
+  function updateCartCount() {
+    try {
+      let raw = localStorage.getItem("burgerCart");
+      if (!raw) raw = localStorage.getItem("cart");
+
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) throw new Error("Carrito inválido");
+
+      const totalItems = parsed.reduce((acc, item) => {
+        const q = Number(item?.quantity ?? item?.cantidad ?? 1);
+        if (!Number.isFinite(q) || q <= 0) return acc + 1;
+        return acc + q;
+      }, 0);
+
+      if (cartCount) cartCount.textContent = String(totalItems);
+      if (cartCountBadge) cartCountBadge.textContent = String(totalItems);
+    } catch {
+      if (cartCount) cartCount.textContent = "0";
+      if (cartCountBadge) cartCountBadge.textContent = "0";
+    }
   }
 
-  if (cartButton) {
-    cartButton.addEventListener("click", () => {
-      try {
-        const raw = localStorage.getItem("burgerCart");
-        if (!raw) {
-          alert("Tu carrito está vacío. Agrega un producto desde el menú.");
-          return;
-        }
-        const parsed = JSON.parse(raw);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          alert("Tu carrito está vacío. Agrega un producto desde el menú.");
-          return;
-        }
-        window.location.href = "/cart";
-      } catch (err) {
-        console.error("[product.js] Error leyendo carrito:", err);
-        alert(
-          "Hubo un problema leyendo tu carrito. Intenta agregar un producto de nuevo."
-        );
+  cartIcon?.addEventListener("click", () => {
+    try {
+      const raw = localStorage.getItem("burgerCart");
+      if (!raw) {
+        alert("Tu carrito está vacío. Agrega un producto desde el menú.");
+        return;
       }
-    });
-  }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        alert("Tu carrito está vacío. Agrega un producto desde el menú.");
+        return;
+      }
+      window.location.href = "/cart";
+    } catch (err) {
+      console.error("[product.js] Error leyendo carrito:", err);
+      alert("Hubo un problema leyendo tu carrito. Intenta de nuevo.");
+    }
+  });
 
   // =============================
   // Helpers
@@ -67,9 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function parseQuery() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
-    return {
-      id: id ? Number(id) : null,
-    };
+    return { id: id ? Number(id) : null };
   }
 
   function formatPrice(value) {
@@ -77,15 +82,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return `$${n.toLocaleString("es-CO")}`;
   }
 
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   // =============================
-  // Elementos del DOM
+  // DOM
   // =============================
   const backButton = document.getElementById("back-button");
 
   const productImage = document.getElementById("product-image");
   const productNameEl = document.getElementById("product-name");
   const productDescriptionEl = document.getElementById("product-description");
-  const productBasePriceEl = document.getElementById("product-base-price");
+  const productPriceEl = document.getElementById("product-price");
+
+  const breadcrumbCategory = document.getElementById("breadcrumb-category");
+  const breadcrumbProduct = document.getElementById("breadcrumb-product");
+  const topline = document.getElementById("product-topline");
 
   const extrasContainer = document.getElementById("extras-container");
   const extrasEmpty = document.getElementById("extras-empty");
@@ -101,10 +119,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const addToCartLabel = document.getElementById("add-to-cart-label");
   const addToCartSub = document.getElementById("add-to-cart-sub");
 
+  // Modal
   const imageModal = document.getElementById("image-modal");
   const modalImage = document.getElementById("modal-image");
   const closeModalBtn = document.getElementById("close-modal");
   const modalBackdrop = document.getElementById("modal-backdrop");
+
+  // Related
+  const relatedViewport = document.getElementById("related-viewport");
+  const relatedPrev = document.getElementById("related-prev");
+  const relatedNext = document.getElementById("related-next");
 
   // =============================
   // Estado
@@ -114,76 +138,95 @@ document.addEventListener("DOMContentLoaded", () => {
   let quantity = 1;
 
   // =============================
-  // Navegación back
+  // Back
   // =============================
-  if (backButton) {
-    backButton.addEventListener("click", () => {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = "/";
-      }
-    });
-  }
+  backButton?.addEventListener("click", () => {
+    if (window.history.length > 1) window.history.back();
+    else window.location.href = "/";
+  });
 
   // =============================
-  // Fetch data
+  // Fetch
   // =============================
   async function fetchProduct(id) {
     const res = await fetch(`/api/menu/item/${id}`);
-    if (!res.ok) {
-      throw new Error("No se pudo cargar el producto");
-    }
+    if (!res.ok) throw new Error("No se pudo cargar el producto");
     return await res.json();
   }
 
   async function fetchExtras() {
     const res = await fetch("/api/menu?tipo=2");
-    if (!res.ok) {
-      console.error("No se pudieron cargar adiciones");
-      return [];
-    }
+    if (!res.ok) return [];
+    return await res.json();
+  }
+
+  async function fetchByTipo(tipo) {
+    const res = await fetch(`/api/menu?tipo=${tipo}`);
+    if (!res.ok) return [];
     return await res.json();
   }
 
   // =============================
   // Render producto
   // =============================
+  function tipoToLabel(tipo) {
+    switch (Number(tipo)) {
+      case 1:
+        return "Hamburguesas";
+      case 3:
+        return "Combos";
+      case 4:
+        return "Papas";
+      case 6:
+        return "Bebidas";
+      default:
+        return "Menú";
+    }
+  }
+
   function renderProduct() {
     if (!product) return;
 
     const priceBase = product[ZONA_PRECIO] || 0;
 
+    // Imagen
     if (productImage) {
       productImage.style.backgroundImage = product.imagen
         ? `url('${product.imagen}')`
         : "";
     }
-    if (productNameEl) {
-      productNameEl.textContent = product.Nombre;
-    }
-    if (productDescriptionEl) {
-      productDescriptionEl.textContent = product.Descripcion;
-    }
-    if (productBasePriceEl) {
-      productBasePriceEl.textContent = `Precio base: ${formatPrice(priceBase)}`;
-    }
 
-    // 1 = hamburguesa, 3 = combo → tienen adiciones / modificar / término
-    // 4 = papas, 6 = bebidas → NO adiciones, NO modificar, NO término
+    // Textos
+    if (productNameEl) productNameEl.textContent = product.Nombre || "Producto";
+    if (productDescriptionEl)
+      productDescriptionEl.textContent = product.Descripcion || "";
+    if (productPriceEl) productPriceEl.textContent = formatPrice(priceBase);
+
+    // Breadcrumb
+    if (breadcrumbProduct)
+      breadcrumbProduct.textContent = product.Nombre || "Producto";
+    if (breadcrumbCategory)
+      breadcrumbCategory.textContent = tipoToLabel(product.tipo);
+
+    // Topline
+    if (topline)
+      topline.textContent = `Categoría: ${tipoToLabel(
+        product.tipo
+      )}`.toUpperCase();
+
+    // 1 y 3 sí; 4 y 6 no
     const esHamburguesaOCombo = product.tipo === 1 || product.tipo === 3;
 
     if (!esHamburguesaOCombo) {
-      if (extrasPanel && extrasPanel.parentElement) {
+      if (extrasPanel && extrasPanel.parentElement)
         extrasPanel.parentElement.classList.add("hidden");
-      }
       if (modifySection) modifySection.classList.add("hidden");
       if (cookingSection) cookingSection.classList.add("hidden");
     }
   }
 
   // =============================
-  // Render adiciones
+  // Render extras
   // =============================
   function renderExtras() {
     if (!extrasContainer) return;
@@ -198,34 +241,34 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (extrasEmpty) {
-      extrasEmpty.classList.add("hidden");
-    }
+    extrasEmpty?.classList.add("hidden");
 
     extras.forEach((extra) => {
       const price = extra[ZONA_PRECIO] || 0;
-
-      const row = document.createElement("div");
-      row.className = "flex items-center justify-between";
-
       const id = `extra-${extra.id}`;
 
+      const row = document.createElement("label");
+      row.className =
+        "flex items-center justify-between p-3 rounded-xl bg-background-dark/40 border border-white/5 hover:border-primary/50 cursor-pointer transition-colors";
+
+      row.setAttribute("for", id);
+
       row.innerHTML = `
-        <label class="flex items-center space-x-3 flex-1 cursor-pointer" for="${id}">
+        <div class="flex items-center gap-3">
           <input
             id="${id}"
             type="checkbox"
             data-extra-id="${extra.id}"
             data-extra-price="${price}"
-            class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary bg-transparent dark:bg-transparent"
+            class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
           />
-          <span class="text-base text-text-light-primary dark:text-text-dark-primary">${
+          <span class="text-sm text-white/80 font-semibold">${
             extra.Nombre
           }</span>
-        </label>
-        <span class="text-base font-medium text-text-light-secondary dark:text-text-dark-secondary">
-          +${formatPrice(price)}
-        </span>
+        </div>
+        <span class="text-sm font-extrabold text-primary">+${formatPrice(
+          price
+        )}</span>
       `;
 
       extrasContainer.appendChild(row);
@@ -233,17 +276,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =============================
-  // Precio total dinámico
+  // Totales
   // =============================
   function getSelectedExtrasTotal() {
     if (!extrasContainer) return 0;
     const inputs = extrasContainer.querySelectorAll('input[type="checkbox"]');
     let total = 0;
     inputs.forEach((input) => {
-      if (input.checked) {
-        const price = Number(input.dataset.extraPrice || 0);
-        total += price;
-      }
+      if (input.checked) total += Number(input.dataset.extraPrice || 0);
     });
     return total;
   }
@@ -253,25 +293,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const basePrice = Number(product[ZONA_PRECIO] || 0);
     const extrasTotal = getSelectedExtrasTotal();
-
     const unitTotal = basePrice + extrasTotal;
     const grandTotal = unitTotal * quantity;
 
-    if (addToCartLabel) {
+    if (addToCartLabel)
       addToCartLabel.textContent = `Agregar al carrito - ${formatPrice(
         grandTotal
       )}`;
-    }
 
     if (addToCartSub) {
       if (extrasTotal > 0) {
         addToCartSub.textContent = `Base: ${formatPrice(
           basePrice
-        )} + adiciones: ${formatPrice(extrasTotal)} x ${quantity}`;
+        )} + adiciones: ${formatPrice(extrasTotal)} × ${quantity}`;
       } else {
         addToCartSub.textContent =
           quantity > 1
-            ? `Unitario: ${formatPrice(basePrice)} x ${quantity}`
+            ? `Unitario: ${formatPrice(basePrice)} × ${quantity}`
             : `Unitario: ${formatPrice(basePrice)}`;
       }
     }
@@ -287,26 +325,15 @@ document.addEventListener("DOMContentLoaded", () => {
   function setQuantity(newQty) {
     const safe = Math.max(1, Math.min(99, newQty));
     quantity = safe;
-    if (qtyValue) {
-      qtyValue.textContent = String(quantity);
-    }
+    if (qtyValue) qtyValue.textContent = String(quantity);
     updateTotals();
   }
 
-  if (qtyDecrease) {
-    qtyDecrease.addEventListener("click", () => {
-      setQuantity(quantity - 1);
-    });
-  }
-
-  if (qtyIncrease) {
-    qtyIncrease.addEventListener("click", () => {
-      setQuantity(quantity + 1);
-    });
-  }
+  qtyDecrease?.addEventListener("click", () => setQuantity(quantity - 1));
+  qtyIncrease?.addEventListener("click", () => setQuantity(quantity + 1));
 
   // =============================
-  // Acordeones
+  // Acordeones (misma lógica)
   // =============================
   document.querySelectorAll(".accordion-header").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -318,18 +345,17 @@ document.addEventListener("DOMContentLoaded", () => {
       panel.classList.toggle("hidden");
 
       const arrow = btn.querySelector(".material-symbols-outlined");
-      if (arrow) {
-        arrow.classList.toggle("rotate-180");
-      }
+      arrow?.classList.toggle("rotate-180");
     });
   });
 
+  // Abiertos por defecto
   document.querySelectorAll(".accordion-panel").forEach((panel) => {
     panel.classList.remove("hidden");
   });
 
   // =============================
-  // Helpers de personalización
+  // Personalización helpers
   // =============================
   function getCooking() {
     const selected = document.querySelector('input[name="cooking"]:checked');
@@ -350,9 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ];
     mapping.forEach(([id, label]) => {
       const input = document.getElementById(id);
-      if (input && input.checked) {
-        mods.push(label);
-      }
+      if (input?.checked) mods.push(label);
     });
     return mods;
   }
@@ -380,115 +404,201 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // Agregar al carrito
   // =============================
-  if (addToCartBtn) {
-    addToCartBtn.addEventListener("click", () => {
-      if (!product) {
-        alert(
-          "No se pudo identificar el producto. Vuelve al menú e inténtalo de nuevo."
-        );
-        window.location.href = "/";
-        return;
+  addToCartBtn?.addEventListener("click", () => {
+    if (!product) {
+      alert(
+        "No se pudo identificar el producto. Vuelve al menú e inténtalo de nuevo."
+      );
+      window.location.href = "/";
+      return;
+    }
+
+    try {
+      const basePrice = Number(product[ZONA_PRECIO] || 0);
+      const selectedExtras = getSelectedExtras();
+      const modifications = getModifications();
+      const cooking = getCooking();
+
+      const extrasTotal = selectedExtras.reduce(
+        (acc, ex) => acc + Number(ex.precio || 0),
+        0
+      );
+      const unitTotal = basePrice + extrasTotal;
+      const grandTotal = unitTotal * quantity;
+
+      const lineItem = {
+        productId: product.id,
+        nombre: product.Nombre,
+        tipo: product.tipo,
+        basePrice,
+        extras: selectedExtras,
+        modifications,
+        cooking,
+        quantity,
+        total: grandTotal,
+      };
+
+      let cart = [];
+      const raw = localStorage.getItem("burgerCart");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) cart = parsed;
       }
+      cart.push(lineItem);
+      localStorage.setItem("burgerCart", JSON.stringify(cart));
 
-      try {
-        const basePrice = Number(product[ZONA_PRECIO] || 0);
-        const selectedExtras = getSelectedExtras();
-        const modifications = getModifications();
-        const cooking = getCooking();
-        const extrasTotal = selectedExtras.reduce(
-          (acc, ex) => acc + Number(ex.precio || 0),
-          0
-        );
-        const unitTotal = basePrice + extrasTotal;
-        const grandTotal = unitTotal * quantity;
-
-        const lineItem = {
-          productId: product.id,
-          nombre: product.Nombre,
-          tipo: product.tipo,
-          basePrice,
-          extras: selectedExtras,
-          modifications,
-          cooking,
-          quantity,
-          total: grandTotal,
-        };
-
-        let cart = [];
-        const raw = localStorage.getItem("burgerCart");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) {
-            cart = parsed;
-          }
-        }
-        cart.push(lineItem);
-        localStorage.setItem("burgerCart", JSON.stringify(cart));
-
-        // ir al carrito
-        window.location.href = "/cart";
-      } catch (err) {
-        console.error("[product.js] Error guardando en carrito:", err);
-        alert(
-          "Hubo un problema guardando el producto en el carrito. Intenta de nuevo."
-        );
-      }
-    });
-  }
+      updateCartCount();
+      window.location.href = "/cart";
+    } catch (err) {
+      console.error("[product.js] Error guardando en carrito:", err);
+      alert(
+        "Hubo un problema guardando el producto en el carrito. Intenta de nuevo."
+      );
+    }
+  });
 
   // =============================
-  // Modal de imagen
+  // Modal imagen
   // =============================
   function openModal(url, alt) {
     if (!imageModal || !modalImage) return;
     modalImage.src = url;
     modalImage.alt = alt || "";
     imageModal.classList.remove("hidden");
+    imageModal.classList.add("flex");
   }
 
   function closeModal() {
     if (!imageModal || !modalImage) return;
     imageModal.classList.add("hidden");
+    imageModal.classList.remove("flex");
     modalImage.src = "";
     modalImage.alt = "";
-    modalImage.classList.remove("zoomed");
   }
 
-  if (productImage) {
-    productImage.addEventListener("click", () => {
-      const url = productImage.style.backgroundImage.slice(5, -2);
-      const alt = productImage.getAttribute("data-alt");
-      openModal(url, alt);
-    });
-  }
-
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener("click", () => {
-      closeModal();
-    });
-  }
-
-  if (modalBackdrop) {
-    modalBackdrop.addEventListener("click", () => {
-      closeModal();
-    });
-  }
-
-  modalImage?.addEventListener("click", () => {
-    modalImage.classList.toggle("zoomed");
+  productImage?.addEventListener("click", () => {
+    const bg = productImage.style.backgroundImage || "";
+    const url = bg.startsWith("url(") ? bg.slice(5, -2) : "";
+    const alt = productImage.getAttribute("data-alt") || "";
+    if (url) openModal(url, alt);
   });
 
+  closeModalBtn?.addEventListener("click", closeModal);
+  modalBackdrop?.addEventListener("click", closeModal);
+
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeModal();
-    }
+    if (e.key === "Escape") closeModal();
   });
 
   // =============================
-  // init
+  // SUGERENCIAS
+  // =============================
+  function buildRelatedCard(item) {
+    const price = item[ZONA_PRECIO] || 0;
+
+    const card = document.createElement("div");
+    card.className =
+      "min-w-[220px] sm:min-w-[240px] bg-surface-dark rounded-2xl overflow-hidden group cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all border border-white/5";
+
+    const img = item.imagen || "/img/placeholder-product.webp";
+
+    card.innerHTML = `
+      <div class="relative aspect-square overflow-hidden">
+        <div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+             style="background-image:url('${img}')"></div>
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-70"></div>
+        <button class="related-add absolute bottom-3 right-3 size-10 bg-primary rounded-full flex items-center justify-center text-white shadow-lg translate-y-10 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300"
+                type="button" aria-label="Ver producto">
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </div>
+      <div class="p-5">
+        <h4 class="font-extrabold text-white text-lg mb-1 line-clamp-1">${
+          item.Nombre || "Producto"
+        }</h4>
+        <p class="text-white/50 text-sm mb-3 line-clamp-1">${
+          item.Descripcion || ""
+        }</p>
+        <span class="font-extrabold text-primary">${formatPrice(price)}</span>
+      </div>
+    `;
+
+    const go = () => (window.location.href = `/product?id=${item.id}`);
+    card.addEventListener("click", go);
+    card.querySelector(".related-add")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      go();
+    });
+
+    return card;
+  }
+
+  function setupRelatedNav() {
+    if (!relatedViewport) return;
+
+    const canScroll =
+      relatedViewport.scrollWidth > relatedViewport.clientWidth + 5;
+    if (relatedPrev) relatedPrev.disabled = !canScroll;
+    if (relatedNext) relatedNext.disabled = !canScroll;
+
+    const updateDisabled = () => {
+      const maxScroll =
+        relatedViewport.scrollWidth - relatedViewport.clientWidth;
+      const x = relatedViewport.scrollLeft;
+
+      if (relatedPrev) relatedPrev.disabled = x <= 2;
+      if (relatedNext) relatedNext.disabled = x >= maxScroll - 2;
+    };
+
+    relatedViewport.addEventListener("scroll", updateDisabled, {
+      passive: true,
+    });
+    updateDisabled();
+
+    relatedPrev?.addEventListener("click", () => {
+      relatedViewport.scrollBy({ left: -420, behavior: "smooth" });
+    });
+
+    relatedNext?.addEventListener("click", () => {
+      relatedViewport.scrollBy({ left: 420, behavior: "smooth" });
+    });
+  }
+
+  async function loadRelated() {
+    if (!product || !relatedViewport) return;
+
+    // Si no hay tipo numérico, no mostramos nada
+    const tipo = Number(product.tipo);
+    if (!Number.isFinite(tipo)) return;
+
+    try {
+      const list = await fetchByTipo(tipo);
+      const items = Array.isArray(list) ? list : [];
+
+      const filtered = items.filter((x) => x?.id && x.id !== product.id);
+      const picked = shuffle(filtered).slice(0, 10);
+
+      relatedViewport.innerHTML = "";
+      picked.forEach((it) => relatedViewport.appendChild(buildRelatedCard(it)));
+
+      // Si quedó vacío, ocultamos el bloque
+      if (picked.length === 0) {
+        relatedViewport.parentElement?.classList?.add("hidden");
+        return;
+      }
+
+      setupRelatedNav();
+    } catch (err) {
+      console.error("[related] Error:", err);
+    }
+  }
+
+  // =============================
+  // INIT
   // =============================
   async function init() {
     showLoader();
+    updateCartCount();
 
     const { id } = parseQuery();
     if (!id || isNaN(id)) {
@@ -502,27 +612,28 @@ document.addEventListener("DOMContentLoaded", () => {
         fetchProduct(id),
         fetchExtras(),
       ]);
-
       product = prod;
       extras = extrasList || [];
 
       renderProduct();
       renderExtras();
 
-      if (extrasContainer) {
-        extrasContainer.addEventListener("change", onExtrasChange);
-      }
+      extrasContainer?.addEventListener("change", onExtrasChange);
 
       setQuantity(1);
+      await loadRelated();
     } catch (err) {
       console.error("[product.js] Error inicializando detalle:", err);
       alert("No se pudo cargar el producto, intenta de nuevo.");
       window.location.href = "/";
     } finally {
-      // aquí ya está todo renderizado y las secciones ocultas si toca
       hideLoader();
     }
   }
 
   init();
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "burgerCart" || e.key === "cart") updateCartCount();
+  });
 });
