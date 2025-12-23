@@ -54,6 +54,7 @@ app.use(
 );
 
 app.use(express.json({ limit: "1mb" }));
+app.get("/health", (_req, res) => res.status(200).send("ok"));
 
 // -------------------- RUTAS ESTÁTICAS --------------------
 const publicPath = path.join(__dirname, "..", "public");
