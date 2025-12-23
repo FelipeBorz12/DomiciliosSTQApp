@@ -207,30 +207,35 @@
                 <h2 class="text-xl font-bold">Datos del Cliente</h2>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="col-span-2">
+              <!-- ✅ CAMBIO: en pantallas pequeñas todo 1 columna, y desde sm 2 columnas -->
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0"
+              >
+                <div class="col-span-1 sm:col-span-2">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
                     >Nombre Completo</label
                   >
                   <input
                     id="client-name"
-                    class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors"
+                    class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors"
                     placeholder="Ej. Juan Pérez"
                     type="text"
                   />
                 </div>
 
-                <div>
+                <!-- ✅ Teléfono 100% en móvil -->
+                <div class="col-span-1">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
                     >Teléfono</label
                   >
                   <input
                     id="client-phone"
-                    class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors"
+                    class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors"
                     placeholder="+57 300 123 4567"
                     type="tel"
+                    inputmode="tel"
                   />
                   <p
                     id="phone-error"
@@ -241,16 +246,19 @@
                   </p>
                 </div>
 
-                <div>
+                <!-- ✅ CAMBIO: Email baja en móvil (porque grid-cols-1) y en sm vuelve a 2 cols -->
+                <div class="col-span-1">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
                     >Email</label
                   >
                   <input
                     id="client-email"
-                    class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors"
+                    class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors"
                     placeholder="hola@correo.com"
                     type="email"
+                    inputmode="email"
+                    autocomplete="email"
                   />
                   <p
                     id="email-error"
@@ -260,34 +268,35 @@
                   </p>
                 </div>
 
-                <div class="col-span-2">
+                <div class="col-span-1 sm:col-span-2">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
                     >Dirección de Entrega</label
                   >
-                  <div class="relative">
+                  <div class="relative min-w-0">
                     <span
                       class="material-symbols-outlined absolute left-4 top-3 text-gray-400"
                       >location_on</span
                     >
                     <input
                       id="client-address"
-                      class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl pl-12 pr-4 py-3 text-sm font-medium transition-colors"
+                      class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl pl-12 pr-4 py-3 text-base md:text-sm font-medium transition-colors"
                       placeholder="Calle 123 # 45 - 67, Apto 201"
                       type="text"
+                      autocomplete="street-address"
                     />
                   </div>
                 </div>
 
-                <!-- ✅ NUEVO: Método de pago -->
-                <div class="col-span-2">
+                <!-- ✅ Método de pago -->
+                <div class="col-span-1 sm:col-span-2">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
                     >Método de pago</label
                   >
                   <select
                     id="payment-method"
-                    class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer"
+                    class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors cursor-pointer"
                   >
                     <option value="">Selecciona un método</option>
                     <option value="Efectivo">Efectivo</option>
@@ -307,14 +316,14 @@
                   </p>
                 </div>
 
-                <div class="col-span-2">
+                <div class="col-span-1 sm:col-span-2">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
                     >Instrucciones Adicionales</label
                   >
                   <textarea
                     id="client-notes"
-                    class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors resize-none"
+                    class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors resize-none"
                     placeholder="Ej. Dejar en portería, timbre roto..."
                     rows="2"
                   ></textarea>
@@ -358,7 +367,6 @@
                 “Actualizar mensaje” para regenerar el texto de WhatsApp.
               </p>
 
-              <!-- PV card (sin mapa, solo info) -->
               <div
                 id="pv-card"
                 class="hidden mt-5 rounded-2xl border border-[#382929] bg-background-dark/30 p-4"
@@ -372,18 +380,17 @@
                 </p>
               </div>
 
-              <!-- selects -->
               <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <select
                   id="pv-departamento"
-                  class="w-full bg-background-light dark:bg-background-dark border border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer"
+                  class="w-full min-w-0 bg-background-light dark:bg-background-dark border border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors cursor-pointer"
                 >
                   <option value="">Departamento</option>
                 </select>
 
                 <select
                   id="pv-municipio"
-                  class="w-full bg-background-light dark:bg-background-dark border border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer"
+                  class="w-full min-w-0 bg-background-light dark:bg-background-dark border border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors cursor-pointer"
                   disabled
                 >
                   <option value="">Municipio</option>
@@ -391,7 +398,7 @@
 
                 <select
                   id="pv-barrio"
-                  class="w-full bg-background-light dark:bg-background-dark border border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium transition-colors cursor-pointer"
+                  class="w-full min-w-0 bg-background-light dark:bg-background-dark border border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors cursor-pointer"
                   disabled
                 >
                   <option value="">Barrio</option>
@@ -488,7 +495,6 @@
         </div>
       </main>
 
-      <!-- Footer simple (puedes pegar el mismo del carrito si quieres) -->
       <footer class="bg-surface-dark border-t border-[#382929] py-10">
         <div
           class="max-w-[1440px] mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500"
