@@ -207,10 +207,7 @@
                 <h2 class="text-xl font-bold">Datos del Cliente</h2>
               </div>
 
-              <!-- ✅ CAMBIO: en pantallas pequeñas todo 1 columna, y desde sm 2 columnas -->
-              <div
-                class="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0"
-              >
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
                 <div class="col-span-1 sm:col-span-2">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
@@ -224,29 +221,41 @@
                   />
                 </div>
 
-                <!-- ✅ Teléfono 100% en móvil -->
+                <!-- ✅ Celular Colombia (prefijo fijo +57, usuario escribe 10 dígitos) -->
                 <div class="col-span-1">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
-                    >Teléfono</label
+                    >Celular (Colombia)</label
                   >
-                  <input
-                    id="client-phone"
-                    class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors"
-                    placeholder="+57 300 123 4567"
-                    type="tel"
-                    inputmode="tel"
-                  />
-                  <p
-                    id="phone-error"
-                    class="mt-2 text-xs text-red-400 hidden"
-                  >
-                    El número debe comenzar con +57 y tener 10 dígitos después
-                    del prefijo.
+
+                  <div class="flex items-stretch gap-2 min-w-0">
+                    <div
+                      class="shrink-0 inline-flex items-center px-3 rounded-xl bg-background-light dark:bg-background-dark border border-transparent text-sm font-extrabold text-gray-700 dark:text-gray-200"
+                      aria-hidden="true"
+                    >
+                      +57
+                    </div>
+
+                    <input
+                      id="client-phone"
+                      class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors"
+                      placeholder="300 123 4567"
+                      type="text"
+                      inputmode="numeric"
+                      autocomplete="tel-national"
+                      maxlength="10"
+                    />
+                  </div>
+
+                  <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Solo Colombia. Escribe 10 dígitos (sin +57).
+                  </p>
+
+                  <p id="phone-error" class="mt-2 text-xs text-red-400 hidden">
+                    Ingresa un celular válido de Colombia (10 dígitos).
                   </p>
                 </div>
 
-                <!-- ✅ CAMBIO: Email baja en móvil (porque grid-cols-1) y en sm vuelve a 2 cols -->
                 <div class="col-span-1">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
@@ -260,10 +269,7 @@
                     inputmode="email"
                     autocomplete="email"
                   />
-                  <p
-                    id="email-error"
-                    class="mt-2 text-xs text-red-400 hidden"
-                  >
+                  <p id="email-error" class="mt-2 text-xs text-red-400 hidden">
                     Ingresa un correo válido.
                   </p>
                 </div>
@@ -288,7 +294,7 @@
                   </div>
                 </div>
 
-                <!-- ✅ Método de pago -->
+                <!-- Método de pago -->
                 <div class="col-span-1 sm:col-span-2">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
@@ -308,10 +314,7 @@
                     </option>
                     <option value="Nequi / Daviplata">Nequi / Daviplata</option>
                   </select>
-                  <p
-                    id="payment-error"
-                    class="mt-2 text-xs text-red-400 hidden"
-                  >
+                  <p id="payment-error" class="mt-2 text-xs text-red-400 hidden">
                     Selecciona un método de pago.
                   </p>
                 </div>
@@ -359,10 +362,7 @@
                 </button>
               </div>
 
-              <p
-                id="pv-message"
-                class="text-sm text-gray-500 dark:text-gray-400"
-              >
+              <p id="pv-message" class="text-sm text-gray-500 dark:text-gray-400">
                 Selecciona tu sucursal. Si cambias el punto de venta, usa
                 “Actualizar mensaje” para regenerar el texto de WhatsApp.
               </p>

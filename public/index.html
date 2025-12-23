@@ -207,7 +207,9 @@
               <span class="material-symbols-outlined text-[20px]"
                 >shopping_bag</span
               >
-              <span class="font-extrabold text-sm hidden sm:block" id="cart-count"
+              <span
+                class="font-extrabold text-sm hidden sm:block"
+                id="cart-count"
                 >0</span
               >
 
@@ -259,8 +261,7 @@
         <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <!-- Featured hero -->
           <div
-            class="lg:col-span-8 relative rounded-2xl overflow-hidden group border border-white/5 bg-surface-dark
-                   aspect-[4/3] sm:aspect-video lg:aspect-auto lg:h-[520px]"
+            class="lg:col-span-8 relative rounded-2xl overflow-hidden group border border-white/5 bg-surface-dark aspect-[4/3] sm:aspect-video lg:aspect-auto lg:h-[520px]"
           >
             <div id="hero-feature" class="absolute inset-0"></div>
 
@@ -302,7 +303,9 @@
         </section>
 
         <!-- CATEGORÍAS -->
-        <section class="rounded-2xl border border-border-dark bg-surface-dark p-4">
+        <section
+          class="rounded-2xl border border-border-dark bg-surface-dark p-4"
+        >
           <div class="flex items-center justify-between gap-3 mb-3">
             <h2 class="text-lg sm:text-xl font-extrabold">Explora el menú</h2>
             <a
@@ -411,13 +414,20 @@
           </div>
 
           <div class="relative" id="products-carousel-wrapper">
-            <div id="products-viewport" class="overflow-x-auto no-scrollbar">
-              <div id="products-container" class="flex gap-5 py-2"></div>
+            <div
+              id="products-viewport"
+              class="overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
+            >
+              <!-- ✅ pr-* = “peek” constante cuando hay overflow -->
+              <div
+                id="products-container"
+                class="flex gap-4 sm:gap-5 py-2 pl-1 pr-12 sm:pr-14 lg:pr-16"
+              ></div>
             </div>
 
             <div
               id="products-fade-right"
-              class="pointer-events-none absolute right-0 top-0 h-full w-14 bg-gradient-to-l from-[#261c1c] to-transparent opacity-0 transition-opacity duration-300"
+              class="pointer-events-none absolute right-0 top-0 h-full w-16 bg-gradient-to-l from-[#261c1c] to-transparent opacity-0 transition-opacity duration-300"
             ></div>
           </div>
         </section>

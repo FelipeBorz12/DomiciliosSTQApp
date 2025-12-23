@@ -322,7 +322,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const img = item?.image_url || "";
     const isFeatured = !!opts.featured;
 
-    // overlay tipo diseño nuevo
     const overlay = isFeatured
       ? "linear-gradient(to right, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.20) 60%),"
       : "linear-gradient(to right, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.20) 70%),";
@@ -394,7 +393,6 @@ document.addEventListener("DOMContentLoaded", () => {
     heroSideB &&
       (heroSideB.innerHTML = buildHeroHTML(side2, { featured: false }));
 
-    // CTA: scroll a menú
     heroFeature.querySelector("#hero-cta")?.addEventListener("click", (e) => {
       e.preventDefault();
       document
@@ -402,12 +400,10 @@ document.addEventListener("DOMContentLoaded", () => {
         ?.scrollIntoView({ behavior: "smooth" });
     });
 
-    // Click en hero: modal zoom (buena para “zoom”)
     heroFeature.addEventListener("click", () => {
       openModal(featured.image_url, featured.title);
     });
 
-    // Click side cards: cambia slide
     heroSideA?.addEventListener("click", () => {
       heroIndex = safeHero(heroIndex + 1);
       renderHero();
@@ -453,8 +449,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/landing/hero");
       if (!res.ok) throw new Error("Respuesta no OK");
       const data = await res.json();
-
-      // Esperado: rows activos ordenados por order_index (idealmente el backend ya lo hace)
       heroItems = Array.isArray(data) && data.length ? data : DEFAULT_HERO;
     } catch (err) {
       console.error("[hero] Error API:", err);
@@ -468,6 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // =============================
   // PRODUCTOS + SEARCH (header-search)
+  // ✅ CAMBIOS SOLO AQUÍ (peek + scroll real + cards legibles)
   // =============================
   const zonaPrecio = "PrecioOriente";
   const productsContainer = document.getElementById("products-container");
@@ -479,17 +474,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const productsWrapper = document.getElementById("products-carousel-wrapper");
   const productsViewport = document.getElementById("products-viewport");
 
-  const MAX_VISIBLE_FULL = 4;
-  const MAX_RENDER = 5;
-
   // =============================
   // SEARCH MULTI-CATEGORÍA (cache + auto-tab + auto-scroll)
   // =============================
-  const SEARCH_TIPOS = [1, 3, 4, 6]; // hamburguesas, combos, papas, bebidas
-  const productsCache = new Map(); // tipo -> array productos
-  let searchSeq = 0; // evita carreras async
+  const SEARCH_TIPOS = [1, 3, 4, 6];
+  const productsCache = new Map();
+  let searchSeq = 0;
 
-  // Mapa tipo -> botón (para activar tab programáticamente)
   const tabByTipo = new Map();
   tabButtons.forEach((b) => {
     const t = Number(b.dataset.tipo);
@@ -506,7 +497,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const section = document.getElementById("products-section");
     if (!section) return;
 
-    // offset por header sticky
     const header = document.querySelector("header");
     const headerH = header
       ? Math.ceil(header.getBoundingClientRect().height)
@@ -516,7 +506,6 @@ document.addEventListener("DOMContentLoaded", () => {
       window.scrollY + section.getBoundingClientRect().top - headerH - 12;
     window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
 
-    // opcional: llevar el carrusel al inicio
     productsViewport?.scrollTo({ left: 0, behavior: "smooth" });
   }
 
@@ -528,6 +517,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const arr = Array.isArray(products) ? products : [];
     productsCache.set(t, arr);
     return arr;
+  }
+
+  function normalizeText(str) {
+    return (str || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
   }
 
   function countMatches(list, term) {
@@ -544,7 +541,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function pickBestTipoForTerm(term) {
-    // elegimos el tipo con más matches (si empatan, el primero del orden)
     let bestTipo = currentTipo;
     let bestCount = 0;
 
@@ -563,19 +559,10 @@ document.addEventListener("DOMContentLoaded", () => {
   let allProducts = [];
   let allProductsRaw = [];
   let currentTipo = 1;
-  let startIndex = 0;
 
   // Search
   let searchTerm = "";
   const searchInput = document.getElementById("header-search");
-
-  function normalizeText(str) {
-    return (str || "")
-      .toString()
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-  }
 
   function debounce(fn, wait = 160) {
     let t;
@@ -585,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function applySearchFilter(resetIndex = true) {
+  function applySearchFilter() {
     const term = normalizeText(searchTerm).trim();
 
     if (!term) {
@@ -598,8 +585,8 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    if (resetIndex) startIndex = 0;
     renderProductsCarousel();
+    requestAnimationFrame(updateProductsNavButtons);
   }
 
   if (searchInput) {
@@ -609,38 +596,29 @@ document.addEventListener("DOMContentLoaded", () => {
       searchTerm = searchInput.value || "";
       const term = normalizeText(searchTerm).trim();
 
-      // Siempre al buscar: baja a productos
       scrollToProductsSection();
 
-      // si está vacío, solo aplica filtro normal en la categoría actual
       if (!term) {
-        applySearchFilter(true);
+        applySearchFilter();
         return;
       }
 
-      // decide la mejor categoría para ese término
       const { bestTipo, bestCount } = await pickBestTipoForTerm(term);
-
-      // si el usuario escribió más y esta búsqueda quedó vieja, no hagas nada
       if (mySeq !== searchSeq) return;
 
-      // si no hay matches en ninguna, deja la categoría actual y muestra vacío
       if (!bestCount) {
-        applySearchFilter(true);
+        applySearchFilter();
         return;
       }
 
-      // si hay matches en otra categoría, cámbiate automáticamente
       if (Number(bestTipo) !== Number(currentTipo)) {
         setActiveTab(bestTipo);
         await loadCategory(bestTipo);
-        if (mySeq !== searchSeq) return; // por si tardó el fetch
+        if (mySeq !== searchSeq) return;
       } else {
-        // misma categoría: solo filtra
-        applySearchFilter(true);
+        applySearchFilter();
       }
 
-      // asegurar carrusel al inicio con los resultados
       productsViewport?.scrollTo({ left: 0, behavior: "smooth" });
     }, 180);
 
@@ -676,33 +654,42 @@ document.addEventListener("DOMContentLoaded", () => {
     return await res.json();
   }
 
+  // ✅ Botones y fade basados en scroll real del viewport
   function updateProductsNavButtons() {
-    if (!productsPrevBtn || !productsNextBtn) return;
+    if (!productsPrevBtn || !productsNextBtn || !productsViewport) return;
 
-    productsPrevBtn.disabled = startIndex <= 0;
-    const moreToRight = startIndex + MAX_VISIBLE_FULL < allProducts.length;
-    productsNextBtn.disabled = !moreToRight;
+    const left = productsViewport.scrollLeft;
+    const maxLeft = productsViewport.scrollWidth - productsViewport.clientWidth;
+
+    const moreLeft = left > 4;
+    const moreRight = left < maxLeft - 4;
+
+    productsPrevBtn.disabled = !moreLeft;
+    productsNextBtn.disabled = !moreRight;
 
     if (productsFadeRight)
-      productsFadeRight.style.opacity = moreToRight ? "1" : "0";
+      productsFadeRight.style.opacity = moreRight ? "1" : "0";
   }
 
-  function buildProductCard(item, isHalf) {
+  // ✅ Tarjeta legible + “peek” natural (sin hacerla mini)
+  function buildProductCard(item) {
     const card = document.createElement("article");
 
     card.className = [
       "group relative flex flex-col rounded-2xl overflow-hidden",
       "bg-[#020617] text-white",
       "border border-white/5 shadow-lg shadow-black/40",
-      "min-w-[260px] sm:min-w-[260px] max-w-[280px] flex-shrink-0",
-      isHalf ? "opacity-70 translate-x-3 scale-[0.98]" : "",
-    ].join(" ");
+      "flex-shrink-0 snap-start",
 
-    if (isHalf) {
-      card.style.maskImage =
-        "linear-gradient(to right, transparent 0%, black 35%, black 85%, transparent 100%)";
-      card.style.webkitMaskImage = card.style.maskImage;
-    }
+      // ✅ Legible siempre
+      "min-w-[260px] max-w-[360px]",
+
+      // ✅ Responsive: siempre deja espacio para “asomar” la siguiente
+      "w-[82vw]",
+      "sm:w-[48vw] md:w-[42vw]",
+      "lg:w-[32vw]",
+      "xl:w-[24vw] 2xl:w-[22vw]",
+    ].join(" ");
 
     const price =
       item[zonaPrecio] ?? item.PrecioAreaMetrop ?? item.PrecioRestoPais ?? 0;
@@ -765,6 +752,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return card;
   }
 
+  // ✅ Renderiza TODOS: el “peek” sale natural si hay overflow
   function renderProductsCarousel() {
     if (!productsContainer) return;
     productsContainer.innerHTML = "";
@@ -776,31 +764,26 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>No hay productos disponibles en esta categoría.</p>
         </div>
       `;
-    } else {
-      const visibleEnd = Math.min(startIndex + MAX_RENDER, allProducts.length);
-      const slice = allProducts.slice(startIndex, visibleEnd);
-
-      slice.forEach((item, idx) => {
-        const isHalf =
-          idx === MAX_RENDER - 1 &&
-          visibleEnd < allProducts.length &&
-          slice.length === MAX_RENDER;
-
-        productsContainer.appendChild(buildProductCard(item, isHalf));
-      });
+      updateProductsNavButtons();
+      return;
     }
+
+    allProducts.forEach((item) => {
+      productsContainer.appendChild(buildProductCard(item));
+    });
 
     updateProductsNavButtons();
   }
 
   async function loadCategory(tipo) {
     currentTipo = tipo ?? 1;
-    startIndex = 0;
 
-    // ✅ si ya está en cache, úsalo sin “loading”
+    // si está en cache: rápido
     if (productsCache.has(currentTipo)) {
       allProductsRaw = productsCache.get(currentTipo) || [];
-      applySearchFilter(true);
+      applySearchFilter();
+      productsViewport?.scrollTo({ left: 0, behavior: "smooth" });
+      requestAnimationFrame(updateProductsNavButtons);
       return;
     }
 
@@ -810,21 +793,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (productsContainer) {
       productsContainer.innerHTML = `
         <div class="flex gap-4 w-full">
-          <div class="min-w-[260px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse"></div>
-          <div class="min-w-[260px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse hidden sm:block"></div>
-          <div class="min-w-[260px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse hidden md:block"></div>
+          <div class="w-[82vw] min-w-[260px] max-w-[360px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse"></div>
+          <div class="w-[82vw] min-w-[260px] max-w-[360px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse hidden sm:block"></div>
+          <div class="w-[82vw] min-w-[260px] max-w-[360px] h-[320px] rounded-2xl bg-white/5 border border-white/10 animate-pulse hidden md:block"></div>
         </div>
       `;
     }
 
     const products = await fetchMenu(currentTipo);
     allProductsRaw = Array.isArray(products) ? products : [];
-    productsCache.set(currentTipo, allProductsRaw); // ✅ guarda cache
-    applySearchFilter(true);
+    productsCache.set(currentTipo, allProductsRaw);
+
+    applySearchFilter();
 
     requestAnimationFrame(() => {
       setProductsLoading(false);
       unlockHeight(productsWrapper);
+      productsViewport?.scrollTo({ left: 0, behavior: "smooth" });
+      updateProductsNavButtons();
     });
   }
 
@@ -839,19 +825,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // ✅ Flechas: scroll real del carrusel (no cambia índices)
+  function getScrollStep() {
+    if (!productsViewport) return 320;
+    return Math.max(280, Math.floor(productsViewport.clientWidth * 0.85));
+  }
+
   productsPrevBtn?.addEventListener("click", () => {
-    if (startIndex <= 0) return;
-    startIndex = Math.max(0, startIndex - MAX_VISIBLE_FULL);
-    renderProductsCarousel();
+    if (!productsViewport) return;
+    productsViewport.scrollBy({ left: -getScrollStep(), behavior: "smooth" });
   });
 
   productsNextBtn?.addEventListener("click", () => {
-    if (startIndex + MAX_VISIBLE_FULL >= allProducts.length) return;
-    startIndex = Math.min(
-      allProducts.length - MAX_VISIBLE_FULL,
-      startIndex + MAX_VISIBLE_FULL
-    );
-    renderProductsCarousel();
+    if (!productsViewport) return;
+    productsViewport.scrollBy({ left: getScrollStep(), behavior: "smooth" });
+  });
+
+  productsViewport?.addEventListener("scroll", () => {
+    window.requestAnimationFrame(updateProductsNavButtons);
+  });
+
+  window.addEventListener("resize", () => {
+    window.requestAnimationFrame(updateProductsNavButtons);
   });
 
   // =============================
@@ -927,7 +922,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error("Respuesta no OK");
       const data = await res.json();
 
-      // tu tabla landing_about: {title, tagline, body, image_url, badge_text, cta_text, cta_href, instagram_handle}
       renderAbout({
         tagline: data.tagline,
         title: data.title,
@@ -983,7 +977,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!res.ok) throw new Error("Respuesta no OK");
       const data = await res.json();
 
-      // tu tabla landing_instagram: {image_url, caption, href, order_index, is_active}
       const stories =
         Array.isArray(data) && data.length
           ? data.map((item) => ({
