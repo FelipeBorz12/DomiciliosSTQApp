@@ -1,3 +1,4 @@
+// src/server.ts
 import express, { Request, Response, NextFunction } from "express";
 import path from "path";
 import cors from "cors";
@@ -11,16 +12,22 @@ import jwt from "jsonwebtoken";
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3005;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
-
+// ===================== ENV =====================
+const PORT = Number(process.env.PORT || 3005);
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_KEY = process.env.SUPABASE_KEY || "";
 const JWT_SECRET = process.env.JWT_SECRET || "";
+
 const NODE_ENV = process.env.NODE_ENV || "development";
 const IS_PROD = NODE_ENV === "production";
 
-const CORS_ORIGIN = process.env.CORS_ORIGIN || `http://localhost:${PORT}`;
+// ✅ CORS (permite varios orígenes por coma)
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
+// Validaciones mínimas de env
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.error("Faltan SUPABASE_URL o SUPABASE_KEY en el .env");
   process.exit(1);
@@ -32,31 +39,43 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
+// ===================== SUPABASE =====================
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ===================== APP =====================
 const app = express();
 
-// Seguridad headers
+// -------------------- MIDDLEWARES --------------------
 app.use(
   helmet({
-    contentSecurityPolicy: false, // si luego quieres CSP, la armamos con tus CDNs (tailwind/fonts)
+    contentSecurityPolicy: false,
   })
 );
 
 app.use(cookieParser());
 
-// CORS restringido (ajusta CORS_ORIGIN para tu dominio real en prod)
+// ✅ CORS bien ubicado (ANTES de rutas)
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: (origin, cb) => {
+      // permitir requests sin origin (curl, healthchecks, server-to-server)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.length === 0) return cb(null, true);
+      return cb(null, allowedOrigins.includes(origin));
+    },
     credentials: true,
   })
 );
 
 app.use(express.json({ limit: "1mb" }));
+
+// Health
 app.get("/health", (_req, res) => res.status(200).send("ok"));
 
-// -------------------- RUTAS ESTÁTICAS --------------------
+// Favicon (evita 404)
+app.get("/favicon.ico", (_req, res) => res.status(204).end());
+
+// -------------------- STATIC --------------------
 const publicPath = path.join(__dirname, "..", "public");
 app.use(express.static(publicPath));
 
@@ -70,6 +89,14 @@ function normalizeEmail(email: any) {
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+type SessionPayload = {
+  userId: number;
+  correo: string;
+  rol: string;
+  iat?: number;
+  exp?: number;
+};
 
 function signSession(payload: { userId: number; correo: string; rol: string }) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
@@ -94,19 +121,11 @@ function clearSessionCookie(res: Response) {
   });
 }
 
-type SessionPayload = {
-  userId: number;
-  correo: string;
-  rol: string;
-  iat?: number;
-  exp?: number;
-};
-
 function readSession(req: Request): SessionPayload | null {
-  // cookie preferred
+  // Cookie primero
   const token = (req.cookies?.tq_session as string) || "";
 
-  // opcional: Authorization header
+  // Opcional: Authorization Bearer
   const auth = req.header("authorization") || "";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7) : "";
 
@@ -127,45 +146,96 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// Rate limit para auth (anti brute force)
+// Rate limit auth (anti brute force)
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 min
-  limit: 35, // 35 requests / 10min por IP
+  limit: 35,
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { message: "Demasiados intentos. Intenta más tarde." },
 });
 
-// -------------------- RUTAS DE PÁGINAS --------------------
-app.get("/", (_req: Request, res: Response) =>
-  res.sendFile(path.join(publicPath, "index.html"))
-);
-app.get("/login", (_req: Request, res: Response) =>
+// ===================== PAGES =====================
+app.get("/", (_req, res) => res.sendFile(path.join(publicPath, "index.html")));
+app.get("/login", (_req, res) =>
   res.sendFile(path.join(publicPath, "login.html"))
 );
-app.get("/register", (_req: Request, res: Response) =>
+app.get("/register", (_req, res) =>
   res.sendFile(path.join(publicPath, "register.html"))
 );
-app.get("/recover", (_req: Request, res: Response) =>
+app.get("/recover", (_req, res) =>
   res.sendFile(path.join(publicPath, "recover.html"))
 );
-app.get("/product", (_req: Request, res: Response) =>
+app.get("/product", (_req, res) =>
   res.sendFile(path.join(publicPath, "product.html"))
 );
-app.get("/cart", (_req: Request, res: Response) =>
+app.get("/cart", (_req, res) =>
   res.sendFile(path.join(publicPath, "cart.html"))
 );
-app.get("/confirm", (_req: Request, res: Response) =>
+app.get("/confirm", (_req, res) =>
   res.sendFile(path.join(publicPath, "confirm.html"))
 );
-app.get("/stores", (_req: Request, res: Response) =>
+app.get("/stores", (_req, res) =>
   res.sendFile(path.join(publicPath, "store.html"))
 );
-app.get("/history", (_req: Request, res: Response) =>
+app.get("/history", (_req, res) =>
   res.sendFile(path.join(publicPath, "history.html"))
 );
 
-// -------------------- API MENÚ --------------------
+// ===================== API: LANDING =====================
+// ✅ Para que no rompa tu index.js aunque aún no tengas tablas
+app.get("/api/landing/hero", async (_req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase
+      .from("landing_hero")
+      .select("id, title, description, tag, image_url, order_index, is_active")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true });
+
+    // Si no existe la tabla o hay error, devuelve [] (no rompe front)
+    if (error) return res.json([]);
+    return res.json(data || []);
+  } catch {
+    return res.json([]);
+  }
+});
+
+app.get("/api/landing/about", async (_req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase
+      .from("landing_about")
+      .select(
+        "id, title, tagline, body, image_url, badge_text, cta_text, cta_href, instagram_handle"
+      )
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    // Si no existe tabla o error, devuelve null
+    if (error) return res.json(null);
+    return res.json(data || null);
+  } catch {
+    return res.json(null);
+  }
+});
+
+app.get("/api/landing/instagram", async (_req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase
+      .from("landing_instagram")
+      .select("id, image_url, caption, href, order_index, is_active")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true });
+
+    // Si no existe tabla o error, devuelve []
+    if (error) return res.json([]);
+    return res.json(data || []);
+  } catch {
+    return res.json([]);
+  }
+});
+
+// ===================== API: MENU =====================
 app.get("/api/menu", async (req: Request, res: Response) => {
   try {
     const { tipo } = req.query;
@@ -186,10 +256,10 @@ app.get("/api/menu", async (req: Request, res: Response) => {
       return res.status(500).json({ message: "Error al obtener menú" });
     }
 
-    res.json(data || []);
+    return res.json(data || []);
   } catch (err) {
     console.error("[GET /api/menu] error inesperado:", err);
-    res.status(500).json({ message: "Error inesperado en el servidor" });
+    return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
 
@@ -214,14 +284,14 @@ app.get("/api/menu/item/:id", async (req: Request, res: Response) => {
 
     if (!data)
       return res.status(404).json({ message: "Producto no encontrado" });
-    res.json(data);
+    return res.json(data);
   } catch (err) {
     console.error("[GET /api/menu/item/:id] error inesperado:", err);
-    res.status(500).json({ message: "Error inesperado en el servidor" });
+    return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
 
-// -------------------- API AUTH --------------------
+// ===================== API: AUTH =====================
 
 // POST /api/auth/register
 app.post(
@@ -248,12 +318,12 @@ app.post(
       }
       if (!isValidEmail(correo))
         return res.status(400).json({ message: "Correo inválido" });
-      if (contrasena.length < 8)
+      if (contrasena.length < 8) {
         return res
           .status(400)
           .json({ message: "La contraseña debe tener mínimo 8 caracteres" });
+      }
 
-      // 🔒 Hash de contraseña
       const hashed = await bcrypt.hash(contrasena, 10);
 
       const { data: userInsert, error: userError } = await supabase
@@ -318,10 +388,11 @@ app.post(
       const correo = normalizeEmail(req.body?.correo);
       const contrasena = String(req.body?.contrasena || "");
 
-      if (!correo || !contrasena)
+      if (!correo || !contrasena) {
         return res
           .status(400)
           .json({ message: "Correo y contraseña son obligatorios" });
+      }
       if (!isValidEmail(correo))
         return res.status(400).json({ message: "Correo inválido" });
 
@@ -342,7 +413,7 @@ app.post(
 
       const stored = String((user as any).Contrasena);
 
-      // ✅ Compatibilidad: si aún tienes usuarios legacy en texto plano, esto los migra al primer login
+      // ✅ Compatibilidad: migra legacy en texto plano al primer login
       let ok = false;
       if (stored.startsWith("$2")) {
         ok = await bcrypt.compare(contrasena, stored);
@@ -375,12 +446,12 @@ app.post(
       if (formError)
         console.error("[POST /api/auth/login] error formulario:", formError);
 
-      // 🔐 Cookie de sesión
       const token = signSession({
         userId: Number((user as any).id),
         correo: String((user as any).correo),
         rol: String((user as any).Rol || "0"),
       });
+
       setSessionCookie(res, token);
 
       return res.json({
@@ -399,12 +470,12 @@ app.post(
 );
 
 // POST /api/auth/logout
-app.post("/api/auth/logout", (req: Request, res: Response) => {
+app.post("/api/auth/logout", (_req: Request, res: Response) => {
   clearSessionCookie(res);
   return res.json({ message: "Sesión cerrada" });
 });
 
-// GET /api/auth/me (PROTEGIDO)
+// GET /api/auth/me
 app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
   try {
     const s = (req as any).session as SessionPayload;
@@ -432,7 +503,49 @@ app.get("/api/auth/me", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/auth/recover (mantén respuesta genérica)
+// ✅ GET /api/auth/user?correo=...  (lo usa tu confirm.js)
+app.get("/api/auth/user", async (req: Request, res: Response) => {
+  try {
+    const correo = normalizeEmail(req.query.correo as string);
+    if (!correo || !isValidEmail(correo))
+      return res.status(400).json({ message: "Correo inválido" });
+
+    const { data: user, error } = await supabase
+      .from("usuarios")
+      .select('id, correo, "Rol"')
+      .eq("correo", correo)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[GET /api/auth/user] error usuarios:", error);
+      return res.status(500).json({ message: "Error buscando usuario" });
+    }
+    if (!user) return res.status(404).json({ message: "No encontrado" });
+
+    const { data: form, error: formError } = await supabase
+      .from("formulario")
+      .select(
+        'nombre, celular, direccionentrega, "Departamento", "Municipio", "Barrio"'
+      )
+      .eq("correo", correo)
+      .maybeSingle();
+
+    if (formError)
+      console.error("[GET /api/auth/user] error formulario:", formError);
+
+    return res.json({
+      userId: (user as any).id,
+      rol: (user as any).Rol,
+      correo: (user as any).correo,
+      perfil: form || null,
+    });
+  } catch (err) {
+    console.error("[GET /api/auth/user] error inesperado:", err);
+    return res.status(500).json({ message: "Error inesperado en el servidor" });
+  }
+});
+
+// POST /api/auth/recover
 app.post(
   "/api/auth/recover",
   authLimiter,
@@ -445,7 +558,6 @@ app.post(
 
       // NO revelar si existe o no
       console.log("[Recover] Solicitud de recuperación para:", correo);
-
       return res.json({
         message: "Si el correo existe, te enviaremos instrucciones.",
       });
@@ -458,7 +570,8 @@ app.post(
   }
 );
 
-// -------------------- API PUNTOS DE VENTA --------------------
+// ===================== API: PUNTOS DE VENTA =====================
+// ✅ quitado zona_precio porque tu tabla no lo tiene (esto te estaba rompiendo)
 app.get("/api/puntos-venta", async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabase
@@ -474,101 +587,25 @@ app.get("/api/puntos-venta", async (_req: Request, res: Response) => {
         .json({ message: "Error al obtener puntos de venta" });
     }
 
-    res.json(data || []);
+    return res.json(data || []);
   } catch (err) {
     console.error("[GET /api/puntos-venta] error inesperado:", err);
-    res.status(500).json({ message: "Error inesperado en el servidor" });
+    return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
 
-// -------------------- API LANDING (HERO / ABOUT / INSTAGRAM) --------------------
-app.get("/api/landing/hero", async (_req: Request, res: Response) => {
-  try {
-    const { data, error } = await supabase
-      .from("landing_hero")
-      .select("id, title, description, tag, image_url, order_index, is_active")
-      .eq("is_active", true)
-      .order("order_index", { ascending: true });
+// ===================== API: PEDIDOS =====================
 
-    if (error) {
-      console.error("[GET /api/landing/hero] error supabase:", error);
-      return res
-        .status(500)
-        .json({ message: "Error al obtener hero", detail: error.message });
-    }
-    return res.json(data || []);
-  } catch (err) {
-    console.error("[GET /api/landing/hero] error inesperado:", err);
-    return res
-      .status(500)
-      .json({ message: "Error inesperado en el servidor (hero)" });
-  }
-});
-
-app.get("/api/landing/about", async (_req: Request, res: Response) => {
-  try {
-    const { data, error } = await supabase
-      .from("landing_about")
-      .select(
-        "id, title, tagline, body, image_url, badge_text, cta_text, cta_href, instagram_handle"
-      )
-      .order("id", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      console.error("[GET /api/landing/about] error supabase:", error);
-      return res
-        .status(500)
-        .json({
-          message: "Error al obtener sección about",
-          detail: error.message,
-        });
-    }
-    return res.json(data || null);
-  } catch (err) {
-    console.error("[GET /api/landing/about] error inesperado:", err);
-    return res
-      .status(500)
-      .json({ message: "Error inesperado en el servidor (about)" });
-  }
-});
-
-app.get("/api/landing/instagram", async (_req: Request, res: Response) => {
-  try {
-    const { data, error } = await supabase
-      .from("landing_instagram")
-      .select("id, image_url, caption, href, order_index, is_active")
-      .eq("is_active", true)
-      .order("order_index", { ascending: true });
-
-    if (error) {
-      console.error("[GET /api/landing/instagram] error supabase:", error);
-      return res
-        .status(500)
-        .json({
-          message: "Error al obtener historias de Instagram",
-          detail: error.message,
-        });
-    }
-    return res.json(data || []);
-  } catch (err) {
-    console.error("[GET /api/landing/instagram] error inesperado:", err);
-    return res
-      .status(500)
-      .json({ message: "Error inesperado en el servidor (instagram)" });
-  }
-});
-
-// -------------------- API PEDIDOS --------------------
+// GET /api/pedidos?correo=...
 app.get("/api/pedidos", async (req: Request, res: Response) => {
   try {
     const correo = normalizeEmail(req.query.correo as string);
 
-    if (!correo)
+    if (!correo) {
       return res
         .status(400)
         .json({ message: 'El parámetro "correo" es obligatorio' });
+    }
 
     const { data, error } = await supabase
       .from("pedidos")
@@ -583,70 +620,215 @@ app.get("/api/pedidos", async (req: Request, res: Response) => {
         .json({ message: "Error al obtener pedidos", detail: error.message });
     }
 
-    if (!data || data.length === 0)
-      return res.status(404).json({ message: "No se encontraron pedidos" });
-
-    res.json(data);
+    // Mejor: devuelve [] en vez de 404 (front suele romper con 404)
+    return res.json(data || []);
   } catch (err) {
     console.error("[GET /api/pedidos] error inesperado:", err);
-    res.status(500).json({ message: "Error inesperado en el servidor" });
+    return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
 
+// ✅ POST /api/pedidos (cabecera + detalle en pedido_items) usando un solo precio
 app.post("/api/pedidos", async (req: Request, res: Response) => {
   try {
-    const {
-      nombre_cliente,
-      resumen_pedido,
-      direccion_cliente,
-      celular_cliente,
-      puntoventa,
-      metodo_pago,
-    } = req.body;
+    const nombre_cliente = normalizeEmail(req.body?.nombre_cliente);
+    const direccion_cliente = String(req.body?.direccion_cliente || "");
+    const celular_cliente = String(req.body?.celular_cliente || "");
+    const metodo_pago = req.body?.metodo_pago
+      ? String(req.body.metodo_pago)
+      : null;
 
-    const resumenMissing =
-      resumen_pedido === undefined || resumen_pedido === null;
+    const pv_id = Number(req.body?.pv_id);
+    const items = req.body?.items;
 
-    if (
-      !nombre_cliente ||
-      resumenMissing ||
-      !direccion_cliente ||
-      !celular_cliente
-    ) {
-      return res.status(400).json({
-        message:
-          "Correo, resumen (puede ser vacío), dirección y celular son obligatorios",
-      });
+    const resumen_pedido = req.body?.resumen_pedido ?? "";
+
+    // si tu front los manda (recomendado), tu tabla pedidos los tiene
+    const delivery_fee = Number(req.body?.delivery_fee ?? 0);
+    const subtotal_in = Number(req.body?.subtotal ?? 0);
+    const total_in = Number(req.body?.total ?? 0);
+
+    if (!nombre_cliente || !direccion_cliente || !celular_cliente) {
+      return res
+        .status(400)
+        .json({ message: "Correo, dirección y celular son obligatorios" });
+    }
+    if (!pv_id || Number.isNaN(pv_id)) {
+      return res
+        .status(400)
+        .json({ message: "pv_id es obligatorio (id de Coordenadas_PV)" });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "items[] es obligatorio y no puede ser vacío" });
     }
 
-    const { data, error } = await supabase
+    // 1) PV -> puntoventa = Barrio
+    const { data: pv, error: pvErr } = await supabase
+      .from("Coordenadas_PV")
+      .select('id, "Barrio", "Direccion", "Municipio"')
+      .eq("id", pv_id)
+      .maybeSingle();
+
+    if (pvErr) {
+      console.error("[POST /api/pedidos] error PV:", pvErr);
+      return res
+        .status(500)
+        .json({
+          message: "Error consultando punto de venta",
+          detail: pvErr.message,
+        });
+    }
+    if (!pv)
+      return res.status(400).json({ message: "Punto de venta inválido" });
+
+    const puntoventaName =
+      (pv as any).Barrio || (pv as any).Direccion || String((pv as any).id);
+
+    // 2) Insert cabecera
+    const insertPedido: any = {
+      nombre_cliente,
+      resumen_pedido: String(resumen_pedido ?? ""),
+      direccion_cliente,
+      celular_cliente,
+      estado: "Recibido",
+      puntoventa: puntoventaName,
+      metodo_pago,
+      pv_id, // tu tabla pedidos sí lo tiene
+      delivery_fee: Number.isFinite(delivery_fee) ? delivery_fee : 0,
+      subtotal: Number.isFinite(subtotal_in) ? subtotal_in : 0,
+      total: Number.isFinite(total_in) ? total_in : 0,
+    };
+
+    const { data: pedido, error: pedidoErr } = await supabase
       .from("pedidos")
-      .insert([
-        {
-          nombre_cliente: normalizeEmail(nombre_cliente),
-          resumen_pedido: String(resumen_pedido ?? ""),
-          direccion_cliente,
-          celular_cliente,
-          estado: "Recibido",
-          puntoventa: puntoventa || "",
-          metodo_pago: metodo_pago || null,
-        },
-      ])
+      .insert([insertPedido])
       .select("id")
       .maybeSingle();
 
-    if (error) {
-      console.error("[POST /api/pedidos] error supabase:", error);
-      return res.status(500).json({ message: "Error al registrar pedido" });
+    if (pedidoErr) {
+      console.error("[POST /api/pedidos] error insert pedido:", pedidoErr);
+      return res
+        .status(500)
+        .json({
+          message: "Error al registrar pedido",
+          detail: pedidoErr.message,
+        });
     }
 
-    res.status(201).json({ message: "Pedido registrado", id: data?.id });
-  } catch (err) {
+    const pedidoId = Number((pedido as any)?.id || 0) || null;
+    if (!pedidoId)
+      return res
+        .status(500)
+        .json({ message: "No se pudo obtener id del pedido" });
+
+    // 3) Menu rows (precio único)
+    const menuIds = Array.from(
+      new Set(
+        items
+          .map((it: any) => Number(it?.menu_id))
+          .filter((x: any) => x && !Number.isNaN(x))
+      )
+    );
+
+    if (menuIds.length === 0) {
+      await supabase.from("pedidos").delete().eq("id", pedidoId);
+      return res
+        .status(400)
+        .json({ message: "items[] inválido: falta menu_id" });
+    }
+
+    const { data: menuRows, error: menuErr } = await supabase
+      .from("menu")
+      .select('id, "Nombre", "PrecioOriente", precio, "Activo"')
+      .in("id", menuIds);
+
+    if (menuErr) {
+      console.error("[POST /api/pedidos] error trayendo menu:", menuErr);
+      await supabase.from("pedidos").delete().eq("id", pedidoId);
+      return res
+        .status(500)
+        .json({
+          message: "Error consultando productos del menú",
+          detail: menuErr.message,
+        });
+    }
+
+    const menuMap = new Map<number, any>();
+    (menuRows || []).forEach((m: any) => menuMap.set(Number(m.id), m));
+
+    // 4) Construir filas de pedido_items (⚠️ NO cooking: tu tabla no tiene esa columna)
+    const itemRows = items.map((it: any) => {
+      const menu_id = Number(it.menu_id);
+      const qty = Math.max(1, Number(it.qty || 1));
+
+      const extras = Array.isArray(it.extras) ? it.extras : [];
+      const modifications = Array.isArray(it.modifications)
+        ? it.modifications
+        : [];
+
+      const menuRow = menuMap.get(menu_id);
+      if (!menuRow) throw new Error(`Producto menu_id=${menu_id} no existe`);
+
+      // ✅ precio único: usa menu.precio si >0, si no PrecioOriente
+      const basePrice =
+        Number(menuRow?.precio || 0) > 0
+          ? Number(menuRow?.precio || 0)
+          : Number(menuRow?.PrecioOriente || 0);
+
+      // extras: suma precios (si vienen con {precio})
+      const extrasSum = extras.reduce(
+        (acc: number, ex: any) => acc + Number(ex?.precio || 0),
+        0
+      );
+
+      const unit_price = basePrice + extrasSum;
+      const line_total = unit_price * qty;
+
+      return {
+        pedido_id: pedidoId,
+        menu_id,
+        nombre_snapshot: String(
+          menuRow?.Nombre || it.product_name || "Producto"
+        ),
+        qty,
+        unit_price,
+        line_total,
+        price_source:
+          Number(menuRow?.precio || 0) > 0
+            ? "menu.precio"
+            : "menu.PrecioOriente",
+        extras: extras.length ? extras : null,
+        modifications: modifications.length ? modifications : null,
+        pv_id: pv_id, // en tu tabla pedido_items es numeric (no FK). Esto entra bien.
+      };
+    });
+
+    // 5) Insert detalle
+    const { error: itemsErr } = await supabase
+      .from("pedido_items")
+      .insert(itemRows as any);
+
+    if (itemsErr) {
+      console.error("[POST /api/pedidos] error insert pedido_items:", itemsErr);
+      await supabase.from("pedidos").delete().eq("id", pedidoId);
+      return res.status(500).json({
+        message: "Error guardando detalle del pedido",
+        detail: itemsErr.message,
+      });
+    }
+
+    return res.status(201).json({ message: "Pedido registrado", id: pedidoId });
+  } catch (err: any) {
     console.error("[POST /api/pedidos] error inesperado:", err);
-    res.status(500).json({ message: "Error inesperado en el servidor" });
+    return res
+      .status(500)
+      .json({ message: err?.message || "Error inesperado en el servidor" });
   }
 });
 
+// PATCH /api/pedidos/:id (solo resumen/metodo_pago)
 app.patch("/api/pedidos/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
@@ -661,8 +843,9 @@ app.patch("/api/pedidos/:id", async (req: Request, res: Response) => {
     if (metodo_pago !== undefined)
       updates.metodo_pago = metodo_pago ? String(metodo_pago) : null;
 
-    if (Object.keys(updates).length === 0)
+    if (Object.keys(updates).length === 0) {
       return res.status(400).json({ message: "No hay campos para actualizar" });
+    }
 
     const { data, error } = await supabase
       .from("pedidos")
@@ -677,30 +860,29 @@ app.patch("/api/pedidos/:id", async (req: Request, res: Response) => {
     }
     if (!data) return res.status(404).json({ message: "Pedido no encontrado" });
 
-    return res.json({ message: "Pedido actualizado", id: data.id });
+    return res.json({ message: "Pedido actualizado", id: (data as any).id });
   } catch (err) {
     console.error("[PATCH /api/pedidos/:id] error inesperado:", err);
     return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
-const allowedOrigins = (process.env.CORS_ORIGIN || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // permitir requests sin origin (healthchecks, curl, server-to-server)
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.length === 0) return cb(null, true); // fallback si no configuras
-      return cb(null, allowedOrigins.includes(origin));
-    },
-    credentials: true,
-  })
-);
+// ===================== FALLBACKS =====================
 
-app.listen(Number(PORT), "0.0.0.0", () => {
+// 404 JSON para /api/*
+app.use("/api", (_req, res) => {
+  return res.status(404).json({ message: "Ruta API no encontrada" });
+});
+
+// Error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  console.error("[SERVER ERROR]", err);
+  return res.status(500).json({ message: "Error inesperado en el servidor" });
+});
+
+// ===================== LISTEN =====================
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Servidor escuchando en http://0.0.0.0:${PORT}`);
-  console.log("CORS_ORIGIN:", process.env.CORS_ORIGIN);
+  console.log("NODE_ENV:", NODE_ENV);
+  console.log("CORS_ORIGIN:", process.env.CORS_ORIGIN || "(no definido)");
 });

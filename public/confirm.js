@@ -1,5 +1,6 @@
 // public/confirm.js
 document.addEventListener("DOMContentLoaded", () => {
+  // ✅ según tu tabla pedidos ahora guardas delivery_fee, subtotal, total
   const DELIVERY_FEE = 5000; // COP
 
   // ---- DOM ----
@@ -37,7 +38,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const cartBadgeDesktop = document.getElementById("cart-badge-desktop");
   const cartBadgeMobile = document.getElementById("cart-badge-mobile");
 
-  // NUEVO (si lo agregas al HTML)
   const saveProfileBtn = document.getElementById("save-profile-btn");
   const saveProfileStatus = document.getElementById("save-profile-status");
 
@@ -46,7 +46,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let userData = null;
   let puntosVenta = [];
   let selectedPV = null;
-  let isUserLoggedIn = false;
 
   // Para no romper selectedPV cuando sincronizas selects por geolocalización
   let syncingPV = false;
@@ -73,6 +72,20 @@ document.addEventListener("DOMContentLoaded", () => {
     setSaveStatus._t = setTimeout(() => {
       saveProfileStatus.classList.add("hidden");
     }, 2000);
+  }
+
+  function safeJson(obj) {
+    // ✅ Limpia undefined y evita cosas no serializables en extras/modifications
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return null;
+    }
+  }
+
+  function toInt(v, def = 0) {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.trunc(n) : def;
   }
 
   // ---- LocalStorage ----
@@ -121,7 +134,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function computeSubtotal() {
-    return cartItems.reduce((acc, item) => acc + Number(item.total || 0), 0);
+    // ✅ Preferimos item.total si existe, si no, calculamos price * qty
+    return cartItems.reduce((acc, item) => {
+      const t = Number(item.total);
+      if (Number.isFinite(t) && t > 0) return acc + t;
+
+      const price = Number(item.precio ?? item.price ?? item.unit_price ?? 0);
+      const qty = Math.max(1, Number(item.quantity || 1));
+      return acc + price * qty;
+    }, 0);
   }
 
   function cookingLabel(value) {
@@ -130,17 +151,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return "Normal";
   }
 
-  // ---- Hidratar inputs (acepta dos formatos) ----
+  // ---- Hidratar inputs ----
   function hydrateUserInputs(data) {
     if (!data) return;
 
     const correo = data.correo || data.email || "";
     const perfil = data.perfil || {};
 
-    // Compat: localStorage (auth.js) guarda plano: nombre/celular/direccionentrega
     const nombre = perfil.nombre || data.nombre || "";
     const celular = perfil.celular || data.celular || "";
-    const direccion = perfil.direccionentrega || perfil.direccion || data.direccionentrega || data.direccion || "";
+    const direccion =
+      perfil.direccionentrega || perfil.direccion || data.direccionentrega || data.direccion || "";
 
     if (nameInput && nombre) nameInput.value = nombre;
     if (emailInput && correo) emailInput.value = correo;
@@ -175,21 +196,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadUser() {
     try {
-      // 1) intenta localStorage
       const local = getLocalUserIfAny();
       const correoLocal = local?.correo ? String(local.correo).trim() : "";
-
-      // 2) URL param
       const correoUrl = getCorreoFromURL();
-
-      // 3) si ya hay correo en local, úsalo
       const correoBase = correoLocal || correoUrl || "";
 
       if (correoBase) {
-        // muestra algo rápido con local, y luego refresca con BD
         if (local?.correo && local.correo === correoBase) {
           userData = local;
-          isUserLoggedIn = true;
           noUserWarning?.classList.add("hidden");
           hydrateUserInputs(local);
         }
@@ -197,25 +211,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const fromDb = await fetchUserByCorreo(correoBase);
         if (fromDb?.correo) {
           userData = fromDb;
-          isUserLoggedIn = true;
           noUserWarning?.classList.add("hidden");
           hydrateUserInputs(fromDb);
 
-          // mezcla lo que hubiera local + perfil BD
-          const merged = { ...(local || {}), ...(fromDb || {}), perfil: fromDb.perfil || (local && local.perfil) || {} };
+          const merged = {
+            ...(local || {}),
+            ...(fromDb || {}),
+            perfil: fromDb.perfil || (local && local.perfil) || {},
+          };
           saveUserToLocal(merged);
         }
         return;
       }
 
-      // 4) sin correo: no logueado (pero igual puede llenar manual)
       userData = null;
-      isUserLoggedIn = false;
       noUserWarning?.classList.remove("hidden");
     } catch (err) {
       console.error("[confirm.js] Error cargando usuario:", err);
       userData = null;
-      isUserLoggedIn = false;
       noUserWarning?.classList.remove("hidden");
     }
   }
@@ -235,10 +248,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const lines = [];
     cartItems.forEach((item) => {
-      const qty = Number(item.quantity || 1);
+      const qty = Math.max(1, Number(item.quantity || 1));
+      const nombre = item.nombre || item.Nombre || item.name || item.productName || "Producto";
       const lineTotal = Number(item.total || 0);
 
-      lines.push(`• ${qty}x ${item.nombre || "Producto"} - ${formatPrice(lineTotal)}`);
+      lines.push(`• ${qty}x ${nombre} - ${formatPrice(lineTotal || 0)}`);
 
       if (Array.isArray(item.extras) && item.extras.length) {
         const extrasText = item.extras
@@ -276,7 +290,8 @@ document.addEventListener("DOMContentLoaded", () => {
       ...lines,
       "────────────────────────────",
       `💵 *Subtotal:* ${formatPrice(subtotal)}`,
-      `🛵 *Total con envío:* ${formatPrice(total)}`,
+      `🛵 *Domicilio:* ${formatPrice(DELIVERY_FEE)}`,
+      `✅ *Total:* ${formatPrice(total)}`,
       "────────────────────────────"
     );
 
@@ -330,7 +345,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const addressOk = !!(addressInput && addressInput.value.trim());
 
     const cartOk = cartItems && cartItems.length > 0;
-    const pvOk = !!(selectedPV && String(selectedPV.num_whatsapp || "").trim());
+
+    // ✅ tablas: pv_id debe existir y ser numérico (Coordenadas_PV.id)
+    const pvId = Number(selectedPV?.id);
+    const pvOk = !!(selectedPV && Number.isFinite(pvId) && pvId > 0 && String(selectedPV.num_whatsapp || "").trim());
 
     const paymentOk = !!(paymentMethodSelect && paymentMethodSelect.value.trim());
 
@@ -395,7 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
     pvBarrioSelect.innerHTML = '<option value="">Barrio</option>';
     pvBarrioSelect.disabled = true;
 
-    // 👇 NO borres selectedPV si estás sincronizando por geolocalización
+    // no borres selectedPV si estás sincronizando
     if (!syncingPV) {
       selectedPV = null;
       updatePVCard();
@@ -557,7 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
           syncingPV = false;
 
-          // 3) Reafirma selectedPV y refresca mensaje + validación
+          // 3) reafirma
           selectedPV = best;
           updatePVCard();
 
@@ -582,7 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // ---- Guardar perfil (local + opcional backend) ----
+  // ---- Guardar perfil ----
   async function saveProfile() {
     const name = nameInput?.value?.trim() || "";
     const email = emailInput?.value?.trim() || "";
@@ -594,7 +612,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!validatePhone(phone)) return alert("Tu celular debe ser +57 y 10 dígitos.");
     if (!address) return alert("Ingresa tu dirección.");
 
-    // Guarda en local para no pedirlo de nuevo
     const merged = userData && typeof userData === "object" ? userData : {};
     merged.correo = email;
     merged.nombre = merged.nombre || name;
@@ -608,15 +625,6 @@ document.addEventListener("DOMContentLoaded", () => {
     userData = merged;
     saveUserToLocal(merged);
 
-    // ✅ Opcional: si creas endpoint PATCH /api/formulario (recomendado)
-    // try {
-    //   await fetch("/api/formulario", {
-    //     method: "PATCH",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ correo: email, nombre: name, celular: phone, direccionentrega: address }),
-    //   });
-    // } catch {}
-
     setSaveStatus("✅ Datos actualizados");
 
     if (orderText) orderText.dataset.userEdited = "0";
@@ -624,7 +632,40 @@ document.addEventListener("DOMContentLoaded", () => {
     validateForm();
   }
 
-  // ---- Enviar ----
+  // ✅ Mapea carrito -> items para pedido_items
+  // IMPORTANTE: en tu backend debes aceptar menu_id y qty; extras/modifications opcional
+  function mapCartToPedidoItems() {
+    const mapped = cartItems
+      .map((item) => {
+        const qty = Math.max(1, toInt(item.quantity ?? item.qty ?? 1, 1));
+
+        // ✅ super robusto para evitar menu_id inválido
+        const menuIdRaw = item.menu_id ?? item.menuId ?? item.id ?? item.productId;
+        const menu_id = Number(menuIdRaw);
+
+        if (!menu_id || Number.isNaN(menu_id)) {
+          console.warn("[confirm.js] item sin menu_id válido:", item);
+          return null;
+        }
+
+        const extras = Array.isArray(item.extras) ? safeJson(item.extras) : [];
+        const modifications = Array.isArray(item.modifications)
+          ? safeJson(item.modifications)
+          : [];
+
+        return {
+          menu_id,
+          qty,
+          extras: extras || [],
+          modifications: modifications || [],
+          cooking: item.cooking ? String(item.cooking) : null,
+        };
+      })
+      .filter(Boolean);
+
+    return mapped;
+  }
+
   async function sendOrder() {
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
@@ -639,24 +680,51 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    if (!name || !email || !phone || !address || !selectedPV || !selectedPV.num_whatsapp) {
+    const pv_id = Number(selectedPV?.id);
+    if (
+      !name ||
+      !email ||
+      !phone ||
+      !address ||
+      !selectedPV ||
+      !selectedPV.num_whatsapp ||
+      !Number.isFinite(pv_id) ||
+      pv_id <= 0
+    ) {
       alert("Faltan datos obligatorios o punto de venta.");
       return;
     }
 
-    const puntoventaName = selectedPV.Barrio || selectedPV.Direccion || String(selectedPV.id);
-    let pedidoId = null;
+    const items = mapCartToPedidoItems();
+    if (!items.length) {
+      alert("Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente.");
+      return;
+    }
+
+    const subtotal = computeSubtotal();
+    const total = subtotal + DELIVERY_FEE;
 
     // 1) Crear pedido en BD
+    let pedidoId = null;
     try {
       const payload = {
         nombre_cliente: email,
-        resumen_pedido: "",
+        resumen_pedido: "", // luego se hace PATCH con el texto
         direccion_cliente: address,
         celular_cliente: phone,
-        puntoventa: puntoventaName,
         metodo_pago: paymentMethod,
+
+        // ✅ según tu tabla pedidos
+        pv_id,
+        delivery_fee: DELIVERY_FEE,
+        subtotal,
+        total,
+
+        // ✅ detalle
+        items,
       };
+
+      console.log("[confirm.js] payload /api/pedidos =", payload);
 
       const res = await fetch("/api/pedidos", {
         method: "POST",
@@ -664,18 +732,15 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(payload),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        console.error("[confirm.js] Error al registrar pedido:", await res.text());
+        console.error("[confirm.js] POST /api/pedidos NO OK:", res.status, data);
         alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
       } else {
-        try {
-          const data = await res.json();
-          if (data) {
-            if (typeof data.id !== "undefined") pedidoId = data.id;
-            else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
-            else if (data.pedido && data.pedido.id) pedidoId = data.pedido.id;
-          }
-        } catch {}
+        if (data && typeof data.id !== "undefined") pedidoId = data.id;
+        else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
+        else if (data.pedido && data.pedido.id) pedidoId = data.pedido.id;
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
@@ -697,7 +762,9 @@ document.addEventListener("DOMContentLoaded", () => {
             metodo_pago: paymentMethod,
           }),
         });
-      } catch {}
+      } catch (e) {
+        console.warn("[confirm.js] PATCH resumen falló:", e);
+      }
     }
 
     // 4) Abrir WhatsApp
@@ -729,7 +796,6 @@ document.addEventListener("DOMContentLoaded", () => {
     updateOrderTextLive();
   }
 
-  // Si escriben el email y existe en BD, autocompleta
   const tryHydrateByEmail = debounce(async () => {
     const emailVal = emailInput?.value?.trim() || "";
     if (!validateEmail(emailVal)) return;
