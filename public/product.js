@@ -1,5 +1,13 @@
+// /public/product.js
 document.addEventListener("DOMContentLoaded", () => {
   const ZONA_PRECIO = "PrecioOriente";
+
+  // Notificación (usa la global que crea upsell.js)
+  function notify({ type = "info", title = "", message = "", duration = 2400 } = {}) {
+    if (window.TQNotify) return window.TQNotify({ type, title, message, duration });
+    // fallback extremo
+    if (title || message) console.log(`[${type}] ${title} ${message}`);
+  }
 
   // =============================
   // LOADER
@@ -52,19 +60,23 @@ document.addEventListener("DOMContentLoaded", () => {
   cartIcon?.addEventListener("click", () => {
     try {
       const raw = localStorage.getItem("burgerCart");
-      if (!raw) {
-        alert("Tu carrito está vacío. Agrega un producto desde el menú.");
-        return;
-      }
-      const parsed = JSON.parse(raw);
+      const parsed = raw ? JSON.parse(raw) : [];
       if (!Array.isArray(parsed) || parsed.length === 0) {
-        alert("Tu carrito está vacío. Agrega un producto desde el menú.");
+        notify({
+          type: "info",
+          title: "Carrito vacío",
+          message: "Agrega un producto desde el menú.",
+        });
         return;
       }
       window.location.href = "/cart";
     } catch (err) {
       console.error("[product.js] Error leyendo carrito:", err);
-      alert("Hubo un problema leyendo tu carrito. Intenta de nuevo.");
+      notify({
+        type: "error",
+        title: "Error",
+        message: "No pudimos leer tu carrito. Intenta de nuevo.",
+      });
     }
   });
 
@@ -91,6 +103,22 @@ document.addEventListener("DOMContentLoaded", () => {
     return a;
   }
 
+  function fetchJsonWithTimeout(url, ms = 12000) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), ms);
+
+    return fetch(url, { signal: controller.signal })
+      .then(async (res) => {
+        clearTimeout(t);
+        if (!res.ok) throw new Error(`HTTP ${res.status} -> ${url}`);
+        return res.json();
+      })
+      .catch((err) => {
+        clearTimeout(t);
+        throw err;
+      });
+  }
+
   // =============================
   // DOM
   // =============================
@@ -110,7 +138,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const extrasPanel = document.getElementById("extras-panel");
 
   const modifySection = document.getElementById("modify-section");
-  const cookingSection = document.getElementById("cooking-section");
 
   const qtyDecrease = document.getElementById("qty-decrease");
   const qtyIncrease = document.getElementById("qty-increase");
@@ -119,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const addToCartLabel = document.getElementById("add-to-cart-label");
   const addToCartSub = document.getElementById("add-to-cart-sub");
 
-  // Modal
+  // Modal imagen
   const imageModal = document.getElementById("image-modal");
   const modalImage = document.getElementById("modal-image");
   const closeModalBtn = document.getElementById("close-modal");
@@ -149,21 +176,23 @@ document.addEventListener("DOMContentLoaded", () => {
   // Fetch
   // =============================
   async function fetchProduct(id) {
-    const res = await fetch(`/api/menu/item/${id}`);
-    if (!res.ok) throw new Error("No se pudo cargar el producto");
-    return await res.json();
+    return fetchJsonWithTimeout(`/api/menu/item/${id}`, 12000);
   }
 
   async function fetchExtras() {
-    const res = await fetch("/api/menu?tipo=2");
-    if (!res.ok) return [];
-    return await res.json();
+    try {
+      return await fetchJsonWithTimeout("/api/menu?tipo=2", 12000);
+    } catch {
+      return [];
+    }
   }
 
   async function fetchByTipo(tipo) {
-    const res = await fetch(`/api/menu?tipo=${tipo}`);
-    if (!res.ok) return [];
-    return await res.json();
+    try {
+      return await fetchJsonWithTimeout(`/api/menu?tipo=${tipo}`, 12000);
+    } catch {
+      return [];
+    }
   }
 
   // =============================
@@ -189,39 +218,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const priceBase = product[ZONA_PRECIO] || 0;
 
-    // Imagen
     if (productImage) {
-      productImage.style.backgroundImage = product.imagen
-        ? `url('${product.imagen}')`
-        : "";
+      productImage.style.backgroundImage = product.imagen ? `url('${product.imagen}')` : "";
     }
 
-    // Textos
     if (productNameEl) productNameEl.textContent = product.Nombre || "Producto";
-    if (productDescriptionEl)
-      productDescriptionEl.textContent = product.Descripcion || "";
+    if (productDescriptionEl) productDescriptionEl.textContent = product.Descripcion || "";
     if (productPriceEl) productPriceEl.textContent = formatPrice(priceBase);
 
-    // Breadcrumb
-    if (breadcrumbProduct)
-      breadcrumbProduct.textContent = product.Nombre || "Producto";
-    if (breadcrumbCategory)
-      breadcrumbCategory.textContent = tipoToLabel(product.tipo);
+    if (breadcrumbProduct) breadcrumbProduct.textContent = product.Nombre || "Producto";
+    if (breadcrumbCategory) breadcrumbCategory.textContent = tipoToLabel(product.tipo);
 
-    // Topline
-    if (topline)
-      topline.textContent = `Categoría: ${tipoToLabel(
-        product.tipo
-      )}`.toUpperCase();
+    if (topline) topline.textContent = `Categoría: ${tipoToLabel(product.tipo)}`.toUpperCase();
 
-    // 1 y 3 sí; 4 y 6 no
+    // Adiciones/modificar solo para 1 y 3
     const esHamburguesaOCombo = product.tipo === 1 || product.tipo === 3;
 
     if (!esHamburguesaOCombo) {
-      if (extrasPanel && extrasPanel.parentElement)
-        extrasPanel.parentElement.classList.add("hidden");
+      if (extrasPanel && extrasPanel.parentElement) extrasPanel.parentElement.classList.add("hidden");
       if (modifySection) modifySection.classList.add("hidden");
-      if (cookingSection) cookingSection.classList.add("hidden");
     }
   }
 
@@ -262,13 +277,9 @@ document.addEventListener("DOMContentLoaded", () => {
             data-extra-price="${price}"
             class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
           />
-          <span class="text-sm text-white/80 font-semibold">${
-            extra.Nombre
-          }</span>
+          <span class="text-sm text-white/80 font-semibold">${extra.Nombre}</span>
         </div>
-        <span class="text-sm font-extrabold text-primary">+${formatPrice(
-          price
-        )}</span>
+        <span class="text-sm font-extrabold text-primary">+${formatPrice(price)}</span>
       `;
 
       extrasContainer.appendChild(row);
@@ -296,28 +307,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const unitTotal = basePrice + extrasTotal;
     const grandTotal = unitTotal * quantity;
 
-    if (addToCartLabel)
-      addToCartLabel.textContent = `Agregar al carrito - ${formatPrice(
-        grandTotal
-      )}`;
+    if (addToCartLabel) addToCartLabel.textContent = `Agregar al carrito - ${formatPrice(grandTotal)}`;
 
     if (addToCartSub) {
       if (extrasTotal > 0) {
-        addToCartSub.textContent = `Base: ${formatPrice(
-          basePrice
-        )} + adiciones: ${formatPrice(extrasTotal)} × ${quantity}`;
+        addToCartSub.textContent = `Base: ${formatPrice(basePrice)} + adiciones: ${formatPrice(extrasTotal)} × ${quantity}`;
       } else {
         addToCartSub.textContent =
-          quantity > 1
-            ? `Unitario: ${formatPrice(basePrice)} × ${quantity}`
-            : `Unitario: ${formatPrice(basePrice)}`;
+          quantity > 1 ? `Unitario: ${formatPrice(basePrice)} × ${quantity}` : `Unitario: ${formatPrice(basePrice)}`;
       }
     }
   }
 
-  function onExtrasChange() {
-    updateTotals();
-  }
+  extrasContainer?.addEventListener("change", updateTotals);
 
   // =============================
   // Cantidad
@@ -333,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
   qtyIncrease?.addEventListener("click", () => setQuantity(quantity + 1));
 
   // =============================
-  // Acordeones (misma lógica)
+  // Acordeones
   // =============================
   document.querySelectorAll(".accordion-header").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -349,7 +351,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Abiertos por defecto
   document.querySelectorAll(".accordion-panel").forEach((panel) => {
     panel.classList.remove("hidden");
   });
@@ -357,11 +358,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   // Personalización helpers
   // =============================
-  function getCooking() {
-    const selected = document.querySelector('input[name="cooking"]:checked');
-    return selected ? selected.value : "normal";
-  }
-
   function getModifications() {
     const mods = [];
     const mapping = [
@@ -383,9 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getSelectedExtras() {
     if (!extrasContainer) return [];
-    const inputs = extrasContainer.querySelectorAll(
-      'input[type="checkbox"]:checked'
-    );
+    const inputs = extrasContainer.querySelectorAll('input[type="checkbox"]:checked');
     const selected = [];
     inputs.forEach((input) => {
       const extraId = Number(input.dataset.extraId || 0);
@@ -402,58 +396,74 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =============================
-  // Agregar al carrito
+  // Agregar al carrito (con flujo)
   // =============================
   addToCartBtn?.addEventListener("click", () => {
     if (!product) {
-      alert(
-        "No se pudo identificar el producto. Vuelve al menú e inténtalo de nuevo."
-      );
+      notify({ type: "error", title: "Error", message: "No se identificó el producto. Vuelve al menú." });
       window.location.href = "/";
       return;
     }
 
     try {
+      let cart = [];
+      const rawBefore = localStorage.getItem("burgerCart");
+      if (rawBefore) {
+        const parsed = JSON.parse(rawBefore);
+        if (Array.isArray(parsed)) cart = parsed;
+      }
+
+      const wasEmpty = cart.length === 0;
+
       const basePrice = Number(product[ZONA_PRECIO] || 0);
       const selectedExtras = getSelectedExtras();
       const modifications = getModifications();
-      const cooking = getCooking();
 
-      const extrasTotal = selectedExtras.reduce(
-        (acc, ex) => acc + Number(ex.precio || 0),
-        0
-      );
+      const extrasTotal = selectedExtras.reduce((acc, ex) => acc + Number(ex.precio || 0), 0);
       const unitTotal = basePrice + extrasTotal;
       const grandTotal = unitTotal * quantity;
 
       const lineItem = {
+        menu_id: product.id,
         productId: product.id,
         nombre: product.Nombre,
         tipo: product.tipo,
         basePrice,
         extras: selectedExtras,
         modifications,
-        cooking,
+        cooking: null,
         quantity,
         total: grandTotal,
       };
 
-      let cart = [];
-      const raw = localStorage.getItem("burgerCart");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) cart = parsed;
-      }
       cart.push(lineItem);
       localStorage.setItem("burgerCart", JSON.stringify(cart));
-
       updateCartCount();
+
+      const tipo = Number(product.tipo);
+      const eligible = tipo === 1 || tipo === 3 || tipo === 4 || tipo === 6;
+
+      // ✅ regla nueva:
+      // - Si es hamburguesa o combo => SIEMPRE mostrar flujo (aunque ya haya cosas en el carrito)
+      // - Si es papas/bebidas => solo si era primera vez (carrito vacío)
+      const isBurgerOrCombo = tipo === 1 || tipo === 3;
+      const shouldStartFlow = eligible && (isBurgerOrCombo || wasEmpty);
+
+      if (shouldStartFlow && window.UpsellFlow?.start) {
+        const cartIndex = cart.length - 1;
+        window.UpsellFlow.start({ cartIndex, seedTipo: tipo });
+        return; // upsell.js se encargará de llevar a /cart al final
+      }
+
+      // Si no aplica el flujo, directo al carrito
       window.location.href = "/cart";
     } catch (err) {
       console.error("[product.js] Error guardando en carrito:", err);
-      alert(
-        "Hubo un problema guardando el producto en el carrito. Intenta de nuevo."
-      );
+      notify({
+        type: "error",
+        title: "Error",
+        message: "Hubo un problema guardando el producto. Intenta de nuevo.",
+      });
     }
   });
 
@@ -485,13 +495,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   closeModalBtn?.addEventListener("click", closeModal);
   modalBackdrop?.addEventListener("click", closeModal);
-
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeModal();
   });
 
   // =============================
-  // SUGERENCIAS
+  // Related
   // =============================
   function buildRelatedCard(item) {
     const price = item[ZONA_PRECIO] || 0;
@@ -513,12 +522,8 @@ document.addEventListener("DOMContentLoaded", () => {
         </button>
       </div>
       <div class="p-5">
-        <h4 class="font-extrabold text-white text-lg mb-1 line-clamp-1">${
-          item.Nombre || "Producto"
-        }</h4>
-        <p class="text-white/50 text-sm mb-3 line-clamp-1">${
-          item.Descripcion || ""
-        }</p>
+        <h4 class="font-extrabold text-white text-lg mb-1 line-clamp-1">${item.Nombre || "Producto"}</h4>
+        <p class="text-white/50 text-sm mb-3 line-clamp-1">${item.Descripcion || ""}</p>
         <span class="font-extrabold text-primary">${formatPrice(price)}</span>
       </div>
     `;
@@ -536,38 +541,27 @@ document.addEventListener("DOMContentLoaded", () => {
   function setupRelatedNav() {
     if (!relatedViewport) return;
 
-    const canScroll =
-      relatedViewport.scrollWidth > relatedViewport.clientWidth + 5;
+    const canScroll = relatedViewport.scrollWidth > relatedViewport.clientWidth + 5;
     if (relatedPrev) relatedPrev.disabled = !canScroll;
     if (relatedNext) relatedNext.disabled = !canScroll;
 
     const updateDisabled = () => {
-      const maxScroll =
-        relatedViewport.scrollWidth - relatedViewport.clientWidth;
+      const maxScroll = relatedViewport.scrollWidth - relatedViewport.clientWidth;
       const x = relatedViewport.scrollLeft;
-
       if (relatedPrev) relatedPrev.disabled = x <= 2;
       if (relatedNext) relatedNext.disabled = x >= maxScroll - 2;
     };
 
-    relatedViewport.addEventListener("scroll", updateDisabled, {
-      passive: true,
-    });
+    relatedViewport.addEventListener("scroll", updateDisabled, { passive: true });
     updateDisabled();
 
-    relatedPrev?.addEventListener("click", () => {
-      relatedViewport.scrollBy({ left: -420, behavior: "smooth" });
-    });
-
-    relatedNext?.addEventListener("click", () => {
-      relatedViewport.scrollBy({ left: 420, behavior: "smooth" });
-    });
+    relatedPrev?.addEventListener("click", () => relatedViewport.scrollBy({ left: -420, behavior: "smooth" }));
+    relatedNext?.addEventListener("click", () => relatedViewport.scrollBy({ left: 420, behavior: "smooth" }));
   }
 
   async function loadRelated() {
     if (!product || !relatedViewport) return;
 
-    // Si no hay tipo numérico, no mostramos nada
     const tipo = Number(product.tipo);
     if (!Number.isFinite(tipo)) return;
 
@@ -581,7 +575,6 @@ document.addEventListener("DOMContentLoaded", () => {
       relatedViewport.innerHTML = "";
       picked.forEach((it) => relatedViewport.appendChild(buildRelatedCard(it)));
 
-      // Si quedó vacío, ocultamos el bloque
       if (picked.length === 0) {
         relatedViewport.parentElement?.classList?.add("hidden");
         return;
@@ -602,29 +595,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const { id } = parseQuery();
     if (!id || isNaN(id)) {
-      alert("Producto inválido. Volviendo al inicio.");
+      hideLoader();
+      notify({ type: "error", title: "Producto inválido", message: "Verifica el enlace del producto." });
       window.location.href = "/";
       return;
     }
 
     try {
-      const [prod, extrasList] = await Promise.all([
-        fetchProduct(id),
-        fetchExtras(),
-      ]);
+      const [prod, extrasList] = await Promise.all([fetchProduct(id), fetchExtras()]);
       product = prod;
-      extras = extrasList || [];
+      extras = Array.isArray(extrasList) ? extrasList : [];
 
       renderProduct();
       renderExtras();
-
-      extrasContainer?.addEventListener("change", onExtrasChange);
-
       setQuantity(1);
-      await loadRelated();
+
+      loadRelated();
     } catch (err) {
       console.error("[product.js] Error inicializando detalle:", err);
-      alert("No se pudo cargar el producto, intenta de nuevo.");
+      notify({ type: "error", title: "Error", message: "No se pudo cargar el producto. Intenta de nuevo." });
       window.location.href = "/";
     } finally {
       hideLoader();

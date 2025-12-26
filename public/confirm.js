@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const nameInput = document.getElementById("client-name");
   const emailInput = document.getElementById("client-email");
-  const phoneInput = document.getElementById("client-phone"); // ✅ ahora son SOLO 10 dígitos (sin +57)
+  const phoneInput = document.getElementById("client-phone");
   const addressInput = document.getElementById("client-address");
   const notesInput = document.getElementById("client-notes");
 
@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let userData = null;
   let puntosVenta = [];
   let selectedPV = null;
+
   let syncingPV = false;
 
   // ---- Utils ----
@@ -84,32 +85,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? Math.trunc(n) : def;
   }
 
-  // ✅ Teléfono Colombia helpers
-  function normalizeCOPhoneDigits(value) {
-    // devuelve SOLO 10 dígitos (celular colombiano sin +57)
-    const digits = String(value || "").replace(/\D/g, "");
-
-    // Si alguien pega +57..., quitamos 57
-    if (digits.length >= 12 && digits.startsWith("57")) {
-      return digits.slice(2, 12);
-    }
-    // si pega 10 dígitos bien
-    if (digits.length >= 10) return digits.slice(0, 10);
-
-    return digits; // parcial mientras escribe
-  }
-
-  function validatePhoneCO10(digits10) {
-    // 10 dígitos
-    return /^\d{10}$/.test(String(digits10 || "").trim());
-  }
-
-  function getFullCOPhone() {
-    const ten = normalizeCOPhoneDigits(phoneInput?.value || "");
-    if (!validatePhoneCO10(ten)) return "";
-    return "+57" + ten;
-  }
-
   // ---- LocalStorage ----
   function saveUserToLocal(data) {
     try {
@@ -131,11 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function loadCart() {
     try {
       const raw = localStorage.getItem("burgerCart");
-      cartItems = raw
-        ? Array.isArray(JSON.parse(raw))
-          ? JSON.parse(raw)
-          : []
-        : [];
+      cartItems = raw ? (Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []) : [];
     } catch (err) {
       console.error("[confirm.js] Error leyendo burgerCart:", err);
       cartItems = [];
@@ -143,15 +114,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function syncBadges() {
-    const count = cartItems.reduce(
-      (acc, it) => acc + Number(it.quantity || 1),
-      0
-    );
+    const count = cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0);
     if (cartBadgeDesktop) cartBadgeDesktop.textContent = String(count);
     if (cartBadgeMobile) cartBadgeMobile.textContent = String(count);
   }
 
   // ---- Validaciones ----
+  function validatePhone(value) {
+    if (!value) return false;
+    return /^\+57\d{10}$/.test(value.trim());
+  }
+
   function validateEmail(value) {
     if (!value) return false;
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -168,12 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 0);
   }
 
-  function cookingLabel(value) {
-    if (value === "medio") return "Medio hecha";
-    if (value === "bien_cocida") return "Bien cocida";
-    return "Normal";
-  }
-
   // ---- Hidratar inputs ----
   function hydrateUserInputs(data) {
     if (!data) return;
@@ -184,19 +151,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const nombre = perfil.nombre || data.nombre || "";
     const celular = perfil.celular || data.celular || "";
     const direccion =
-      perfil.direccionentrega ||
-      perfil.direccion ||
-      data.direccionentrega ||
-      data.direccion ||
-      "";
+      perfil.direccionentrega || perfil.direccion || data.direccionentrega || data.direccion || "";
 
     if (nameInput && nombre) nameInput.value = nombre;
     if (emailInput && correo) emailInput.value = correo;
 
-    // ✅ ahora el input guarda SOLO 10 dígitos
     if (phoneInput && celular) {
-      const ten = normalizeCOPhoneDigits(celular);
-      phoneInput.value = ten;
+      const digits = String(celular).replace(/\D/g, "");
+      if (digits.length === 12 && digits.startsWith("57")) phoneInput.value = "+" + digits;
+      else if (digits.length === 10) phoneInput.value = "+57" + digits;
+      else if (String(celular).startsWith("+57")) phoneInput.value = String(celular);
+      else phoneInput.value = "+57" + digits;
     }
 
     if (addressInput && direccion) addressInput.value = direccion;
@@ -213,9 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function fetchUserByCorreo(correo) {
-    const res = await fetch(
-      `/api/auth/user?correo=${encodeURIComponent(correo)}`
-    );
+    const res = await fetch(`/api/auth/user?correo=${encodeURIComponent(correo)}`);
     if (!res.ok) return null;
     const data = await res.json();
     return data || null;
@@ -264,14 +227,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function buildOrderText(pedidoId = null) {
     const name = nameInput?.value?.trim() || "No especificado";
     const email = emailInput?.value?.trim() || "No especificado";
-
-    // ✅ aquí siempre mostramos +57...
-    const phone = getFullCOPhone() || "No especificado";
-
+    const phone = phoneInput?.value?.trim() || "No especificado";
     const address = addressInput?.value?.trim() || "No especificado";
     const notes = notesInput?.value?.trim() || "";
-    const paymentMethod =
-      paymentMethodSelect?.value?.trim() || "No especificado";
+
+    const paymentMethod = paymentMethodSelect?.value?.trim() || "No especificado";
 
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
@@ -279,12 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const lines = [];
     cartItems.forEach((item) => {
       const qty = Math.max(1, Number(item.quantity || 1));
-      const nombre =
-        item.nombre ||
-        item.Nombre ||
-        item.name ||
-        item.productName ||
-        "Producto";
+      const nombre = item.nombre || item.Nombre || item.name || item.productName || "Producto";
       const lineTotal = Number(item.total || 0);
 
       lines.push(`• ${qty}x ${nombre} - ${formatPrice(lineTotal || 0)}`);
@@ -300,9 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lines.push(`   → Personalización: ${item.modifications.join(", ")}`);
       }
 
-      if (item.tipo === 1 || item.tipo === 3) {
-        lines.push(`   → Término: ${cookingLabel(item.cooking)}`);
-      }
+      // ✅ QUITADO: término de la carne (no mostrar)
     });
 
     const header = [];
@@ -332,12 +285,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (selectedPV) {
       const pvNameText = selectedPV.Barrio || "Punto de venta";
-      const pvAddrText = `${selectedPV.Direccion || ""} - ${
-        selectedPV.Municipio || ""
-      }`;
+      const pvAddrText = `${selectedPV.Direccion || ""} - ${selectedPV.Municipio || ""}`;
       header.push(`🏬 *Punto de venta:* ${pvNameText}`, `📍 ${pvAddrText}`);
-      if (selectedPV.num_whatsapp)
-        header.push(`📞 WhatsApp: ${selectedPV.num_whatsapp}`);
+      if (selectedPV.num_whatsapp) header.push(`📞 WhatsApp: ${selectedPV.num_whatsapp}`);
       header.push("────────────────────────────");
     }
 
@@ -365,12 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pvCard.classList.remove("hidden");
     pvName.textContent = selectedPV.Barrio || "Punto de venta";
-    pvAddress.textContent = `${selectedPV.Direccion || ""} - ${
-      selectedPV.Municipio || ""
-    }`;
-    pvWhatsapp.textContent = `WhatsApp: ${
-      selectedPV.num_whatsapp || "No disponible"
-    }`;
+    pvAddress.textContent = `${selectedPV.Direccion || ""} - ${selectedPV.Municipio || ""}`;
+    pvWhatsapp.textContent = `WhatsApp: ${selectedPV.num_whatsapp || "No disponible"}`;
   }
 
   function validateForm() {
@@ -381,25 +327,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const emailVal = emailInput ? emailInput.value.trim() : "";
     const emailOk = validateEmail(emailVal);
 
-    // ✅ teléfono: el input debe tener 10 dígitos, y el número final es +57...
-    const tenDigits = normalizeCOPhoneDigits(phoneInput?.value || "");
-    const phoneOk = validatePhoneCO10(tenDigits);
+    const phoneVal = phoneInput ? phoneInput.value.trim() : "";
+    const phoneOk = validatePhone(phoneVal);
 
     const addressOk = !!(addressInput && addressInput.value.trim());
+
     const cartOk = cartItems && cartItems.length > 0;
 
     const pvId = Number(selectedPV?.id);
-    const pvOk = !!(
-      selectedPV &&
-      Number.isFinite(pvId) &&
-      pvId > 0 &&
-      String(selectedPV.num_whatsapp || "").trim()
-    );
+    const pvOk = !!(selectedPV && Number.isFinite(pvId) && pvId > 0 && String(selectedPV.num_whatsapp || "").trim());
 
     const paymentOk = !!(paymentMethodSelect && paymentMethodSelect.value.trim());
 
     if (phoneError) {
-      if (tenDigits && !phoneOk) phoneError.classList.remove("hidden");
+      if (phoneVal && !phoneOk) phoneError.classList.remove("hidden");
       else phoneError.classList.add("hidden");
     }
 
@@ -413,9 +354,7 @@ document.addEventListener("DOMContentLoaded", () => {
       else paymentError.classList.add("hidden");
     }
 
-    const allOk =
-      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
-
+    const allOk = nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
     sendWhatsappBtn.disabled = !allOk;
   }
 
@@ -436,9 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!pvDeptSelect || !pvMpioSelect || !pvBarrioSelect) return;
     if (!Array.isArray(puntosVenta) || puntosVenta.length === 0) return;
 
-    const departamentos = Array.from(
-      new Set(puntosVenta.map((pv) => pv.Departamento))
-    ).sort();
+    const departamentos = Array.from(new Set(puntosVenta.map((pv) => pv.Departamento))).sort();
 
     pvDeptSelect.innerHTML = '<option value="">Departamento</option>';
     departamentos.forEach((d) => {
@@ -474,11 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const municipios = Array.from(
-      new Set(
-        puntosVenta
-          .filter((pv) => pv.Departamento === dept)
-          .map((pv) => pv.Municipio)
-      )
+      new Set(puntosVenta.filter((pv) => pv.Departamento === dept).map((pv) => pv.Municipio))
     ).sort();
 
     municipios.forEach((m) => {
@@ -534,10 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!dept || !mpio || !barrio) return;
 
     const found = puntosVenta.find(
-      (pv) =>
-        pv.Departamento === dept &&
-        pv.Municipio === mpio &&
-        pv.Barrio === barrio
+      (pv) => pv.Departamento === dept && pv.Municipio === mpio && pv.Barrio === barrio
     );
 
     if (found) {
@@ -566,10 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const dLon = toRad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -579,14 +506,12 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error cargando puntos de venta:", err);
-      if (pvMessage)
-        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
       return;
     }
 
     if (!navigator.geolocation) {
-      if (pvMessage)
-        pvMessage.textContent = "Tu navegador no soporta geolocalización.";
+      if (pvMessage) pvMessage.textContent = "Tu navegador no soporta geolocalización.";
       return;
     }
 
@@ -598,8 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const userLat = pos.coords.latitude;
           const userLon = pos.coords.longitude;
 
-          if (pvMessage)
-            pvMessage.textContent = "Buscando punto de venta más cercano...";
+          if (pvMessage) pvMessage.textContent = "Buscando punto de venta más cercano...";
 
           let best = null;
           let bestDist = Infinity;
@@ -616,9 +540,7 @@ document.addEventListener("DOMContentLoaded", () => {
           });
 
           if (!best) {
-            if (pvMessage)
-              pvMessage.textContent =
-                "No se pudo calcular el punto de venta más cercano.";
+            if (pvMessage) pvMessage.textContent = "No se pudo calcular el punto de venta más cercano.";
             return;
           }
 
@@ -651,9 +573,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (err) {
           console.error("[confirm.js] Error en sugerencia PV:", err);
-          if (pvMessage)
-            pvMessage.textContent =
-              "Ocurrió un error al buscar el punto de venta.";
+          if (pvMessage) pvMessage.textContent = "Ocurrió un error al buscar el punto de venta.";
         }
       },
       (error) => {
@@ -667,27 +587,22 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveProfile() {
     const name = nameInput?.value?.trim() || "";
     const email = emailInput?.value?.trim() || "";
+    const phone = phoneInput?.value?.trim() || "";
     const address = addressInput?.value?.trim() || "";
-
-    const ten = normalizeCOPhoneDigits(phoneInput?.value || "");
-    const phoneFull = validatePhoneCO10(ten) ? "+57" + ten : "";
 
     if (!name) return alert("Ingresa tu nombre.");
     if (!validateEmail(email)) return alert("Ingresa un correo válido.");
-    if (!phoneFull) return alert("Ingresa un celular válido de Colombia (10 dígitos).");
+    if (!validatePhone(phone)) return alert("Tu celular debe ser +57 y 10 dígitos.");
     if (!address) return alert("Ingresa tu dirección.");
 
     const merged = userData && typeof userData === "object" ? userData : {};
     merged.correo = email;
     merged.nombre = merged.nombre || name;
-
-    // ✅ guardamos siempre +57...
-    merged.celular = phoneFull;
+    merged.celular = merged.celular || phone;
     merged.direccionentrega = merged.direccionentrega || address;
-
     merged.perfil = merged.perfil || {};
     merged.perfil.nombre = name;
-    merged.perfil.celular = phoneFull;
+    merged.perfil.celular = phone;
     merged.perfil.direccionentrega = address;
 
     userData = merged;
@@ -700,6 +615,7 @@ document.addEventListener("DOMContentLoaded", () => {
     validateForm();
   }
 
+  // ✅ Mapea carrito -> items para pedido_items
   function mapCartToPedidoItems() {
     const mapped = cartItems
       .map((item) => {
@@ -723,7 +639,7 @@ document.addEventListener("DOMContentLoaded", () => {
           qty,
           extras: extras || [],
           modifications: modifications || [],
-          cooking: item.cooking ? String(item.cooking) : null,
+          // ✅ QUITADO: cooking
         };
       })
       .filter(Boolean);
@@ -734,10 +650,9 @@ document.addEventListener("DOMContentLoaded", () => {
   async function sendOrder() {
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
+    const phone = phoneInput?.value?.trim();
     const address = addressInput?.value?.trim();
     const paymentMethod = paymentMethodSelect?.value?.trim();
-
-    const phoneFull = getFullCOPhone(); // ✅ +57...
 
     if (!paymentMethodSelect || !paymentMethod) {
       paymentTouched = true;
@@ -750,7 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
       !name ||
       !email ||
-      !phoneFull ||
+      !phone ||
       !address ||
       !selectedPV ||
       !selectedPV.num_whatsapp ||
@@ -763,25 +678,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const items = mapCartToPedidoItems();
     if (!items.length) {
-      alert(
-        "Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente."
-      );
+      alert("Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente.");
       return;
     }
 
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
 
+    // 1) Crear pedido en BD
     let pedidoId = null;
     try {
       const payload = {
         nombre_cliente: email,
         resumen_pedido: "",
         direccion_cliente: address,
-
-        // ✅ aquí va +57...
-        celular_cliente: phoneFull,
-
+        celular_cliente: phone,
         metodo_pago: paymentMethod,
         pv_id,
         delivery_fee: DELIVERY_FEE,
@@ -802,9 +713,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) {
         console.error("[confirm.js] POST /api/pedidos NO OK:", res.status, data);
-        alert(
-          "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
-        );
+        alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
       } else {
         if (data && typeof data.id !== "undefined") pedidoId = data.id;
         else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
@@ -812,14 +721,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
-      alert(
-        "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
-      );
+      alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
     }
 
+    // 2) Mensaje final
     let message = orderText?.value?.trim();
     if (!message) message = buildOrderText(pedidoId ?? undefined);
 
+    // 3) PATCH con resumen
     if (pedidoId !== null && pedidoId !== undefined) {
       try {
         await fetch(`/api/pedidos/${pedidoId}`, {
@@ -835,30 +744,30 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // 4) Abrir WhatsApp
     const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(/\D/g, "");
     if (!pvPhoneDigits) {
       alert("No hay WhatsApp configurado para el punto de venta.");
       return;
     }
 
-    const url =
-      "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
+    const url = "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
     window.open(url, "_blank");
 
+    // 5) Limpiar carrito y redirigir
     localStorage.removeItem("burgerCart");
     cartItems = [];
     syncBadges();
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
-    if (pedidoId !== null && pedidoId !== undefined)
-      params.set("pedidoId", String(pedidoId));
+    if (pedidoId !== null && pedidoId !== undefined) params.set("pedidoId", String(pedidoId));
 
-    const historyUrl =
-      "/history" + (params.toString() ? "?" + params.toString() : "");
+    const historyUrl = "/history" + (params.toString() ? "?" + params.toString() : "");
     setTimeout(() => (window.location.href = historyUrl), 800);
   }
 
+  // ---- Live update ----
   function onAnyFormChange() {
     validateForm();
     updateOrderTextLive();
@@ -914,13 +823,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tryHydrateByEmail();
   });
 
-  // ✅ Teléfono: solo números y máximo 10
-  phoneInput?.addEventListener("input", () => {
-    const ten = normalizeCOPhoneDigits(phoneInput.value);
-    phoneInput.value = ten; // se autocorrige mientras escribe / pega
-    onAnyFormChange();
-  });
-
+  phoneInput?.addEventListener("input", onAnyFormChange);
   addressInput?.addEventListener("input", onAnyFormChange);
   notesInput?.addEventListener("input", onAnyFormChange);
 
@@ -966,8 +869,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error inicial cargando PV:", err);
-      if (pvMessage)
-        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
     }
 
     if (orderText) orderText.dataset.userEdited = "0";
