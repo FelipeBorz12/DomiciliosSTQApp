@@ -1,10 +1,20 @@
+// src/middleware/turnstile.ts
 import type { Request, Response, NextFunction } from "express";
 
 const TURNSTILE_SECRET_KEY = process.env.TURNSTILE_SECRET_KEY || "";
+const NODE_ENV = process.env.NODE_ENV || "development";
+const IS_PROD = NODE_ENV === "production";
 
 function getIp(req: Request) {
+  // Soporta proxies (Easypanel / Nginx / Cloudflare)
   const xf = (req.headers["x-forwarded-for"] as string) || "";
-  return xf.split(",")[0]?.trim() || req.socket.remoteAddress || "";
+  const xr = (req.headers["x-real-ip"] as string) || "";
+  return (
+    xf.split(",")[0]?.trim() ||
+    xr.trim() ||
+    req.socket.remoteAddress ||
+    ""
+  );
 }
 
 export async function verifyTurnstile(
@@ -13,15 +23,33 @@ export async function verifyTurnstile(
   next: NextFunction
 ) {
   try {
+    // ✅ En DEV: no bloquees el flujo (login/register) si Turnstile falla o no está
+    if (!IS_PROD) {
+      (req as any).turnstile = {
+        bypass: true,
+        success: true,
+        reason: "TURNSTILE bypass en development",
+      };
+      return next();
+    }
+
+    // ✅ En PROD: debe existir secret
     if (!TURNSTILE_SECRET_KEY) {
       return res
         .status(500)
         .json({ message: "TURNSTILE_SECRET_KEY no configurado" });
     }
 
-    const token = String(req.body?.cf_turnstile_response || "").trim();
+    // ✅ Turnstile puede llegar con estos nombres
+    const token =
+      String(req.body?.cf_turnstile_response || "").trim() ||
+      String(req.body?.["cf-turnstile-response"] || "").trim();
+
     if (!token) {
-      return res.status(400).json({ message: "Falta cf_turnstile_response" });
+      return res.status(400).json({
+        message: "Falta token Turnstile",
+        hint: "Envía cf_turnstile_response o cf-turnstile-response",
+      });
     }
 
     const form = new URLSearchParams();
@@ -40,7 +68,7 @@ export async function verifyTurnstile(
       }
     );
 
-    const data = await r.json();
+    const data: any = await r.json();
 
     if (!data?.success) {
       return res.status(403).json({
