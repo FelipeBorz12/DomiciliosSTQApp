@@ -248,9 +248,7 @@
           </li>
 
           <li class="menu-item hidden" id="menu-logout-item">
-            <button onclick="logoutUser()" class="text-red-500">
-              Cerrar sesión
-            </button>
+            <button id="logout-btn">Cerrar sesión</button>
           </li>
         </ul>
 
@@ -835,7 +833,7 @@
         <p class="text-sm text-white/80">Cerrando sesión…</p>
       </div>
     </div>
-
+    <script type="module" src="/auth.js"></script>
     <script src="/session.js"></script>
     <script type="module" src="/index.js"></script>
   </body>

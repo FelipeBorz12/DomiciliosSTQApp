@@ -225,27 +225,35 @@ function showMsg(el, msg) {
 }
 
 /* ================= LOGOUT ================= */
-window.logoutUser = async function () {
-  const modal = document.getElementById("logout-modal");
-  if (modal) modal.classList.remove("hidden");
+function setupLogout() {
+  const btn = document.getElementById("logout-btn");
+  if (!btn) return;
 
-  // 🔐 MARCAR LOGOUT
-  localStorage.setItem("justLoggedOut", "1");
+  btn.addEventListener("click", async () => {
+    const modal = document.getElementById("logout-modal");
+    if (modal) modal.classList.remove("hidden");
 
-  try {
-    if (supabase) {
-      await supabase.auth.signOut();
+    // ⛔ marcar que viene de logout
+    localStorage.setItem("justLoggedOut", "1");
+
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      console.warn("[Logout] error:", e);
     }
-  } catch (e) {
-    console.warn("[Logout] error:", e);
-  }
 
-  try {
-    localStorage.removeItem("burgerUser");
-    sessionStorage.clear();
-  } catch {}
+    try {
+      localStorage.removeItem("burgerUser");
+      sessionStorage.clear();
+    } catch {}
 
-  setTimeout(() => {
-    window.location.replace("/login");
-  }, 700);
-};
+    setTimeout(() => {
+      window.location.replace("/login");
+    }, 700);
+  });
+}
+
+/* ===== ejecutar setup logout ===== */
+document.addEventListener("DOMContentLoaded", setupLogout);
