@@ -16,7 +16,7 @@ const supabase =
       })
     : null;
 
-/* ================= LOADER ================= */
+/* ================= LOADER (global) ================= */
 function showLoader(text = "Cargando…") {
   const loader = document.getElementById("global-loader");
   const label = document.getElementById("loader-text");
@@ -67,12 +67,18 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
 }
 
+function isStrongPassword(pw) {
+  const s = (pw || "").toString();
+  return s.length >= 8 && /[A-Za-z]/.test(s) && /\d/.test(s);
+}
+
 /* ================= HTTP ================= */
 async function postJSON(url, payload) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    credentials: "same-origin",
   });
   const data = await res.json().catch(() => null);
   return { ok: res.ok, data };
@@ -100,18 +106,61 @@ async function fetchMeOrThrow(accessToken) {
 }
 
 function saveBurgerUser(me) {
-  localStorage.setItem(
-    "burgerUser",
-    JSON.stringify({
-      userId: me?.userId ?? null,
-      rol: me?.rol ?? "0",
-      correo: me?.correo ?? "",
-      auth_user_id: me?.auth_user_id ?? null,
-      perfil: me?.perfil ?? {},
-      v: 5,
-    })
-  );
+  const perfil = me?.perfil || {};
+  const payload = {
+    userId: me?.userId ?? null,
+    rol: me?.rol ?? "0",
+    correo: me?.correo ?? "",
+    auth_user_id: me?.auth_user_id ?? null,
+    perfil: {
+      nombre: perfil?.nombre || "",
+      direccionentrega: perfil?.direccionentrega || "",
+      celular: perfil?.celular || null,
+      Departamento: perfil?.Departamento || "",
+      Municipio: perfil?.Municipio || "",
+      Barrio: perfil?.Barrio || "",
+    },
+    v: 4,
+  };
+  try {
+    localStorage.setItem("burgerUser", JSON.stringify(payload));
+  } catch {}
 }
+
+/* ================= HELPERS UI ================= */
+function showMsg(el, msg) {
+  if (!el) return;
+  el.textContent = msg || "";
+  el.classList.remove("hidden");
+}
+
+/* ================= LOGOUT GLOBAL ================= */
+window.logoutUser = async function () {
+  const modal = document.getElementById("logout-modal");
+  if (modal) modal.classList.remove("hidden");
+
+  // bandera para que /login NO haga auto-redirect instantáneo
+  try {
+    localStorage.setItem("tq_skip_autologin_until", String(Date.now() + 5000));
+  } catch {}
+
+  try {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+  } catch (e) {
+    console.warn("[Logout] signOut error:", e);
+  }
+
+  try {
+    localStorage.removeItem("burgerUser");
+    sessionStorage.clear();
+  } catch {}
+
+  setTimeout(() => {
+    window.location.replace("/login");
+  }, 650);
+};
 
 /* ================= DOM READY ================= */
 document.addEventListener("DOMContentLoaded", () => {
@@ -123,137 +172,110 @@ document.addEventListener("DOMContentLoaded", () => {
   const googleBtn = document.getElementById("google-login");
   const errorEl = document.getElementById("login-error");
 
-  /* === SESIÓN EXISTENTE (IMPORTANTE) === */
-  (async () => {
-    if (!supabase) return;
+  // ✅ Solo aplica auto-login en la página de login (si existe el form)
+  if (loginForm) {
+    (async () => {
+      if (!supabase) return;
 
-    // ⛔ SI VIENE DE LOGOUT, NO AUTO-LOGIN
-    if (localStorage.getItem("justLoggedOut")) {
-      localStorage.removeItem("justLoggedOut");
-      hideLoader();
-      return;
-    }
+      // si vienes de logout, no auto-redirigir
+      try {
+        const skipUntil = Number(localStorage.getItem("tq_skip_autologin_until") || "0");
+        if (Date.now() < skipUntil) return;
+      } catch {}
 
-    showLoader("Preparando tu sesión…");
+      showLoader("Preparando tu sesión…");
 
-    try {
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
 
-      if (session?.access_token) {
-        const me = await fetchMeOrThrow(session.access_token);
+        if (session?.access_token) {
+          const me = await fetchMeOrThrow(session.access_token);
+          saveBurgerUser(me);
+          window.location.replace("/");
+          return;
+        }
+      } catch (e) {
+        console.warn("[Session check]", e);
+      } finally {
+        hideLoader();
+      }
+    })();
+
+    /* ================= LOGIN EMAIL ================= */
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorEl?.classList.add("hidden");
+
+      if (!supabase) {
+        return showMsg(
+          errorEl,
+          "Falta configurar SUPABASE_URL / SUPABASE_ANON_KEY en login.html"
+        );
+      }
+
+      const formData = new FormData(loginForm);
+      const correo = normalizeEmail(formData.get("correo"));
+      const contrasena = String(formData.get("contrasena") || "");
+
+      if (!isValidEmail(correo))
+        return showMsg(errorEl, "Ingresa un correo válido.");
+      if (!contrasena)
+        return showMsg(errorEl, "Ingresa tu contraseña.");
+
+      try {
+        showLoader("Verificando tus datos…");
+        await verifyTurnstileOrThrow();
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: correo,
+          password: contrasena,
+        });
+
+        if (error || !data?.session)
+          throw new Error(error?.message || "No se pudo iniciar sesión.");
+
+        const me = await fetchMeOrThrow(data.session.access_token);
         saveBurgerUser(me);
         window.location.replace("/");
-        return;
+      } catch (err) {
+        resetTurnstile();
+        hideLoader();
+        showMsg(
+          errorEl,
+          err instanceof Error ? err.message : "Error al iniciar sesión"
+        );
       }
-    } catch (e) {
-      console.warn("[Session check]", e);
-    }
+    });
 
-    hideLoader();
-  })();
+    /* ================= GOOGLE ================= */
+    googleBtn?.addEventListener("click", async () => {
+      errorEl?.classList.add("hidden");
 
-  /* ================= LOGIN EMAIL ================= */
-  loginForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    errorEl.classList.add("hidden");
+      if (!supabase) {
+        return showMsg(
+          errorEl,
+          "Falta configurar SUPABASE_URL / SUPABASE_ANON_KEY en login.html"
+        );
+      }
 
-    const formData = new FormData(loginForm);
-    const correo = normalizeEmail(formData.get("correo"));
-    const contrasena = String(formData.get("contrasena") || "");
+      try {
+        showLoader("Redirigiendo a Google…");
+        await verifyTurnstileOrThrow();
 
-    if (!isValidEmail(correo))
-      return showMsg(errorEl, "Ingresa un correo válido.");
-    if (!contrasena)
-      return showMsg(errorEl, "Ingresa tu contraseña.");
+        await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: window.location.origin + "/login",
+          },
+        });
+      } catch (err) {
+        resetTurnstile();
+        hideLoader();
+        showMsg(errorEl, err instanceof Error ? err.message : "Error con Google");
+      }
+    });
+  }
 
-    try {
-      showLoader("Verificando tus datos…");
-      await verifyTurnstileOrThrow();
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: correo,
-        password: contrasena,
-      });
-
-      if (error || !data?.session)
-        throw new Error(error?.message || "No se pudo iniciar sesión.");
-
-      const me = await fetchMeOrThrow(data.session.access_token);
-      saveBurgerUser(me);
-      window.location.replace("/");
-    } catch (err) {
-      resetTurnstile();
-      hideLoader();
-      showMsg(
-        errorEl,
-        err instanceof Error ? err.message : "Error al iniciar sesión"
-      );
-    }
-  });
-
-  /* ================= GOOGLE ================= */
-  googleBtn?.addEventListener("click", async () => {
-    errorEl.classList.add("hidden");
-
-    try {
-      showLoader("Redirigiendo a Google…");
-      await verifyTurnstileOrThrow();
-
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/login",
-        },
-      });
-    } catch (err) {
-      resetTurnstile();
-      hideLoader();
-      showMsg(
-        errorEl,
-        err instanceof Error ? err.message : "Error con Google"
-      );
-    }
-  });
+  // register/recover quedan igual si los usas en otras páginas con estos forms
 });
-
-/* ================= HELPERS UI ================= */
-function showMsg(el, msg) {
-  if (!el) return;
-  el.textContent = msg || "";
-  el.classList.remove("hidden");
-}
-
-/* ================= LOGOUT ================= */
-function setupLogout() {
-  const btn = document.getElementById("logout-btn");
-  if (!btn) return;
-
-  btn.addEventListener("click", async () => {
-    const modal = document.getElementById("logout-modal");
-    if (modal) modal.classList.remove("hidden");
-
-    // ⛔ marcar que viene de logout
-    localStorage.setItem("justLoggedOut", "1");
-
-    try {
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
-    } catch (e) {
-      console.warn("[Logout] error:", e);
-    }
-
-    try {
-      localStorage.removeItem("burgerUser");
-      sessionStorage.clear();
-    } catch {}
-
-    setTimeout(() => {
-      window.location.replace("/login");
-    }, 700);
-  });
-}
-
-/* ===== ejecutar setup logout ===== */
-document.addEventListener("DOMContentLoaded", setupLogout);

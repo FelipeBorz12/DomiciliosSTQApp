@@ -1,83 +1,181 @@
 // public/session.js
 (function () {
-  const STORAGE_KEY = "burgerUser";
-
-  function getUser() {
+  /* ================== HELPERS ================== */
+  function safeParseJSON(raw, fallback) {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const v = JSON.parse(raw);
+      return v ?? fallback;
     } catch {
-      return null;
+      return fallback;
     }
   }
 
-  function setUser(user) {
-    if (!user) localStorage.removeItem(STORAGE_KEY);
-    else localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  function getBurgerUser() {
+    const raw = localStorage.getItem("burgerUser");
+    if (!raw) return null;
+    const u = safeParseJSON(raw, null);
+    if (!u || typeof u !== "object") return null;
+    if (!u.correo) return null;
+    return u;
   }
 
-  function isLogged() {
-    const u = getUser();
-    return !!(u && u.correo);
+  function isLoggedIn() {
+    return !!getBurgerUser();
   }
 
-  function goLogin() {
-    window.location.href = "/login";
+  function getCartItems() {
+    let raw = localStorage.getItem("burgerCart");
+    if (!raw) raw = localStorage.getItem("cart");
+    const items = safeParseJSON(raw, []);
+    return Array.isArray(items) ? items : [];
   }
 
-  function goHistory() {
-    const user = getUser();
-    if (user?.correo) {
-      window.location.href = `/history?correo=${encodeURIComponent(user.correo)}`;
-    } else {
-      goLogin();
+  function getCartCount(items) {
+    // soporta [{qty}] o [{quantity}] o lista simple
+    let total = 0;
+    for (const it of items || []) {
+      const q = Number(it?.qty ?? it?.quantity ?? 1);
+      total += Number.isFinite(q) ? q : 1;
     }
+    return total;
   }
 
-  function logout() {
-    setUser(null);
-    window.location.href = "/";
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = String(text ?? "");
   }
 
-  // 🔑 Intercepta TODOS los botones de perfil
-  function bindProfileButtons() {
-    const candidates = document.querySelectorAll(
-      '[aria-label="Perfil"], [aria-label="Cuenta"], .user-btn'
-    );
+  function show(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove("hidden");
+  }
 
-    candidates.forEach((btn) => {
-      // elimina onclick HTML duro
-      btn.onclick = null;
+  function hide(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add("hidden");
+  }
 
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isLogged()) goHistory();
-        else goLogin();
-      });
+  /* ================== UI: USER ================== */
+  function paintUser() {
+    const u = getBurgerUser();
+
+    // header label
+    const name =
+      u?.perfil?.nombre ||
+      u?.correo ||
+      "";
+
+    const headerName = document.getElementById("user-name-header");
+    if (headerName) {
+      headerName.textContent = u ? name : "";
+      headerName.classList.toggle("hidden", !u);
+    }
+
+    // mobile menu items (si existen)
+    const mobileLogin = document.getElementById("mobile-login-item");
+    const mobileProfile = document.getElementById("mobile-profile-item");
+    const mobileLogout = document.getElementById("mobile-logout-item");
+
+    if (mobileLogin) mobileLogin.classList.toggle("hidden", !!u);
+    if (mobileProfile) mobileProfile.classList.toggle("hidden", !u);
+    if (mobileLogout) mobileLogout.classList.toggle("hidden", !u);
+  }
+
+  /* ================== UI: CART BADGE ================== */
+  function paintCart() {
+    const items = getCartItems();
+    const count = getCartCount(items);
+
+    setText("cart-count", count);
+    setText("cart-count-badge", count);
+
+    // compat en otras páginas
+    setText("cart-badge-desktop", count);
+    setText("cart-badge-mobile", count);
+  }
+
+  /* ================== NAV ACTIONS ================== */
+  function wireUserIcon() {
+    const btn = document.getElementById("user-icon");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      if (isLoggedIn()) {
+        window.location.href = "/account.html";
+      } else {
+        window.location.href = "/login";
+      }
+    });
+
+    // mobile "Mi perfil"
+    const mobileProfileBtn = document.getElementById("mobile-profile-btn");
+    mobileProfileBtn?.addEventListener("click", () => {
+      if (isLoggedIn()) window.location.href = "/account.html";
+      else window.location.href = "/login";
+    });
+
+    // mobile "Cerrar sesión" (si existe)
+    const mobileLogoutBtn = document.getElementById("mobile-logout-btn");
+    mobileLogoutBtn?.addEventListener("click", async () => {
+      // si existe logoutUser (de auth.js), úsalo
+      if (typeof window.logoutUser === "function") return window.logoutUser();
+      // fallback
+      try {
+        localStorage.removeItem("burgerUser");
+      } catch {}
+      window.location.href = "/login";
     });
   }
 
-  // Opcional: esconder links login si ya hay sesión
-  function hideLoginLinks() {
-    if (!isLogged()) return;
-    document.querySelectorAll('a[href="/login"]').forEach((a) => {
-      a.classList.add("hidden");
+  function wireCartIcon() {
+    const btn = document.getElementById("cart-icon");
+    if (!btn) return;
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      const items = getCartItems();
+      const count = getCartCount(items);
+
+      if (!count) {
+        // si existe modal de carrito vacío
+        if (typeof window.openEmptyCartModal === "function") {
+          window.openEmptyCartModal();
+          return;
+        }
+        // fallback simple
+        alert("Tu carrito está vacío.");
+        return;
+      }
+
+      window.location.href = "/cart";
     });
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    bindProfileButtons();
-    hideLoginLinks();
-  });
+  /* ================== INIT ================== */
+  function init() {
+    paintUser();
+    paintCart();
+    wireUserIcon();
+    wireCartIcon();
 
-  // API pública por si otros scripts la necesitan
-  window.Session = {
-    getUser,
-    setUser,
-    isLogged,
-    logout,
-    goLogin,
-    goHistory,
+    // re-render si cambia storage en otra pestaña
+    window.addEventListener("storage", () => {
+      paintUser();
+      paintCart();
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+
+  // Exponer helpers si quieres usarlos en otros scripts
+  window.TQSession = {
+    isLoggedIn,
+    getBurgerUser,
+    paintUser,
+    paintCart,
   };
 })();
