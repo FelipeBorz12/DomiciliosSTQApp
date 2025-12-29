@@ -17,6 +17,11 @@
         obs.observe(root, { attributes: true, attributeFilter: ["class"] });
       })();
     </script>
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+    ></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -314,7 +319,10 @@
                     </option>
                     <option value="Nequi / Daviplata">Nequi / Daviplata</option>
                   </select>
-                  <p id="payment-error" class="mt-2 text-xs text-red-400 hidden">
+                  <p
+                    id="payment-error"
+                    class="mt-2 text-xs text-red-400 hidden"
+                  >
                     Selecciona un método de pago.
                   </p>
                 </div>
@@ -362,7 +370,10 @@
                 </button>
               </div>
 
-              <p id="pv-message" class="text-sm text-gray-500 dark:text-gray-400">
+              <p
+                id="pv-message"
+                class="text-sm text-gray-500 dark:text-gray-400"
+              >
                 Selecciona tu sucursal. Si cambias el punto de venta, usa
                 “Actualizar mensaje” para regenerar el texto de WhatsApp.
               </p>
@@ -456,6 +467,21 @@
                       Actualizar mensaje
                     </button>
                   </div>
+                </div>
+                <!-- ✅ Anti-bot (obligatorio antes de habilitar WhatsApp) -->
+                <div class="mb-4">
+                  <div
+                    class="cf-turnstile"
+                    data-sitekey="TU_SITE_KEY"
+                    data-theme="dark"
+                    data-size="normal"
+                    data-callback="onOrderTurnstile"
+                    data-expired-callback="onOrderTurnstileExpired"
+                    data-error-callback="onOrderTurnstileError"
+                  ></div>
+                  <p id="antibot-msg" class="mt-2 text-xs text-white/60">
+                    Valida la verificación para habilitar el envío por WhatsApp.
+                  </p>
                 </div>
 
                 <button

@@ -41,6 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveProfileStatus = document.getElementById("save-profile-status");
 
   // ---- Estado ----
+  let antiBotOk = false;
   let cartItems = [];
   let userData = null;
   let puntosVenta = [];
@@ -106,7 +107,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function loadCart() {
     try {
       const raw = localStorage.getItem("burgerCart");
-      cartItems = raw ? (Array.isArray(JSON.parse(raw)) ? JSON.parse(raw) : []) : [];
+      cartItems = raw
+        ? Array.isArray(JSON.parse(raw))
+          ? JSON.parse(raw)
+          : []
+        : [];
     } catch (err) {
       console.error("[confirm.js] Error leyendo burgerCart:", err);
       cartItems = [];
@@ -114,7 +119,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function syncBadges() {
-    const count = cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0);
+    const count = cartItems.reduce(
+      (acc, it) => acc + Number(it.quantity || 1),
+      0
+    );
     if (cartBadgeDesktop) cartBadgeDesktop.textContent = String(count);
     if (cartBadgeMobile) cartBadgeMobile.textContent = String(count);
   }
@@ -151,16 +159,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const nombre = perfil.nombre || data.nombre || "";
     const celular = perfil.celular || data.celular || "";
     const direccion =
-      perfil.direccionentrega || perfil.direccion || data.direccionentrega || data.direccion || "";
+      perfil.direccionentrega ||
+      perfil.direccion ||
+      data.direccionentrega ||
+      data.direccion ||
+      "";
 
     if (nameInput && nombre) nameInput.value = nombre;
     if (emailInput && correo) emailInput.value = correo;
 
     if (phoneInput && celular) {
       const digits = String(celular).replace(/\D/g, "");
-      if (digits.length === 12 && digits.startsWith("57")) phoneInput.value = "+" + digits;
+      if (digits.length === 12 && digits.startsWith("57"))
+        phoneInput.value = "+" + digits;
       else if (digits.length === 10) phoneInput.value = "+57" + digits;
-      else if (String(celular).startsWith("+57")) phoneInput.value = String(celular);
+      else if (String(celular).startsWith("+57"))
+        phoneInput.value = String(celular);
       else phoneInput.value = "+57" + digits;
     }
 
@@ -178,7 +192,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function fetchUserByCorreo(correo) {
-    const res = await fetch(`/api/auth/user?correo=${encodeURIComponent(correo)}`);
+    const res = await fetch(
+      `/api/auth/user?correo=${encodeURIComponent(correo)}`
+    );
     if (!res.ok) return null;
     const data = await res.json();
     return data || null;
@@ -231,7 +247,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const address = addressInput?.value?.trim() || "No especificado";
     const notes = notesInput?.value?.trim() || "";
 
-    const paymentMethod = paymentMethodSelect?.value?.trim() || "No especificado";
+    const paymentMethod =
+      paymentMethodSelect?.value?.trim() || "No especificado";
 
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
@@ -239,7 +256,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const lines = [];
     cartItems.forEach((item) => {
       const qty = Math.max(1, Number(item.quantity || 1));
-      const nombre = item.nombre || item.Nombre || item.name || item.productName || "Producto";
+      const nombre =
+        item.nombre ||
+        item.Nombre ||
+        item.name ||
+        item.productName ||
+        "Producto";
       const lineTotal = Number(item.total || 0);
 
       lines.push(`• ${qty}x ${nombre} - ${formatPrice(lineTotal || 0)}`);
@@ -285,9 +307,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (selectedPV) {
       const pvNameText = selectedPV.Barrio || "Punto de venta";
-      const pvAddrText = `${selectedPV.Direccion || ""} - ${selectedPV.Municipio || ""}`;
+      const pvAddrText = `${selectedPV.Direccion || ""} - ${
+        selectedPV.Municipio || ""
+      }`;
       header.push(`🏬 *Punto de venta:* ${pvNameText}`, `📍 ${pvAddrText}`);
-      if (selectedPV.num_whatsapp) header.push(`📞 WhatsApp: ${selectedPV.num_whatsapp}`);
+      if (selectedPV.num_whatsapp)
+        header.push(`📞 WhatsApp: ${selectedPV.num_whatsapp}`);
       header.push("────────────────────────────");
     }
 
@@ -315,8 +340,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pvCard.classList.remove("hidden");
     pvName.textContent = selectedPV.Barrio || "Punto de venta";
-    pvAddress.textContent = `${selectedPV.Direccion || ""} - ${selectedPV.Municipio || ""}`;
-    pvWhatsapp.textContent = `WhatsApp: ${selectedPV.num_whatsapp || "No disponible"}`;
+    pvAddress.textContent = `${selectedPV.Direccion || ""} - ${
+      selectedPV.Municipio || ""
+    }`;
+    pvWhatsapp.textContent = `WhatsApp: ${
+      selectedPV.num_whatsapp || "No disponible"
+    }`;
   }
 
   function validateForm() {
@@ -335,9 +364,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const cartOk = cartItems && cartItems.length > 0;
 
     const pvId = Number(selectedPV?.id);
-    const pvOk = !!(selectedPV && Number.isFinite(pvId) && pvId > 0 && String(selectedPV.num_whatsapp || "").trim());
+    const pvOk = !!(
+      selectedPV &&
+      Number.isFinite(pvId) &&
+      pvId > 0 &&
+      String(selectedPV.num_whatsapp || "").trim()
+    );
 
-    const paymentOk = !!(paymentMethodSelect && paymentMethodSelect.value.trim());
+    const paymentOk = !!(
+      paymentMethodSelect && paymentMethodSelect.value.trim()
+    );
 
     if (phoneError) {
       if (phoneVal && !phoneOk) phoneError.classList.remove("hidden");
@@ -354,8 +390,9 @@ document.addEventListener("DOMContentLoaded", () => {
       else paymentError.classList.add("hidden");
     }
 
-    const allOk = nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
-    sendWhatsappBtn.disabled = !allOk;
+    const allOk =
+      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
+    sendWhatsappBtn.disabled = !(allOk && antiBotOk);
   }
 
   // ---- Puntos de venta ----
@@ -375,7 +412,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!pvDeptSelect || !pvMpioSelect || !pvBarrioSelect) return;
     if (!Array.isArray(puntosVenta) || puntosVenta.length === 0) return;
 
-    const departamentos = Array.from(new Set(puntosVenta.map((pv) => pv.Departamento))).sort();
+    const departamentos = Array.from(
+      new Set(puntosVenta.map((pv) => pv.Departamento))
+    ).sort();
 
     pvDeptSelect.innerHTML = '<option value="">Departamento</option>';
     departamentos.forEach((d) => {
@@ -411,7 +450,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const municipios = Array.from(
-      new Set(puntosVenta.filter((pv) => pv.Departamento === dept).map((pv) => pv.Municipio))
+      new Set(
+        puntosVenta
+          .filter((pv) => pv.Departamento === dept)
+          .map((pv) => pv.Municipio)
+      )
     ).sort();
 
     municipios.forEach((m) => {
@@ -467,7 +510,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!dept || !mpio || !barrio) return;
 
     const found = puntosVenta.find(
-      (pv) => pv.Departamento === dept && pv.Municipio === mpio && pv.Barrio === barrio
+      (pv) =>
+        pv.Departamento === dept &&
+        pv.Municipio === mpio &&
+        pv.Barrio === barrio
     );
 
     if (found) {
@@ -496,7 +542,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const dLon = toRad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
@@ -506,12 +555,14 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error cargando puntos de venta:", err);
-      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage)
+        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
       return;
     }
 
     if (!navigator.geolocation) {
-      if (pvMessage) pvMessage.textContent = "Tu navegador no soporta geolocalización.";
+      if (pvMessage)
+        pvMessage.textContent = "Tu navegador no soporta geolocalización.";
       return;
     }
 
@@ -523,7 +574,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const userLat = pos.coords.latitude;
           const userLon = pos.coords.longitude;
 
-          if (pvMessage) pvMessage.textContent = "Buscando punto de venta más cercano...";
+          if (pvMessage)
+            pvMessage.textContent = "Buscando punto de venta más cercano...";
 
           let best = null;
           let bestDist = Infinity;
@@ -540,7 +592,9 @@ document.addEventListener("DOMContentLoaded", () => {
           });
 
           if (!best) {
-            if (pvMessage) pvMessage.textContent = "No se pudo calcular el punto de venta más cercano.";
+            if (pvMessage)
+              pvMessage.textContent =
+                "No se pudo calcular el punto de venta más cercano.";
             return;
           }
 
@@ -573,12 +627,15 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (err) {
           console.error("[confirm.js] Error en sugerencia PV:", err);
-          if (pvMessage) pvMessage.textContent = "Ocurrió un error al buscar el punto de venta.";
+          if (pvMessage)
+            pvMessage.textContent =
+              "Ocurrió un error al buscar el punto de venta.";
         }
       },
       (error) => {
         console.error("[confirm.js] Geolocalización error:", error);
-        if (pvMessage) pvMessage.textContent = "No se pudo obtener tu ubicación.";
+        if (pvMessage)
+          pvMessage.textContent = "No se pudo obtener tu ubicación.";
       }
     );
   }
@@ -592,7 +649,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!name) return alert("Ingresa tu nombre.");
     if (!validateEmail(email)) return alert("Ingresa un correo válido.");
-    if (!validatePhone(phone)) return alert("Tu celular debe ser +57 y 10 dígitos.");
+    if (!validatePhone(phone))
+      return alert("Tu celular debe ser +57 y 10 dígitos.");
     if (!address) return alert("Ingresa tu dirección.");
 
     const merged = userData && typeof userData === "object" ? userData : {};
@@ -621,7 +679,8 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((item) => {
         const qty = Math.max(1, toInt(item.quantity ?? item.qty ?? 1, 1));
 
-        const menuIdRaw = item.menu_id ?? item.menuId ?? item.id ?? item.productId;
+        const menuIdRaw =
+          item.menu_id ?? item.menuId ?? item.id ?? item.productId;
         const menu_id = Number(menuIdRaw);
 
         if (!menu_id || Number.isNaN(menu_id)) {
@@ -678,7 +737,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const items = mapCartToPedidoItems();
     if (!items.length) {
-      alert("Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente.");
+      alert(
+        "Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente."
+      );
       return;
     }
 
@@ -712,8 +773,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        console.error("[confirm.js] POST /api/pedidos NO OK:", res.status, data);
-        alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
+        console.error(
+          "[confirm.js] POST /api/pedidos NO OK:",
+          res.status,
+          data
+        );
+        alert(
+          "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
+        );
       } else {
         if (data && typeof data.id !== "undefined") pedidoId = data.id;
         else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
@@ -721,7 +788,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
-      alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
+      alert(
+        "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
+      );
     }
 
     // 2) Mensaje final
@@ -745,13 +814,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 4) Abrir WhatsApp
-    const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(/\D/g, "");
+    const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(
+      /\D/g,
+      ""
+    );
     if (!pvPhoneDigits) {
       alert("No hay WhatsApp configurado para el punto de venta.");
       return;
     }
 
-    const url = "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
+    const url =
+      "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
     window.open(url, "_blank");
 
     // 5) Limpiar carrito y redirigir
@@ -761,9 +834,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
-    if (pedidoId !== null && pedidoId !== undefined) params.set("pedidoId", String(pedidoId));
+    if (pedidoId !== null && pedidoId !== undefined)
+      params.set("pedidoId", String(pedidoId));
 
-    const historyUrl = "/history" + (params.toString() ? "?" + params.toString() : "");
+    const historyUrl =
+      "/history" + (params.toString() ? "?" + params.toString() : "");
     setTimeout(() => (window.location.href = historyUrl), 800);
   }
 
@@ -869,13 +944,76 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error inicial cargando PV:", err);
-      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage)
+        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
     }
 
     if (orderText) orderText.dataset.userEdited = "0";
     updateOrderTextLive(true);
     validateForm();
   }
+  // ---- Anti-bot (Confirm) ----
+  const sendBtn = document.getElementById("send-whatsapp-btn");
+  const msgEl = document.getElementById("antibot-msg");
+
+  function setAntiBotMsg(text, isError = false) {
+    if (!msgEl) return;
+    msgEl.textContent = text || "";
+    msgEl.classList.toggle("text-red-400", !!isError);
+    msgEl.classList.toggle("text-white/60", !isError);
+  }
+
+  async function verifyAntiBotServer(token) {
+    const res = await fetch("/api/antibot/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ cf_turnstile_response: token }),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok)
+      throw new Error(data?.message || "No se pudo validar anti-bot");
+    return true;
+  }
+
+  window.onOrderTurnstile = async function (token) {
+    antiBotOk = false;
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+      setAntiBotMsg("Validando…");
+      await verifyAntiBotServer(token);
+      antiBotOk = true;
+      setAntiBotMsg("Verificación lista ✅ Ya puedes enviar tu pedido.");
+    } catch (e) {
+      console.error("[anti-bot] verify error:", e);
+      antiBotOk = false;
+      setAntiBotMsg("Falló la verificación. Intenta de nuevo.", true);
+      if (window.turnstile) {
+        try {
+          window.turnstile.reset();
+        } catch {}
+      }
+    } finally {
+      validateForm(); // ✅ re-evalúa con antiBotOk
+    }
+  };
+
+  window.onOrderTurnstileExpired = function () {
+    antiBotOk = false;
+    setAntiBotMsg("La verificación expiró. Vuélvela a completar.", true);
+    validateForm();
+  };
+
+  window.onOrderTurnstileError = function () {
+    antiBotOk = false;
+    setAntiBotMsg(
+      "Error cargando verificación anti-bot. Recarga la página.",
+      true
+    );
+    validateForm();
+  };
 
   init();
 });
