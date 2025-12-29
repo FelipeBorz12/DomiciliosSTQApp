@@ -189,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (session?.access_token) {
           const me = await fetchMeOrThrow(session.access_token);
           saveBurgerUser(me);
-          window.location.href = "/";
+          window.location.href = "/login";
         }
       } catch {}
     })();
