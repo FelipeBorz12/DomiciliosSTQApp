@@ -1,136 +1,178 @@
 // public/account.js
-function safeParseJSON(raw, fallback) {
-  try {
-    const v = JSON.parse(raw);
-    return v ?? fallback;
-  } catch {
-    return fallback;
+// Página /account: muestra y permite actualizar el perfil.
+
+(function () {
+  "use strict";
+
+  function $(id) {
+    return document.getElementById(id);
   }
-}
 
-function getBurgerUser() {
-  const raw = localStorage.getItem("burgerUser");
-  if (!raw) return null;
-  const u = safeParseJSON(raw, null);
-  if (!u || typeof u !== "object") return null;
-  if (!u.correo) return null;
-  return u;
-}
+  function setText(id, value) {
+    const el = $(id);
+    if (el) el.textContent = value ?? "";
+  }
 
-function saveBurgerUser(u) {
-  localStorage.setItem("burgerUser", JSON.stringify(u));
-}
+  function setValue(id, value) {
+    const el = $(id);
+    if (el) el.value = value ?? "";
+  }
 
-function el(id) {
-  return document.getElementById(id);
-}
+  function toast(msg, ms = 3500) {
+    const el = $("toast");
+    if (!el) return alert(msg);
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.add("hidden"), ms);
+  }
 
-function fmtMoney(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return String(v ?? "");
-  return n.toLocaleString("es-CO", { style: "currency", currency: "COP" });
-}
+  async function loadMeWithToken() {
+    const supa = window.tqSession?.getSupabase?.();
+    if (!supa) return null;
+    const { data } = await supa.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return null;
 
-async function loadOrders(correo) {
-  const loading = el("orders-loading");
-  const empty = el("orders-empty");
-  const list = el("orders-list");
-  const count = el("orders-count");
+    const res = await fetch("/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  }
 
-  try {
-    loading.classList.remove("hidden");
-    empty.classList.add("hidden");
-    list.classList.add("hidden");
-    list.innerHTML = "";
+  async function saveProfile(payload) {
+    const supa = window.tqSession?.getSupabase?.();
+    if (!supa) return { ok: false, message: "Supabase no disponible" };
 
-    const res = await fetch(`/api/pedidos?correo=${encodeURIComponent(correo)}`);
-    const data = await res.json().catch(() => []);
-    const orders = Array.isArray(data) ? data : [];
+    const { data } = await supa.auth.getSession();
+    const token = data?.session?.access_token;
+    if (!token) return { ok: false, message: "Sin sesión" };
 
-    count.textContent = `${orders.length} pedidos`;
+    const res = await fetch("/api/profile", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
 
-    if (!orders.length) {
-      loading.classList.add("hidden");
-      empty.classList.remove("hidden");
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, message: json?.message || "Error guardando" };
+    return { ok: true };
+  }
+
+  function disableForm(msg) {
+    const note = $("legacy-note");
+    if (note) {
+      note.textContent = msg;
+      note.classList.remove("hidden");
+    }
+
+    const saveBtn = $("save-btn");
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    const logoutBtn = $("logout-btn");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async () => {
+        await window.tqSession?.signOutAll?.();
+        window.location.href = "/";
+      });
+    }
+
+      const loggedIn = await window.tqSession.isLoggedIn();
+      if (!loggedIn) {
+        // Fallback: sesión legacy (solo localStorage). Útil para usuarios antiguos.
+        const local = window.tqSession.getLocalUser();
+        if (local && local.correo) {
+          setText("account-email", local.correo);
+          setText("account-status", local.legacy ? "(legacy)" : "");
+
+          const perfil = local.perfil || {};
+          setValue("nombre", perfil.nombre || "");
+          setValue("celular", perfil.celular || "");
+          setValue("direccionentrega", perfil.direccionentrega || "");
+          setValue("Departamento", perfil.Departamento || perfil.Departamento || "...");
+          setValue("Municipio", perfil.Municipio || "...");
+          setValue("Barrio", perfil.Barrio || "...");
+
+          disableForm(
+            "Tu sesión es legacy (usuarios antiguos). Para editar tu perfil aquí, inicia sesión con Google o con una cuenta creada en Supabase Auth."
+          );
+          return;
+        }
+
+        const next = encodeURIComponent("/account");
+        window.location.href = `/login?next=${next}`;
+        return;
+      }
+
+    // Carga perfil real
+    const me = await loadMeWithToken();
+    if (!me?.correo) {
+      toast("No se pudo cargar tu perfil.");
       return;
     }
 
-    const html = orders.map((o) => {
-      const id = o?.id ?? "—";
-      const fecha = o?.created_at ? new Date(o.created_at).toLocaleString("es-CO") : "";
-      const total = o?.total ?? o?.valor_total ?? o?.monto ?? "";
-      const estado = o?.estado ?? o?.status ?? "—";
+    setText("account-email", me.correo);
+    setText("account-status", "");
 
-      return `
-        <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <p class="text-sm font-extrabold">Pedido #${id}</p>
-              <p class="text-xs text-white/60">${fecha}</p>
-            </div>
-            <div class="text-right">
-              <p class="text-sm font-extrabold text-primary">${fmtMoney(total)}</p>
-              <p class="text-xs text-white/60">${estado}</p>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join("");
+    const perfil = me.perfil || {};
+    setValue("nombre", perfil.nombre || "");
+    setValue("celular", perfil.celular || "");
+    setValue("direccionentrega", perfil.direccionentrega || "");
+    setValue("Departamento", perfil.Departamento || "...");
+    setValue("Municipio", perfil.Municipio || "...");
+    setValue("Barrio", perfil.Barrio || "...");
 
-    list.innerHTML = html;
-    loading.classList.add("hidden");
-    list.classList.remove("hidden");
-  } catch (e) {
-    console.warn("[orders] error:", e);
-    loading.textContent = "No se pudieron cargar los pedidos.";
-    if (count) count.textContent = "—";
-  }
-}
+    // Guardar
+    const form = $("account-form");
+    if (form) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const u = getBurgerUser();
-  if (!u) {
-    window.location.replace("/login");
-    return;
-  }
+        const saveBtn = $("save-btn");
+        const status = $("save-status");
 
-  // fill form
-  el("p-name").value = u?.perfil?.nombre || "";
-  el("p-email").value = u?.correo || "";
-  el("p-phone").value = u?.perfil?.celular || "";
-  el("p-address").value = u?.perfil?.direccionentrega || "";
+        if (saveBtn) saveBtn.disabled = true;
+        if (status) status.textContent = "Guardando...";
 
-  // load orders
-  await loadOrders(u.correo);
+        const payload = {
+          nombre: ($("nombre")?.value || "").trim(),
+          celular: ($("celular")?.value || "").trim(),
+          direccionentrega: ($("direccionentrega")?.value || "").trim(),
+          Departamento: ($("Departamento")?.value || "...").trim() || "...",
+          Municipio: ($("Municipio")?.value || "...").trim() || "...",
+          Barrio: ($("Barrio")?.value || "...").trim() || "...",
+        };
 
-  // save local
-  el("profile-form").addEventListener("submit", (e) => {
-    e.preventDefault();
+        const r = await saveProfile(payload);
+        if (!r.ok) {
+          toast(r.message || "No se pudo guardar.");
+          if (status) status.textContent = "";
+          if (saveBtn) saveBtn.disabled = false;
+          return;
+        }
 
-    const next = { ...u };
-    next.perfil = { ...(u.perfil || {}) };
-    next.perfil.nombre = el("p-name").value.trim();
-    next.perfil.celular = el("p-phone").value.trim();
-    next.perfil.direccionentrega = el("p-address").value.trim();
+        // refresca burgerUser
+        try {
+          const cached = JSON.parse(localStorage.getItem("burgerUser") || "null") || {};
+          cached.perfil = { ...(cached.perfil || {}), ...payload };
+          localStorage.setItem("burgerUser", JSON.stringify(cached));
+        } catch {}
 
-    saveBurgerUser(next);
-
-    // repintar header
-    if (window.TQSession?.paintUser) window.TQSession.paintUser();
-
-    const hint = el("save-hint");
-    hint.classList.remove("hidden");
-    setTimeout(() => hint.classList.add("hidden"), 1200);
-  });
-
-  // logout
-  el("logout-btn").addEventListener("click", async () => {
-    if (typeof window.logoutUser === "function") {
-      await window.logoutUser();
-      return;
+        toast("Perfil actualizado ✅");
+        if (status) status.textContent = "Guardado.";
+        if (saveBtn) saveBtn.disabled = false;
+      });
     }
-    // fallback
-    localStorage.removeItem("burgerUser");
-    window.location.replace("/login");
   });
-});
+})();

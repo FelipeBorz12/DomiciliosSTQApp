@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Mi cuenta - Tierra Querida</title>
+    <title>Mi cuenta | Tierra Querida</title>
 
-    <!-- ✅ Config Supabase (para logout real) -->
-    <script>
-      window.SUPABASE_URL = "https://zvuzrpvsnkhnlfqtscrl.supabase.co";
-      window.SUPABASE_ANON_KEY =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
-    </script>
+    <!-- Config (Supabase) -->
+    <script src="/config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    <!-- ✅ Forzar dark -->
+    <!-- ✅ Forzar siempre dark -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
+
     <script>
       (function () {
         const root = document.documentElement;
@@ -26,168 +26,103 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#e02424",
-              "background-dark": "#171111",
-              "surface-dark": "#261c1c",
-              "surface-dark-hover": "#3a2a2a",
-              "border-dark": "#382929",
-            },
-            fontFamily: {
-              display: ["Plus Jakarta Sans", "sans-serif"],
-            },
-            borderRadius: {
-              DEFAULT: "1rem",
-              lg: "1.5rem",
-              xl: "2rem",
-              "2xl": "2.5rem",
-              full: "9999px",
-            },
-          },
-        },
-      };
-    </script>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      rel="stylesheet"
-    />
-
     <link rel="stylesheet" href="/styles.css" />
   </head>
 
-  <body class="bg-background-dark text-white font-display min-h-screen">
-    <!-- Loader (para auth.js) -->
-    <div id="global-loader" class="hidden">
-      <div class="loader-box">
-        <div class="loader-spinner"></div>
-        <p id="loader-text" class="text-sm text-white/80">Cargando…</p>
-      </div>
-    </div>
-
-    <!-- Header (igual lógica: user-icon y cart-icon funcionan con session.js) -->
-    <header class="sticky top-0 z-50 w-full backdrop-blur-md bg-[#171111]/80 border-b border-border-dark">
-      <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between gap-4">
+  <body class="bg-[#171111] text-white">
+    <!-- Header simple -->
+    <header class="px-4 md:px-10 pt-6">
+      <div class="max-w-6xl mx-auto flex items-center justify-between">
         <a href="/" class="flex items-center gap-3">
-          <div class="size-10 bg-primary rounded-full overflow-hidden">
-            <img src="/img/logo.png" alt="Logo Tierra Querida" class="w-full h-full object-cover" />
-          </div>
-          <div class="hidden sm:block leading-tight">
-            <h2 class="text-lg font-extrabold tracking-tight">Tierra Querida</h2>
-            <p class="text-[11px] text-white/60 font-semibold tracking-[0.2em] uppercase">mi cuenta</p>
+          <img src="/images/logo.png" class="w-10 h-10 rounded-xl" alt="Tierra Querida" />
+          <div class="leading-tight">
+            <div class="font-extrabold text-lg">Tierra Querida</div>
+            <div class="text-xs text-white/60">Mi cuenta</div>
           </div>
         </a>
 
-        <nav class="hidden md:flex items-center gap-8">
-          <a class="text-sm font-bold hover:text-primary transition-colors" href="/#products-section">Menú</a>
-          <a class="text-sm font-bold text-white/70 hover:text-white transition-colors" href="/#about-section">Nosotros</a>
-          <a class="text-sm font-bold text-white/70 hover:text-white transition-colors" href="/stores">Sedes</a>
-        </nav>
-
-        <div class="flex items-center gap-3 sm:gap-4">
-          <div class="hidden lg:flex items-center bg-surface-dark rounded-full px-4 h-10 w-72 border border-transparent focus-within:border-primary/50 transition-colors">
-            <span class="material-symbols-outlined text-white/50 text-[20px]">search</span>
-            <input class="bg-transparent border-none text-sm text-white placeholder-white/40 focus:ring-0 w-full h-full" placeholder="Buscar..." type="text" />
-          </div>
-
-          <button class="p-2 hover:bg-surface-dark rounded-full transition-colors" id="user-icon" type="button" aria-label="Perfil">
-            <span class="material-symbols-outlined">person</span>
-          </button>
-
-          <button class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-4 h-10 rounded-full transition-all" id="cart-icon" type="button" aria-label="Carrito">
-            <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
-            <span class="font-extrabold text-sm hidden sm:block" id="cart-count">0</span>
-            <span class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-primary sm:hidden">
-              <span id="cart-count-badge">0</span>
-            </span>
-          </button>
-
-          <span id="user-name-header" class="hidden lg:inline text-sm font-semibold text-white/80 truncate max-w-[180px]"></span>
-        </div>
-      </div>
-    </header>
-
-    <main class="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-12 py-8 flex flex-col gap-8">
-      <section class="rounded-3xl border border-border-dark bg-surface-dark p-6 md:p-8">
-        <div class="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 class="text-2xl md:text-3xl font-black">Mi cuenta</h1>
-            <p class="text-sm text-white/60">Edita tus datos y revisa tu historial.</p>
-          </div>
-
+        <div class="flex items-center gap-3">
+          <a href="/history" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15">Mis pedidos</a>
           <button
             id="logout-btn"
-            type="button"
-            class="rounded-full bg-white/10 hover:bg-white/15 px-5 py-3 text-sm font-extrabold transition-colors"
+            class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 font-bold"
           >
             Cerrar sesión
           </button>
         </div>
+      </div>
+    </header>
 
-        <form id="profile-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="md:col-span-1">
-            <label class="block text-sm font-semibold text-white/90 mb-1">Nombre</label>
-            <input id="p-name" class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white focus:ring-1 focus:ring-primary" />
+    <!-- Main -->
+    <main class="px-4 md:px-10 py-8">
+      <div class="max-w-6xl mx-auto">
+        <div class="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8">
+          <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
+            <div>
+              <h1 class="text-2xl md:text-3xl font-extrabold">Mi perfil</h1>
+              <p class="text-white/60 text-sm">Actualiza tus datos para agilizar tus pedidos.</p>
+            </div>
+            <div class="text-sm text-white/60">
+              <span class="font-bold text-white/80">Correo:</span>
+              <span id="account-email" class="ml-1"></span>
+              <span id="account-status" class="ml-3"></span>
+            </div>
           </div>
 
-          <div class="md:col-span-1">
-            <label class="block text-sm font-semibold text-white/90 mb-1">Correo</label>
-            <input id="p-email" disabled class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-gray-400 cursor-not-allowed" />
-          </div>
+          <div id="legacy-note" class="hidden mb-5 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm"></div>
 
-          <div class="md:col-span-1">
-            <label class="block text-sm font-semibold text-white/90 mb-1">Celular</label>
-            <input id="p-phone" class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white focus:ring-1 focus:ring-primary" placeholder="+573001112233" />
-          </div>
+          <form id="account-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-white/70 mb-1">Nombre</label>
+              <input id="nombre" class="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2" />
+            </div>
 
-          <div class="md:col-span-1">
-            <label class="block text-sm font-semibold text-white/90 mb-1">Dirección</label>
-            <input id="p-address" class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white focus:ring-1 focus:ring-primary" />
-          </div>
+            <div>
+              <label class="block text-sm text-white/70 mb-1">Celular</label>
+              <input id="celular" class="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2" />
+            </div>
 
-          <div class="md:col-span-2 flex items-center justify-end gap-3 mt-2">
-            <p id="save-hint" class="text-xs text-white/50 hidden">Guardado ✅</p>
-            <button type="submit" class="rounded-full bg-primary hover:bg-red-700 px-6 py-3 text-sm font-extrabold transition-colors">
-              Guardar cambios
-            </button>
-          </div>
-        </form>
-      </section>
+            <div class="md:col-span-2">
+              <label class="block text-sm text-white/70 mb-1">Dirección de entrega</label>
+              <input
+                id="direccionentrega"
+                class="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2"
+              />
+            </div>
 
-      <section class="rounded-3xl border border-border-dark bg-surface-dark p-6 md:p-8">
-        <div class="flex items-center justify-between gap-4 mb-5">
-          <h2 class="text-xl font-black">Historial de pedidos</h2>
-          <span id="orders-count" class="text-xs font-extrabold text-white/60">—</span>
+            <div>
+              <label class="block text-sm text-white/70 mb-1">Departamento</label>
+              <input id="Departamento" class="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2" />
+            </div>
+
+            <div>
+              <label class="block text-sm text-white/70 mb-1">Municipio</label>
+              <input id="Municipio" class="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2" />
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm text-white/70 mb-1">Barrio</label>
+              <input id="Barrio" class="w-full bg-white/10 border border-white/10 rounded-xl px-3 py-2" />
+            </div>
+
+            <div class="md:col-span-2 flex flex-col md:flex-row md:items-center gap-3 mt-2">
+              <button
+                id="save-btn"
+                type="submit"
+                class="px-5 py-3 rounded-2xl bg-white text-black font-extrabold hover:bg-white/90"
+              >
+                Guardar cambios
+              </button>
+              <div id="save-status" class="text-sm text-white/60"></div>
+            </div>
+          </form>
         </div>
-
-        <div id="orders-loading" class="text-sm text-white/60">Cargando pedidos…</div>
-        <div id="orders-empty" class="hidden text-sm text-white/60">Aún no tienes pedidos.</div>
-
-        <div id="orders-list" class="hidden space-y-3"></div>
-      </section>
+      </div>
     </main>
 
-    <!-- Modal cerrando sesión -->
-    <div id="logout-modal" class="hidden fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center">
-      <div class="bg-background-dark rounded-xl px-6 py-5 text-center border border-white/10">
-        <div class="loader-spinner mx-auto mb-3"></div>
-        <p class="text-sm text-white/80">Cerrando sesión…</p>
-      </div>
-    </div>
+    <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-black/80 px-4 py-2 rounded-xl border border-white/10 text-sm"></div>
 
     <script src="/session.js"></script>
-    <script type="module" src="/auth.js"></script>
-    <script type="module" src="/account.js"></script>
+    <script src="/account.js"></script>
   </body>
 </html>
