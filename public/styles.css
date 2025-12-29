@@ -945,3 +945,28 @@ body {
   .tq-safe-bottom {
     padding-bottom: calc(1rem + var(--tq-safe-bottom));
   }
+
+  #global-loader {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 5, 5, 0.95);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#global-loader.hidden {
+  display: none;
+}
+.loader-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid rgba(255,255,255,.2);
+  border-top-color: #ec1313;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 14px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

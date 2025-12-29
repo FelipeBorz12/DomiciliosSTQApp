@@ -248,7 +248,7 @@
           </li>
 
           <li class="menu-item hidden" id="menu-logout-item">
-            <button type="button" id="logout-button" class="w-full text-left">
+            <button onclick="logoutUser()" class="text-red-500">
               Cerrar sesión
             </button>
           </li>
@@ -826,6 +826,15 @@
         }
       })();
     </script>
+    <div
+      id="logout-modal"
+      class="hidden fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
+    >
+      <div class="bg-background-dark rounded-xl px-6 py-5 text-center">
+        <div class="loader-spinner mx-auto mb-3"></div>
+        <p class="text-sm text-white/80">Cerrando sesión…</p>
+      </div>
+    </div>
 
     <script src="/session.js"></script>
     <script type="module" src="/index.js"></script>
