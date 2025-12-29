@@ -117,8 +117,10 @@
 
           <div class="flex items-center gap-4 flex-1 justify-end md:flex-none">
             <button
-              class="p-2 hover:bg-surface-dark rounded-full transition-colors hidden sm:block"
-              aria-label="Perfil"
+              id="user-icon"
+              class="p-2 rounded-full hover:bg-white/10 transition-colors"
+              aria-label="Cuenta"
+              type="button"
             >
               <span class="material-symbols-outlined">person</span>
             </button>
@@ -378,7 +380,8 @@
         </div>
       </div>
     </div>
-    <script src="/session.js" type="module"></script>
+    <script type="module" src="/session.js"></script>
+
     <script src="/cart.js" type="module"></script>
   </body>
 </html>

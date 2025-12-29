@@ -1,181 +1,172 @@
 // public/session.js
-(function () {
-  /* ================== HELPERS ================== */
-  function safeParseJSON(raw, fallback) {
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+/* ================= CONFIG ================= */
+const SUPABASE_URL = window.SUPABASE_URL || "";
+const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
+
+// Si no hay keys en esta página, igual intentamos con burgerUser (fallback).
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : null;
+
+/* ================= HELPERS ================= */
+function safeJSONParse(str) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
+}
+
+function getBurgerUser() {
+  return safeJSONParse(localStorage.getItem("burgerUser") || "null");
+}
+
+function setHeaderUserName(name) {
+  const el = document.getElementById("user-name-header");
+  if (!el) return;
+  el.textContent = name || "";
+  el.classList.toggle("hidden", !name);
+}
+
+function setUserIconLogged(isLogged) {
+  const btn = document.getElementById("user-icon");
+  if (!btn) return;
+
+  // Indicador visual (puntito)
+  btn.dataset.logged = isLogged ? "1" : "0";
+  btn.classList.toggle("ring-2", isLogged);
+  btn.classList.toggle("ring-primary/60", isLogged);
+}
+
+function toggleMenuItems(isLogged) {
+  // Menú móvil (si existe)
+  const login = document.getElementById("mobile-login-item");
+  const profile = document.getElementById("mobile-profile-item");
+  const logout = document.getElementById("mobile-logout-item");
+
+  if (login) login.classList.toggle("hidden", isLogged);
+  if (profile) profile.classList.toggle("hidden", !isLogged);
+  if (logout) logout.classList.toggle("hidden", !isLogged);
+}
+
+/* ================= AUTH STATE ================= */
+async function getAuthState() {
+  // 1) Preferir Supabase session
+  if (supabase) {
     try {
-      const v = JSON.parse(raw);
-      return v ?? fallback;
-    } catch {
-      return fallback;
-    }
-  }
-
-  function getBurgerUser() {
-    const raw = localStorage.getItem("burgerUser");
-    if (!raw) return null;
-    const u = safeParseJSON(raw, null);
-    if (!u || typeof u !== "object") return null;
-    if (!u.correo) return null;
-    return u;
-  }
-
-  function isLoggedIn() {
-    return !!getBurgerUser();
-  }
-
-  function getCartItems() {
-    let raw = localStorage.getItem("burgerCart");
-    if (!raw) raw = localStorage.getItem("cart");
-    const items = safeParseJSON(raw, []);
-    return Array.isArray(items) ? items : [];
-  }
-
-  function getCartCount(items) {
-    // soporta [{qty}] o [{quantity}] o lista simple
-    let total = 0;
-    for (const it of items || []) {
-      const q = Number(it?.qty ?? it?.quantity ?? 1);
-      total += Number.isFinite(q) ? q : 1;
-    }
-    return total;
-  }
-
-  function setText(id, text) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = String(text ?? "");
-  }
-
-  function show(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.remove("hidden");
-  }
-
-  function hide(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add("hidden");
-  }
-
-  /* ================== UI: USER ================== */
-  function paintUser() {
-    const u = getBurgerUser();
-
-    // header label
-    const name =
-      u?.perfil?.nombre ||
-      u?.correo ||
-      "";
-
-    const headerName = document.getElementById("user-name-header");
-    if (headerName) {
-      headerName.textContent = u ? name : "";
-      headerName.classList.toggle("hidden", !u);
-    }
-
-    // mobile menu items (si existen)
-    const mobileLogin = document.getElementById("mobile-login-item");
-    const mobileProfile = document.getElementById("mobile-profile-item");
-    const mobileLogout = document.getElementById("mobile-logout-item");
-
-    if (mobileLogin) mobileLogin.classList.toggle("hidden", !!u);
-    if (mobileProfile) mobileProfile.classList.toggle("hidden", !u);
-    if (mobileLogout) mobileLogout.classList.toggle("hidden", !u);
-  }
-
-  /* ================== UI: CART BADGE ================== */
-  function paintCart() {
-    const items = getCartItems();
-    const count = getCartCount(items);
-
-    setText("cart-count", count);
-    setText("cart-count-badge", count);
-
-    // compat en otras páginas
-    setText("cart-badge-desktop", count);
-    setText("cart-badge-mobile", count);
-  }
-
-  /* ================== NAV ACTIONS ================== */
-  function wireUserIcon() {
-    const btn = document.getElementById("user-icon");
-    if (!btn) return;
-
-    btn.addEventListener("click", () => {
-      if (isLoggedIn()) {
-        window.location.href = "/account.html";
-      } else {
-        window.location.href = "/login";
+      const { data } = await supabase.auth.getSession();
+      const s = data?.session;
+      if (s?.access_token) {
+        return {
+          logged: true,
+          accessToken: s.access_token,
+          email: s.user?.email || "",
+        };
       }
-    });
-
-    // mobile "Mi perfil"
-    const mobileProfileBtn = document.getElementById("mobile-profile-btn");
-    mobileProfileBtn?.addEventListener("click", () => {
-      if (isLoggedIn()) window.location.href = "/account.html";
-      else window.location.href = "/login";
-    });
-
-    // mobile "Cerrar sesión" (si existe)
-    const mobileLogoutBtn = document.getElementById("mobile-logout-btn");
-    mobileLogoutBtn?.addEventListener("click", async () => {
-      // si existe logoutUser (de auth.js), úsalo
-      if (typeof window.logoutUser === "function") return window.logoutUser();
-      // fallback
-      try {
-        localStorage.removeItem("burgerUser");
-      } catch {}
-      window.location.href = "/login";
-    });
+    } catch {}
   }
 
-  function wireCartIcon() {
-    const btn = document.getElementById("cart-icon");
-    if (!btn) return;
+  // 2) Fallback: burgerUser (si existe)
+  const bu = getBurgerUser();
+  if (bu?.correo) {
+    return {
+      logged: true,
+      accessToken: null,
+      email: bu.correo,
+      fromLocal: true,
+    };
+  }
 
-    btn.addEventListener("click", (e) => {
+  return { logged: false, accessToken: null, email: "" };
+}
+
+async function refreshHeader() {
+  const state = await getAuthState();
+
+  setUserIconLogged(state.logged);
+
+  const bu = getBurgerUser();
+  const name = bu?.perfil?.nombre || bu?.correo || state.email || "";
+  setHeaderUserName(state.logged ? name : "");
+
+  toggleMenuItems(state.logged);
+}
+
+/* ================= NAV LOGIC ================= */
+async function goAccountOrLogin() {
+  const state = await getAuthState();
+  if (state.logged) {
+    window.location.href = "/account";
+  } else {
+    window.location.href = "/login";
+  }
+}
+
+/* ================= LOGOUT (opcional global) ================= */
+window.logoutUser = async function () {
+  const modal = document.getElementById("logout-modal");
+  if (modal) modal.classList.remove("hidden");
+
+  try {
+    if (supabase) await supabase.auth.signOut();
+  } catch (e) {
+    console.warn("[logoutUser] supabase.signOut error:", e);
+  }
+
+  try {
+    localStorage.removeItem("burgerUser");
+    // si tienes estas llaves en tu app:
+    localStorage.removeItem("burgerCart");
+    localStorage.removeItem("cart");
+    sessionStorage.clear();
+  } catch {}
+
+  setTimeout(() => {
+    window.location.href = "/login";
+  }, 600);
+};
+
+/* ================= INIT ================= */
+document.addEventListener("DOMContentLoaded", async () => {
+  // Botón usuario (header)
+  const userBtn = document.getElementById("user-icon");
+  if (userBtn) {
+    userBtn.addEventListener("click", (e) => {
       e.preventDefault();
-
-      const items = getCartItems();
-      const count = getCartCount(items);
-
-      if (!count) {
-        // si existe modal de carrito vacío
-        if (typeof window.openEmptyCartModal === "function") {
-          window.openEmptyCartModal();
-          return;
-        }
-        // fallback simple
-        alert("Tu carrito está vacío.");
-        return;
-      }
-
-      window.location.href = "/cart";
+      goAccountOrLogin();
     });
   }
 
-  /* ================== INIT ================== */
-  function init() {
-    paintUser();
-    paintCart();
-    wireUserIcon();
-    wireCartIcon();
+  // Botón perfil en menú móvil
+  const mobileProfileBtn = document.getElementById("mobile-profile-btn");
+  mobileProfileBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.location.href = "/account";
+  });
 
-    // re-render si cambia storage en otra pestaña
-    window.addEventListener("storage", () => {
-      paintUser();
-      paintCart();
+  // Botón logout en menú móvil
+  const mobileLogoutBtn = document.getElementById("mobile-logout-btn");
+  mobileLogoutBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.logoutUser?.();
+  });
+
+  // Pintar estado inicial
+  await refreshHeader();
+
+  // Si hay supabase, escuchar cambios de auth
+  if (supabase) {
+    supabase.auth.onAuthStateChange(async () => {
+      await refreshHeader();
     });
   }
-
-  document.addEventListener("DOMContentLoaded", init);
-
-  // Exponer helpers si quieres usarlos en otros scripts
-  window.TQSession = {
-    isLoggedIn,
-    getBurgerUser,
-    paintUser,
-    paintCart,
-  };
-})();
+});
