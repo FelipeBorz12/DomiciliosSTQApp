@@ -152,6 +152,10 @@ app.get("/api/landing/hero", async (_req: Request, res: Response) => {
   }
 });
 
+app.get("/account", (_req, res) =>
+  res.sendFile(path.join(publicPath, "account.html"))
+);
+
 app.get("/api/landing/about", async (_req: Request, res: Response) => {
   try {
     const { data, error } = await supabaseAdmin
