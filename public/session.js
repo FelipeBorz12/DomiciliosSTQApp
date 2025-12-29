@@ -1,205 +1,93 @@
-// public/session.js
+// /public/session.js
+// Depende de window.Auth y window.sb
+
 (function () {
-  "use strict";
-
-  /* ================= HELPERS ================= */
-  function safeJSONParse(str) {
-    try {
-      return JSON.parse(str);
-    } catch {
-      return null;
-    }
-  }
-
-  function getBurgerUser() {
-    return safeJSONParse(localStorage.getItem("burgerUser") || "null");
-  }
-
-  function isLoggedIn() {
-    const bu = getBurgerUser();
-    return !!(bu && (bu.correo || bu.auth_user_id));
-  }
-
-  function setHeaderUserName(name) {
-    const el = document.getElementById("user-name-header");
-    if (!el) return;
-    el.textContent = name || "";
-    el.classList.toggle("hidden", !name);
-  }
-
-  function setUserIconLogged(logged) {
-    const btn = document.getElementById("user-icon");
-    if (!btn) return;
-
-    btn.dataset.logged = logged ? "1" : "0";
-
-    // Indicador visual (ring)
-    btn.classList.toggle("ring-2", logged);
-    btn.classList.toggle("ring-primary/60", logged);
-  }
-
-  function updateCartBadges() {
-    // Lee del carrito (soporta burgerCart o cart)
-    let items = [];
-    try {
-      let raw = localStorage.getItem("burgerCart");
-      if (!raw) raw = localStorage.getItem("cart");
-      items = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(items)) items = [];
-    } catch {
-      items = [];
+  async function init() {
+    if (!window.Auth || !window.sb) {
+      console.error("[session] Faltan auth.js o supabaseClient.js");
+      return;
     }
 
-    const count = items.reduce((acc, it) => {
-      const q = Number(it?.cantidad ?? it?.qty ?? 1);
-      return acc + (Number.isFinite(q) ? q : 1);
-    }, 0);
-
-    const desktop = document.getElementById("cart-count");
-    const mobile = document.getElementById("cart-count-badge");
-    if (desktop) desktop.textContent = String(count);
-    if (mobile) mobile.textContent = String(count);
-
-    return { items, count };
-  }
-
-  function toggleMobileMenuItems(logged) {
-    const loginItem = document.getElementById("mobile-login-item");
-    const profileItem = document.getElementById("mobile-profile-item");
-    const logoutItem = document.getElementById("mobile-logout-item");
-
-    if (loginItem) loginItem.classList.toggle("hidden", logged);
-    if (profileItem) profileItem.classList.toggle("hidden", !logged);
-    if (logoutItem) logoutItem.classList.toggle("hidden", !logged);
-  }
-
-  /* ================= NAV ================= */
-  function goAccountOrLogin() {
-    if (isLoggedIn()) {
-      window.location.href = "/account";
-    } else {
-      window.location.href = "/login";
-    }
-  }
-
-  function goCartOrEmptyModal() {
-    const { count } = updateCartBadges();
-
-    if (!count) {
-      // Si existe tu modal "empty-cart-modal", lo abre
-      const modal = document.getElementById("empty-cart-modal");
-      if (modal) {
-        modal.classList.remove("hidden");
-        modal.classList.add("open");
-        return;
-      }
-    }
-    window.location.href = "/cart";
-  }
-
-  /* ================= LOGOUT ================= */
-  window.logoutUser = async function () {
-    const modal = document.getElementById("logout-modal");
-    if (modal) modal.classList.remove("hidden");
-
-    // Si auth.js existe y creó supabase como global, intenta cerrar sesión
-    // (si no existe, solo limpia storage)
-    try {
-      if (window.supabase && window.supabase.auth && window.supabase.auth.signOut) {
-        await window.supabase.auth.signOut();
-      }
-    } catch (e) {
-      console.warn("[logoutUser] signOut error:", e);
-    }
-
-    try {
-      localStorage.removeItem("burgerUser");
-      localStorage.removeItem("burgerCart");
-      localStorage.removeItem("cart");
-      sessionStorage.clear();
-    } catch {}
-
-    setTimeout(() => {
-      window.location.href = "/login";
-    }, 600);
-  };
-
-  /* ================= MENU MÓVIL ================= */
-  function initMobileMenu() {
-    const menu = document.getElementById("mobile-menu");
-    const openBtn = document.getElementById("menu-toggle");
-    const closeBtn = document.getElementById("menu-close");
-    const backdrop = document.getElementById("menu-backdrop");
-
-    function openMenu() {
-      if (!menu) return;
-      menu.classList.remove("hidden");
-      menu.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
-
-    function closeMenu() {
-      if (!menu) return;
-      menu.classList.add("hidden");
-      menu.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-    }
-
-    openBtn?.addEventListener("click", openMenu);
-    closeBtn?.addEventListener("click", closeMenu);
-    backdrop?.addEventListener("click", closeMenu);
-
-    // cerrar menú al hacer click en un link
-    menu?.querySelectorAll("a").forEach((a) => {
-      a.addEventListener("click", closeMenu);
-    });
-
-    // botones del menú
-    document.getElementById("mobile-profile-btn")?.addEventListener("click", () => {
-      closeMenu();
-      window.location.href = "/account";
-    });
-
-    document.getElementById("mobile-logout-btn")?.addEventListener("click", () => {
-      closeMenu();
-      window.logoutUser?.();
-    });
-  }
-
-  /* ================= INIT ================= */
-  document.addEventListener("DOMContentLoaded", () => {
-    // Usuario
     const userBtn = document.getElementById("user-icon");
-    if (userBtn) {
-      userBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        goAccountOrLogin();
-      });
+    const userNameHeader = document.getElementById("user-name-header");
+
+    const mobileLoginItem = document.getElementById("mobile-login-item");
+    const mobileProfileItem = document.getElementById("mobile-profile-item");
+    const mobileLogoutItem = document.getElementById("mobile-logout-item");
+    const mobileProfileBtn = document.getElementById("mobile-profile-btn");
+    const mobileLogoutBtn = document.getElementById("mobile-logout-btn");
+
+    const session = await window.Auth.getSession();
+    const isLogged = !!session;
+
+    // ---- UI estado login ----
+    if (mobileLoginItem && mobileProfileItem && mobileLogoutItem) {
+      if (isLogged) {
+        mobileLoginItem.classList.add("hidden");
+        mobileProfileItem.classList.remove("hidden");
+        mobileLogoutItem.classList.remove("hidden");
+      } else {
+        mobileLoginItem.classList.remove("hidden");
+        mobileProfileItem.classList.add("hidden");
+        mobileLogoutItem.classList.add("hidden");
+      }
     }
 
-    // Carrito (bolsa)
-    const cartBtn = document.getElementById("cart-icon");
-    if (cartBtn) {
-      cartBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        goCartOrEmptyModal();
-      });
+    // ---- Nombre en header (si logueado) ----
+    if (isLogged && userNameHeader) {
+      // intenta traer tu perfil desde tu API (más completo)
+      try {
+        const me = await window.Auth.fetchMe();
+        const nombre =
+          me?.perfil?.nombre ||
+          session?.user?.user_metadata?.nombre ||
+          session?.user?.email ||
+          "";
+        userNameHeader.textContent = nombre;
+      } catch {
+        userNameHeader.textContent = session?.user?.email || "";
+      }
+    } else if (userNameHeader) {
+      userNameHeader.textContent = "";
     }
 
-    // Pintar estado de sesión en header
-    const logged = isLoggedIn();
-    const bu = getBurgerUser();
-    const name = bu?.perfil?.nombre || bu?.correo || "";
-    setUserIconLogged(logged);
-    setHeaderUserName(logged ? name : "");
-    toggleMobileMenuItems(logged);
+    // ---- Click en icono usuario ----
+    // ✅ Si logueado -> /account
+    // ✅ Si no -> /login
+    userBtn?.addEventListener("click", async () => {
+      const s = await window.Auth.getSession();
+      if (s) window.location.href = "/account";
+      else window.location.href = "/login";
+    });
 
-    // Pintar badges carrito
-    updateCartBadges();
+    mobileProfileBtn?.addEventListener("click", async () => {
+      const s = await window.Auth.getSession();
+      if (s) window.location.href = "/account";
+      else window.location.href = "/login";
+    });
 
-    // Menu móvil
-    initMobileMenu();
-  });
+    mobileLogoutBtn?.addEventListener("click", () => window.Auth.signOut());
+
+    // ---- Si estás en login y ya hay sesión, redirige ----
+    const path = window.location.pathname;
+    if ((path === "/login" || path === "/login.html") && isLogged) {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
+      window.location.href = next || "/";
+      return;
+    }
+
+    // ---- Mantener UI en cambios de sesión (OAuth callback / refresh) ----
+    window.sb.auth.onAuthStateChange(async (_event, _session) => {
+      // refresca rápido la página actual para que el estado sea consistente
+      // (especialmente después del callback de Google)
+      if (window.location.pathname === "/login" || window.location.pathname === "/login.html") {
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        window.location.href = next || "/";
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
 })();

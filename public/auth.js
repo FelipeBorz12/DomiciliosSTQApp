@@ -1,281 +1,138 @@
-// public/auth.js
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// /public/auth.js
+// Depende de window.sb (supabaseClient.js)
 
-/* ================= CONFIG ================= */
-const SUPABASE_URL = window.SUPABASE_URL;
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY;
-
-const supabase =
-  SUPABASE_URL && SUPABASE_ANON_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-        },
-      })
-    : null;
-
-/* ================= LOADER (global) ================= */
-function showLoader(text = "Cargando…") {
-  const loader = document.getElementById("global-loader");
-  const label = document.getElementById("loader-text");
-  if (!loader) return;
-  if (label) label.textContent = text;
-  loader.classList.remove("hidden");
-}
-
-function hideLoader() {
-  const loader = document.getElementById("global-loader");
-  if (!loader) return;
-  loader.classList.add("hidden");
-}
-
-/* ================= TURNSTILE ================= */
-function resetTurnstile() {
-  if (window.turnstile) {
-    try {
-      window.turnstile.reset();
-    } catch {}
+(function () {
+  function toast(msg) {
+    const el = document.getElementById("toast");
+    if (!el) return alert(msg);
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    clearTimeout(window.__toastTimer);
+    window.__toastTimer = setTimeout(() => el.classList.add("hidden"), 2800);
   }
-}
 
-function getTurnstileToken() {
-  return (
-    document.querySelector('input[name="cf-turnstile-response"]')?.value || ""
-  );
-}
+  function normalizeEmail(email) {
+    return String(email || "").trim().toLowerCase();
+  }
 
-/* ================= UTILIDADES ================= */
-function togglePasswordVisibility(button) {
-  const input = button
-    .closest("form")
-    ?.querySelector(`input[name="${button.dataset.target}"]`);
-  if (!input) return;
-
-  const icon = button.querySelector(".material-symbols-outlined");
-  const show = input.type === "password";
-  input.type = show ? "text" : "password";
-  if (icon) icon.textContent = show ? "visibility" : "visibility_off";
-}
-
-function normalizeEmail(email) {
-  return (email || "").toString().trim().toLowerCase();
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
-}
-
-function isStrongPassword(pw) {
-  const s = (pw || "").toString();
-  return s.length >= 8 && /[A-Za-z]/.test(s) && /\d/.test(s);
-}
-
-/* ================= HTTP ================= */
-async function postJSON(url, payload) {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-    credentials: "same-origin",
-  });
-  const data = await res.json().catch(() => null);
-  return { ok: res.ok, data };
-}
-
-async function verifyTurnstileOrThrow() {
-  const token = getTurnstileToken();
-  if (!token) throw new Error("Completa la verificación anti-bot.");
-
-  const { ok, data } = await postJSON("/api/antibot/verify", {
-    cf_turnstile_response: token,
-  });
-
-  if (!ok) throw new Error(data?.message || "No se pudo validar anti-bot.");
-}
-
-/* ================= PERFIL ================= */
-async function fetchMeOrThrow(accessToken) {
-  const res = await fetch("/api/auth/me", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.message || "No se pudo obtener perfil");
-  return data;
-}
-
-function saveBurgerUser(me) {
-  const perfil = me?.perfil || {};
-  const payload = {
-    userId: me?.userId ?? null,
-    rol: me?.rol ?? "0",
-    correo: me?.correo ?? "",
-    auth_user_id: me?.auth_user_id ?? null,
-    perfil: {
-      nombre: perfil?.nombre || "",
-      direccionentrega: perfil?.direccionentrega || "",
-      celular: perfil?.celular || null,
-      Departamento: perfil?.Departamento || "",
-      Municipio: perfil?.Municipio || "",
-      Barrio: perfil?.Barrio || "",
-    },
-    v: 4,
-  };
-  try {
-    localStorage.setItem("burgerUser", JSON.stringify(payload));
-  } catch {}
-}
-
-/* ================= HELPERS UI ================= */
-function showMsg(el, msg) {
-  if (!el) return;
-  el.textContent = msg || "";
-  el.classList.remove("hidden");
-}
-
-/* ================= LOGOUT GLOBAL ================= */
-window.logoutUser = async function () {
-  const modal = document.getElementById("logout-modal");
-  if (modal) modal.classList.remove("hidden");
-
-  // bandera para que /login NO haga auto-redirect instantáneo
-  try {
-    localStorage.setItem("tq_skip_autologin_until", String(Date.now() + 5000));
-  } catch {}
-
-  try {
-    if (supabase) {
-      await supabase.auth.signOut();
+  function ensureSb() {
+    if (!window.sb) {
+      console.error("[auth] Supabase client no inicializado. Falta supabaseClient.js");
+      return false;
     }
-  } catch (e) {
-    console.warn("[Logout] signOut error:", e);
+    return true;
   }
 
-  try {
-    localStorage.removeItem("burgerUser");
-    sessionStorage.clear();
-  } catch {}
+  async function getSession() {
+    if (!ensureSb()) return null;
+    const { data, error } = await window.sb.auth.getSession();
+    if (error) console.warn("[auth.getSession] error:", error);
+    return data?.session || null;
+  }
 
-  setTimeout(() => {
-    window.location.replace("/login");
-  }, 650);
-};
+  async function getAccessToken() {
+    const session = await getSession();
+    return session?.access_token || "";
+  }
 
-/* ================= DOM READY ================= */
-document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".toggle-password").forEach((btn) => {
-    btn.addEventListener("click", () => togglePasswordVisibility(btn));
-  });
+  async function fetchMe() {
+    const token = await getAccessToken();
+    if (!token) return null;
 
-  const loginForm = document.getElementById("login-form");
-  const googleBtn = document.getElementById("google-login");
-  const errorEl = document.getElementById("login-error");
+    const res = await fetch("/api/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  // ✅ Solo aplica auto-login en la página de login (si existe el form)
-  if (loginForm) {
-    (async () => {
-      if (!supabase) return;
+    if (!res.ok) return null;
+    return await res.json();
+  }
 
-      // si vienes de logout, no auto-redirigir
+  async function signInWithPassword(email, password) {
+    if (!ensureSb()) return { ok: false, message: "Supabase no inicializado" };
+
+    const correo = normalizeEmail(email);
+    const contrasena = String(password || "");
+
+    if (!correo || !contrasena) {
+      return { ok: false, message: "Correo y contraseña son obligatorios" };
+    }
+
+    // OJO: Este es exactamente el endpoint que te da el 400 cuando falla:
+    // /auth/v1/token?grant_type=password
+    const { data, error } = await window.sb.auth.signInWithPassword({
+      email: correo,
+      password: contrasena,
+    });
+
+    if (error || !data?.session) {
+      // Mensaje más útil para tu caso (Google-only / sin password)
+      const msg = String(error?.message || "No se pudo iniciar sesión");
+      if (msg.toLowerCase().includes("invalid login credentials")) {
+        return {
+          ok: false,
+          message:
+            "Credenciales inválidas. Si tu cuenta fue creada con Google, no tiene contraseña. Usa 'Iniciar con Google' o crea una contraseña con 'Olvidé mi contraseña'.",
+        };
+      }
+      return { ok: false, message: msg };
+    }
+
+    return { ok: true, session: data.session };
+  }
+
+  async function signInWithGoogle() {
+    if (!ensureSb()) return { ok: false, message: "Supabase no inicializado" };
+
+    const { data, error } = await window.sb.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        // ✅ vuelve al sitio y Supabase procesará el callback
+        redirectTo: window.location.origin + "/login",
+      },
+    });
+
+    if (error) return { ok: false, message: error.message };
+    return { ok: true, data };
+  }
+
+  async function signOut() {
+    if (!ensureSb()) return;
+
+    // opcional: muestra modal si existe
+    const modal = document.getElementById("logout-modal");
+    if (modal) modal.classList.remove("hidden");
+
+    try {
+      const { error } = await window.sb.auth.signOut();
+      if (error) console.warn("[auth.signOut] error:", error);
+    } finally {
+      if (modal) modal.classList.add("hidden");
+      // Limpieza extra por si acaso
       try {
-        const skipUntil = Number(localStorage.getItem("tq_skip_autologin_until") || "0");
-        if (Date.now() < skipUntil) return;
+        localStorage.removeItem("tq_sb_session");
       } catch {}
-
-      showLoader("Preparando tu sesión…");
-
-      try {
-        const { data } = await supabase.auth.getSession();
-        const session = data?.session;
-
-        if (session?.access_token) {
-          const me = await fetchMeOrThrow(session.access_token);
-          saveBurgerUser(me);
-          window.location.replace("/");
-          return;
-        }
-      } catch (e) {
-        console.warn("[Session check]", e);
-      } finally {
-        hideLoader();
-      }
-    })();
-
-    /* ================= LOGIN EMAIL ================= */
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      errorEl?.classList.add("hidden");
-
-      if (!supabase) {
-        return showMsg(
-          errorEl,
-          "Falta configurar SUPABASE_URL / SUPABASE_ANON_KEY en login.html"
-        );
-      }
-
-      const formData = new FormData(loginForm);
-      const correo = normalizeEmail(formData.get("correo"));
-      const contrasena = String(formData.get("contrasena") || "");
-
-      if (!isValidEmail(correo))
-        return showMsg(errorEl, "Ingresa un correo válido.");
-      if (!contrasena)
-        return showMsg(errorEl, "Ingresa tu contraseña.");
-
-      try {
-        showLoader("Verificando tus datos…");
-        await verifyTurnstileOrThrow();
-
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: correo,
-          password: contrasena,
-        });
-
-        if (error || !data?.session)
-          throw new Error(error?.message || "No se pudo iniciar sesión.");
-
-        const me = await fetchMeOrThrow(data.session.access_token);
-        saveBurgerUser(me);
-        window.location.replace("/");
-      } catch (err) {
-        resetTurnstile();
-        hideLoader();
-        showMsg(
-          errorEl,
-          err instanceof Error ? err.message : "Error al iniciar sesión"
-        );
-      }
-    });
-
-    /* ================= GOOGLE ================= */
-    googleBtn?.addEventListener("click", async () => {
-      errorEl?.classList.add("hidden");
-
-      if (!supabase) {
-        return showMsg(
-          errorEl,
-          "Falta configurar SUPABASE_URL / SUPABASE_ANON_KEY en login.html"
-        );
-      }
-
-      try {
-        showLoader("Redirigiendo a Google…");
-        await verifyTurnstileOrThrow();
-
-        await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: window.location.origin + "/login",
-          },
-        });
-      } catch (err) {
-        resetTurnstile();
-        hideLoader();
-        showMsg(errorEl, err instanceof Error ? err.message : "Error con Google");
-      }
-    });
+      window.location.href = "/";
+    }
   }
 
-  // register/recover quedan igual si los usas en otras páginas con estos forms
-});
+  async function requireSessionOrRedirect(nextPath) {
+    const session = await getSession();
+    if (session) return session;
+
+    const next = nextPath || window.location.pathname;
+    window.location.href = `/login?next=${encodeURIComponent(next)}`;
+    return null;
+  }
+
+  // Exponer API global
+  window.Auth = {
+    toast,
+    getSession,
+    getAccessToken,
+    fetchMe,
+    signInWithPassword,
+    signInWithGoogle,
+    signOut,
+    requireSessionOrRedirect,
+  };
+})();

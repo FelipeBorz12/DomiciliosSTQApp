@@ -1,15 +1,37 @@
 // src/supabaseClient.ts
-import { createClient } from '@supabase/supabase-js';
-import * as dotenv from 'dotenv';
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL as string;
-const supabaseKey = process.env.SUPABASE_KEY as string;
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Faltan SUPABASE_URL o SUPABASE_KEY en el archivo .env');
+// ✅ Service role (solo backend)
+const SUPABASE_SERVICE_ROLE_KEY =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || "";
+
+// ✅ Anon key (para validar sesiones/tokens que llegan del frontend)
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "";
+
+if (!SUPABASE_URL) {
+  throw new Error("Falta SUPABASE_URL en el .env");
 }
 
-// IMPORTANTE: esta key es service_role, solo debe usarse en el backend
-export const supabase = createClient(supabaseUrl, supabaseKey);
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error(
+    "Falta SUPABASE_SERVICE_ROLE_KEY (o SUPABASE_KEY) en el .env"
+  );
+}
+
+if (!SUPABASE_ANON_KEY) {
+  throw new Error("Falta SUPABASE_ANON_KEY en el .env");
+}
+
+// ✅ Admin (service_role): DB + Auth Admin
+export const supabaseAdmin = createClient(
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY
+);
+
+// ✅ Anon (validación de tokens/sesión)
+export const supabaseAnon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
