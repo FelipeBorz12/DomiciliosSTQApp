@@ -29,11 +29,12 @@ body {
    =========================== */
 
 .no-scrollbar {
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Edge */
+  display: none;
 }
 
 /* ===========================
@@ -932,3 +933,15 @@ body {
   font-size: 1.25rem;
   cursor: pointer;
 }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* ✅ Safe area para que NO se recorten botones en móviles (iPhone/Android con barra) */
+  :root {
+    --tq-safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .tq-safe-bottom {
+    padding-bottom: calc(1rem + var(--tq-safe-bottom));
+  }

@@ -3,8 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const ZONA_PRECIO = "PrecioOriente";
 
   // Notificación (usa la global que crea upsell.js)
-  function notify({ type = "info", title = "", message = "", duration = 2400 } = {}) {
-    if (window.TQNotify) return window.TQNotify({ type, title, message, duration });
+  function notify({
+    type = "info",
+    title = "",
+    message = "",
+    duration = 2400,
+  } = {}) {
+    if (window.TQNotify)
+      return window.TQNotify({ type, title, message, duration });
     // fallback extremo
     if (title || message) console.log(`[${type}] ${title} ${message}`);
   }
@@ -219,23 +225,32 @@ document.addEventListener("DOMContentLoaded", () => {
     const priceBase = product[ZONA_PRECIO] || 0;
 
     if (productImage) {
-      productImage.style.backgroundImage = product.imagen ? `url('${product.imagen}')` : "";
+      productImage.style.backgroundImage = product.imagen
+        ? `url('${product.imagen}')`
+        : "";
     }
 
     if (productNameEl) productNameEl.textContent = product.Nombre || "Producto";
-    if (productDescriptionEl) productDescriptionEl.textContent = product.Descripcion || "";
+    if (productDescriptionEl)
+      productDescriptionEl.textContent = product.Descripcion || "";
     if (productPriceEl) productPriceEl.textContent = formatPrice(priceBase);
 
-    if (breadcrumbProduct) breadcrumbProduct.textContent = product.Nombre || "Producto";
-    if (breadcrumbCategory) breadcrumbCategory.textContent = tipoToLabel(product.tipo);
+    if (breadcrumbProduct)
+      breadcrumbProduct.textContent = product.Nombre || "Producto";
+    if (breadcrumbCategory)
+      breadcrumbCategory.textContent = tipoToLabel(product.tipo);
 
-    if (topline) topline.textContent = `Categoría: ${tipoToLabel(product.tipo)}`.toUpperCase();
+    if (topline)
+      topline.textContent = `Categoría: ${tipoToLabel(
+        product.tipo
+      )}`.toUpperCase();
 
     // Adiciones/modificar solo para 1 y 3
     const esHamburguesaOCombo = product.tipo === 1 || product.tipo === 3;
 
     if (!esHamburguesaOCombo) {
-      if (extrasPanel && extrasPanel.parentElement) extrasPanel.parentElement.classList.add("hidden");
+      if (extrasPanel && extrasPanel.parentElement)
+        extrasPanel.parentElement.classList.add("hidden");
       if (modifySection) modifySection.classList.add("hidden");
     }
   }
@@ -277,9 +292,13 @@ document.addEventListener("DOMContentLoaded", () => {
             data-extra-price="${price}"
             class="rounded text-primary bg-surface-dark border-gray-600 focus:ring-primary focus:ring-offset-background-dark"
           />
-          <span class="text-sm text-white/80 font-semibold">${extra.Nombre}</span>
+          <span class="text-sm text-white/80 font-semibold">${
+            extra.Nombre
+          }</span>
         </div>
-        <span class="text-sm font-extrabold text-primary">+${formatPrice(price)}</span>
+        <span class="text-sm font-extrabold text-primary">+${formatPrice(
+          price
+        )}</span>
       `;
 
       extrasContainer.appendChild(row);
@@ -307,15 +326,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const unitTotal = basePrice + extrasTotal;
     const grandTotal = unitTotal * quantity;
 
-    if (addToCartLabel) addToCartLabel.textContent = `Agregar al carrito - ${formatPrice(grandTotal)}`;
+    if (addToCartLabel) {
+      addToCartLabel.textContent = `Agregar al carrito - ${formatPrice(
+        grandTotal
+      )}`;
+    }
 
+    // ✅ ocultar y no usar subtexto nunca (evita que se salga del botón)
     if (addToCartSub) {
-      if (extrasTotal > 0) {
-        addToCartSub.textContent = `Base: ${formatPrice(basePrice)} + adiciones: ${formatPrice(extrasTotal)} × ${quantity}`;
-      } else {
-        addToCartSub.textContent =
-          quantity > 1 ? `Unitario: ${formatPrice(basePrice)} × ${quantity}` : `Unitario: ${formatPrice(basePrice)}`;
-      }
+      addToCartSub.textContent = "";
+      addToCartSub.classList.add("hidden");
     }
   }
 
@@ -379,7 +399,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getSelectedExtras() {
     if (!extrasContainer) return [];
-    const inputs = extrasContainer.querySelectorAll('input[type="checkbox"]:checked');
+    const inputs = extrasContainer.querySelectorAll(
+      'input[type="checkbox"]:checked'
+    );
     const selected = [];
     inputs.forEach((input) => {
       const extraId = Number(input.dataset.extraId || 0);
@@ -400,7 +422,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // =============================
   addToCartBtn?.addEventListener("click", () => {
     if (!product) {
-      notify({ type: "error", title: "Error", message: "No se identificó el producto. Vuelve al menú." });
+      notify({
+        type: "error",
+        title: "Error",
+        message: "No se identificó el producto. Vuelve al menú.",
+      });
       window.location.href = "/";
       return;
     }
@@ -419,7 +445,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const selectedExtras = getSelectedExtras();
       const modifications = getModifications();
 
-      const extrasTotal = selectedExtras.reduce((acc, ex) => acc + Number(ex.precio || 0), 0);
+      const extrasTotal = selectedExtras.reduce(
+        (acc, ex) => acc + Number(ex.precio || 0),
+        0
+      );
       const unitTotal = basePrice + extrasTotal;
       const grandTotal = unitTotal * quantity;
 
@@ -522,8 +551,12 @@ document.addEventListener("DOMContentLoaded", () => {
         </button>
       </div>
       <div class="p-5">
-        <h4 class="font-extrabold text-white text-lg mb-1 line-clamp-1">${item.Nombre || "Producto"}</h4>
-        <p class="text-white/50 text-sm mb-3 line-clamp-1">${item.Descripcion || ""}</p>
+        <h4 class="font-extrabold text-white text-lg mb-1 line-clamp-1">${
+          item.Nombre || "Producto"
+        }</h4>
+        <p class="text-white/50 text-sm mb-3 line-clamp-1">${
+          item.Descripcion || ""
+        }</p>
         <span class="font-extrabold text-primary">${formatPrice(price)}</span>
       </div>
     `;
@@ -541,22 +574,30 @@ document.addEventListener("DOMContentLoaded", () => {
   function setupRelatedNav() {
     if (!relatedViewport) return;
 
-    const canScroll = relatedViewport.scrollWidth > relatedViewport.clientWidth + 5;
+    const canScroll =
+      relatedViewport.scrollWidth > relatedViewport.clientWidth + 5;
     if (relatedPrev) relatedPrev.disabled = !canScroll;
     if (relatedNext) relatedNext.disabled = !canScroll;
 
     const updateDisabled = () => {
-      const maxScroll = relatedViewport.scrollWidth - relatedViewport.clientWidth;
+      const maxScroll =
+        relatedViewport.scrollWidth - relatedViewport.clientWidth;
       const x = relatedViewport.scrollLeft;
       if (relatedPrev) relatedPrev.disabled = x <= 2;
       if (relatedNext) relatedNext.disabled = x >= maxScroll - 2;
     };
 
-    relatedViewport.addEventListener("scroll", updateDisabled, { passive: true });
+    relatedViewport.addEventListener("scroll", updateDisabled, {
+      passive: true,
+    });
     updateDisabled();
 
-    relatedPrev?.addEventListener("click", () => relatedViewport.scrollBy({ left: -420, behavior: "smooth" }));
-    relatedNext?.addEventListener("click", () => relatedViewport.scrollBy({ left: 420, behavior: "smooth" }));
+    relatedPrev?.addEventListener("click", () =>
+      relatedViewport.scrollBy({ left: -420, behavior: "smooth" })
+    );
+    relatedNext?.addEventListener("click", () =>
+      relatedViewport.scrollBy({ left: 420, behavior: "smooth" })
+    );
   }
 
   async function loadRelated() {
@@ -596,13 +637,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const { id } = parseQuery();
     if (!id || isNaN(id)) {
       hideLoader();
-      notify({ type: "error", title: "Producto inválido", message: "Verifica el enlace del producto." });
+      notify({
+        type: "error",
+        title: "Producto inválido",
+        message: "Verifica el enlace del producto.",
+      });
       window.location.href = "/";
       return;
     }
 
     try {
-      const [prod, extrasList] = await Promise.all([fetchProduct(id), fetchExtras()]);
+      const [prod, extrasList] = await Promise.all([
+        fetchProduct(id),
+        fetchExtras(),
+      ]);
       product = prod;
       extras = Array.isArray(extrasList) ? extrasList : [];
 
@@ -613,7 +661,11 @@ document.addEventListener("DOMContentLoaded", () => {
       loadRelated();
     } catch (err) {
       console.error("[product.js] Error inicializando detalle:", err);
-      notify({ type: "error", title: "Error", message: "No se pudo cargar el producto. Intenta de nuevo." });
+      notify({
+        type: "error",
+        title: "Error",
+        message: "No se pudo cargar el producto. Intenta de nuevo.",
+      });
       window.location.href = "/";
     } finally {
       hideLoader();
