@@ -117,7 +117,7 @@
     </div>
 
     <div class="relative flex min-h-screen w-full flex-col">
-      <!-- HEADER (nuevo estilo) -->
+      <!-- ================= HEADER UNIFICADO ================= -->
       <header
         class="sticky top-0 z-50 w-full backdrop-blur-md bg-[#171111]/80 border-b border-border-dark"
       >
@@ -125,11 +125,10 @@
           class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between gap-4"
         >
           <!-- Brand -->
-          <div class="flex items-center gap-3">
+          <a href="/" class="flex items-center gap-3">
             <div
               class="size-10 bg-primary rounded-full flex items-center justify-center overflow-hidden"
             >
-              <!-- ✅ Logo desde carpeta (cambia la ruta a tu archivo real) -->
               <img
                 src="/img/logo.png"
                 alt="Logo Tierra Querida"
@@ -148,9 +147,9 @@
                 domicilios
               </p>
             </div>
-          </div>
+          </a>
 
-          <!-- Nav -->
+          <!-- Nav desktop -->
           <nav class="hidden md:flex items-center gap-8">
             <a
               class="text-sm font-bold hover:text-primary transition-colors"
@@ -164,14 +163,14 @@
             >
             <a
               class="text-sm font-bold text-white/70 hover:text-white transition-colors"
-              href="#instagram-section"
-              >Comunidad</a
+              href="/stores"
+              >Sedes</a
             >
           </nav>
 
           <!-- Actions -->
           <div class="flex items-center gap-3 sm:gap-4">
-            <!-- Search -->
+            <!-- Search SOLO PC -->
             <div
               class="hidden lg:flex items-center bg-surface-dark rounded-full px-4 h-10 w-72 border border-transparent focus-within:border-primary/50 transition-colors"
             >
@@ -192,17 +191,9 @@
               class="p-2 hover:bg-surface-dark rounded-full transition-colors"
               id="user-icon"
               aria-label="Perfil"
+              type="button"
             >
               <span class="material-symbols-outlined">person</span>
-            </button>
-
-            <!-- Menú lateral -->
-            <button
-              class="p-2 hover:bg-surface-dark rounded-full transition-colors"
-              id="menu-icon"
-              aria-label="Menú"
-            >
-              <span class="material-symbols-outlined">menu</span>
             </button>
 
             <!-- Carrito -->
@@ -210,13 +201,12 @@
               class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-4 h-10 rounded-full transition-all"
               id="cart-icon"
               aria-label="Carrito"
+              type="button"
             >
               <span class="material-symbols-outlined text-[20px]"
                 >shopping_bag</span
               >
-              <span
-                class="font-extrabold text-sm hidden sm:block"
-                id="cart-count"
+              <span class="font-extrabold text-sm hidden sm:block" id="cart-count"
                 >0</span
               >
 
@@ -228,7 +218,17 @@
               </span>
             </button>
 
-            <!-- Nombre usuario -->
+            <!-- Menú móvil (ÚNICO) -->
+            <button
+              class="md:hidden p-2 hover:bg-surface-dark rounded-full transition-colors"
+              id="menu-toggle"
+              aria-label="Menú"
+              type="button"
+            >
+              <span class="material-symbols-outlined">menu</span>
+            </button>
+
+            <!-- Nombre usuario (solo desktop grande) -->
             <span
               id="user-name-header"
               class="hidden lg:inline text-sm font-semibold text-white/80 truncate max-w-[180px]"
@@ -237,26 +237,74 @@
         </div>
       </header>
 
-      <!-- MENÚ LATERAL (igual que antes) -->
-      <nav class="menu" id="menu">
-        <ul id="menu-list">
-          <li class="menu-item"><a href="/stores">Puntos de venta</a></li>
-          <li class="menu-item"><a href="/history">Histórico de pedidos</a></li>
+      <!-- ================= MENÚ MÓVIL ÚNICO ================= -->
+      <nav
+        id="mobile-menu"
+        class="fixed inset-0 z-40 hidden bg-black/70 backdrop-blur-sm"
+        aria-hidden="true"
+      >
+        <div class="h-full w-80 max-w-[88vw] bg-surface-dark border-r border-border-dark p-6">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="size-9 rounded-full overflow-hidden bg-primary">
+                <img
+                  src="/img/logo.png"
+                  alt="Logo"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+              <div class="leading-tight">
+                <p class="font-extrabold">Tierra Querida</p>
+                <p class="text-[11px] text-white/60 uppercase tracking-[0.2em] font-semibold">
+                  menú
+                </p>
+              </div>
+            </div>
 
-          <li class="menu-item" id="menu-login-item">
-            <a href="/login">Iniciar sesión</a>
-          </li>
+            <button id="menu-close" class="p-2 rounded-full hover:bg-white/10" type="button" aria-label="Cerrar">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
 
-          <li class="menu-item hidden" id="menu-logout-item">
-            <button id="logout-btn">Cerrar sesión</button>
-          </li>
-        </ul>
+          <ul class="space-y-3 font-bold text-sm">
+            <li>
+              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/#products-section">Menú</a>
+            </li>
+            <li>
+              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/#about-section">Nosotros</a>
+            </li>
+            <li>
+              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/stores">Sedes</a>
+            </li>
 
-        <button class="close-menu" id="close-menu">
-          <span class="material-symbols-outlined">close</span>
-        </button>
+            <li class="pt-3 border-t border-border-dark"></li>
+
+            <li id="mobile-login-item">
+              <a class="block px-4 py-3 rounded-xl bg-primary hover:bg-red-700 text-center" href="/login.html">Iniciar sesión</a>
+            </li>
+
+            <li id="mobile-profile-item" class="hidden">
+              <button id="mobile-profile-btn" class="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" type="button">
+                Mi perfil
+              </button>
+            </li>
+
+            <li id="mobile-logout-item" class="hidden">
+              <button id="mobile-logout-btn" class="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" type="button">
+                Cerrar sesión
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <!-- click fuera -->
+        <button
+          id="menu-backdrop"
+          class="absolute inset-0 -z-10 w-full h-full"
+          type="button"
+          aria-label="Cerrar menú"
+        ></button>
       </nav>
-      <div class="overlay" id="overlay"></div>
 
       <!-- MAIN -->
       <main
@@ -308,16 +356,14 @@
         </section>
 
         <!-- CATEGORÍAS -->
-        <section
-          class="rounded-2xl border border-border-dark bg-surface-dark p-4"
-        >
+        <section class="rounded-2xl border border-border-dark bg-surface-dark p-4">
           <div class="flex items-center justify-between gap-3 mb-3">
             <h2 class="text-lg sm:text-xl font-extrabold">Explora el menú</h2>
             <a
               href="/stores"
               class="text-sm font-bold text-white/60 hover:text-white flex items-center gap-1"
             >
-              Ver todo
+              Ver sedes
               <span class="material-symbols-outlined text-[18px]"
                 >arrow_right_alt</span
               >
@@ -423,7 +469,6 @@
               id="products-viewport"
               class="overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory"
             >
-              <!-- ✅ pr-* = “peek” constante cuando hay overflow -->
               <div
                 id="products-container"
                 class="flex gap-4 sm:gap-5 py-2 pl-1 pr-12 sm:pr-14 lg:pr-16"
@@ -466,9 +511,7 @@
               <span class="material-symbols-outlined text-[18px]"
                 >verified</span
               >
-              <span id="about-badge-text"
-                >+100 puntos de venta en Colombia</span
-              >
+              <span id="about-badge-text">+100 puntos de venta en Colombia</span>
             </div>
 
             <a
@@ -529,7 +572,7 @@
       </main>
 
       <!-- FOOTER -->
-      <footer class="bg-surface-dark border-t border-border-dark py-12">
+      <footer id="main-footer" class="bg-surface-dark border-t border-border-dark py-12">
         <div
           class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8"
         >
@@ -554,26 +597,16 @@
             <h3 class="font-extrabold text-white mb-4">Enlaces</h3>
             <ul class="flex flex-col gap-2 text-sm text-white/60">
               <li>
-                <a
-                  class="hover:text-primary transition-colors"
-                  href="#products-section"
-                  >Menú</a
-                >
+                <a class="hover:text-primary transition-colors" href="#products-section">Menú</a>
               </li>
               <li>
-                <a class="hover:text-primary transition-colors" href="/stores"
-                  >Ubicaciones</a
-                >
+                <a class="hover:text-primary transition-colors" href="/stores">Sedes</a>
               </li>
               <li>
-                <a class="hover:text-primary transition-colors" href="/history"
-                  >Histórico</a
-                >
+                <a class="hover:text-primary transition-colors" href="#about-section">Nosotros</a>
               </li>
               <li>
-                <a class="hover:text-primary transition-colors" href="#"
-                  >Política de Privacidad</a
-                >
+                <a class="hover:text-primary transition-colors" href="#">Política de Privacidad</a>
               </li>
             </ul>
           </div>
@@ -582,9 +615,7 @@
             <h3 class="font-extrabold text-white mb-4">Contacto</h3>
             <ul class="flex flex-col gap-2 text-sm text-white/60">
               <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-xs"
-                  >location_on</span
-                >
+                <span class="material-symbols-outlined text-xs">location_on</span>
                 Colombia
               </li>
               <li class="flex items-center gap-2">
@@ -612,27 +643,18 @@
       </footer>
     </div>
 
-    <!-- MODAL ZOOM IMAGEN -->
-    <div id="image-modal" class="modal hidden">
-      <div class="modal-backdrop"></div>
-      <div class="modal-content">
-        <button class="modal-close" aria-label="Cerrar">✕</button>
-        <img id="modal-image" src="" alt="" class="modal-image" />
-        <p id="modal-caption" class="modal-caption"></p>
-      </div>
-    </div>
-
-    <!-- MODAL PERFIL -->
+    <!-- MODAL PERFIL (si no está logueado -> login.html, lo hace session.js) -->
     <div
-      id="user-modal"
-      class="fixed inset-0 z-40 hidden items-center justify-center bg-black/60"
+      id="user-section"
+      class="hidden fixed inset-0 z-50 items-center justify-center bg-black/60"
     >
       <div
         class="bg-[#120a0a] rounded-2xl p-5 w-full max-w-md mx-4 shadow-2xl border border-white/10 relative"
       >
         <button
-          id="user-modal-close"
+          id="user-close"
           class="absolute top-3 right-3 text-sm text-gray-300 hover:text-primary transition-colors"
+          type="button"
         >
           ✕
         </button>
@@ -647,7 +669,7 @@
               Nombre
             </label>
             <input
-              id="user-name-input"
+              id="user-name"
               type="text"
               class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary"
             />
@@ -658,7 +680,7 @@
               Correo
             </label>
             <input
-              id="user-email-input"
+              id="user-email"
               type="email"
               disabled
               class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
@@ -667,10 +689,10 @@
 
           <div>
             <label class="block text-sm font-semibold text-white/90 mb-1">
-              Celular (+57)
+              Celular
             </label>
             <input
-              id="user-phone-input"
+              id="user-phone"
               type="tel"
               placeholder="+573001112233"
               class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary"
@@ -682,7 +704,7 @@
               Dirección de entrega
             </label>
             <input
-              id="user-address-input"
+              id="user-address"
               type="text"
               class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:ring-1 focus:ring-primary"
             />
@@ -694,36 +716,26 @@
           >
             Guardar cambios
           </button>
+
+          <button
+            id="logout-btn"
+            type="button"
+            class="w-full rounded-full bg-white/10 hover:bg-white/15 text-white text-sm font-extrabold py-3 transition-colors"
+          >
+            Cerrar sesión
+          </button>
         </form>
       </div>
     </div>
 
-    <!-- MODAL: CARRITO VACÍO -->
-    <div id="empty-cart-modal" class="modal hidden">
-      <div class="modal-backdrop"></div>
-      <div
-        class="modal-content relative max-w-sm w-full mx-4 bg-[#120a0a] rounded-2xl p-5 shadow-2xl border border-white/10 flex flex-col gap-3"
-      >
-        <button
-          id="empty-cart-close"
-          class="absolute top-3 right-3 text-gray-300 hover:text-primary transition-colors text-sm"
-          aria-label="Cerrar"
-        >
-          ✕
-        </button>
-
-        <h2 class="text-lg font-black text-white">Tu carrito está vacío</h2>
-
-        <p class="text-sm text-white/70">
-          Aún no has agregado nada. Explora el menú y arma tu pedido 🍔🍟
-        </p>
-
-        <button
-          id="empty-cart-go"
-          class="mt-2 inline-flex items-center justify-center px-4 py-3 rounded-full bg-primary hover:bg-red-700 text-white text-sm font-extrabold tracking-wide transition"
-        >
-          Ir al menú
-        </button>
+    <!-- MODAL: CERRANDO SESIÓN -->
+    <div
+      id="logout-modal"
+      class="hidden fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
+    >
+      <div class="bg-background-dark rounded-xl px-6 py-5 text-center">
+        <div class="loader-spinner mx-auto mb-3"></div>
+        <p class="text-sm text-white/80">Cerrando sesión…</p>
       </div>
     </div>
 
@@ -769,72 +781,33 @@
       })();
     </script>
 
-    <!-- SCRIPT MODAL CARRITO VACÍO -->
+    <script type="module" src="/session.js"></script>
+    <script type="module" src="/index.js"></script>
+
+    <!-- ================= MENU MÓVIL (JS inline mínimo) ================= -->
     <script>
       (function () {
-        const modal = document.getElementById("empty-cart-modal");
-        if (!modal) return;
+        const menu = document.getElementById("mobile-menu");
+        const openBtn = document.getElementById("menu-toggle");
+        const closeBtn = document.getElementById("menu-close");
+        const backdrop = document.getElementById("menu-backdrop");
 
-        const backdrop = modal.querySelector(".modal-backdrop");
-        const closeBtn = document.getElementById("empty-cart-close");
-        const goBtn = document.getElementById("empty-cart-go");
-
-        function openEmptyCartModal() {
-          modal.classList.remove("hidden");
-          modal.classList.add("open");
+        function openMenu() {
+          if (!menu) return;
+          menu.classList.remove("hidden");
+          menu.setAttribute("aria-hidden", "false");
         }
 
-        function closeEmptyCartModal() {
-          modal.classList.remove("open");
-          modal.classList.add("hidden");
+        function closeMenu() {
+          if (!menu) return;
+          menu.classList.add("hidden");
+          menu.setAttribute("aria-hidden", "true");
         }
 
-        window.openEmptyCartModal = openEmptyCartModal;
-
-        closeBtn?.addEventListener("click", closeEmptyCartModal);
-        backdrop?.addEventListener("click", closeEmptyCartModal);
-        goBtn?.addEventListener("click", () => {
-          closeEmptyCartModal();
-          document
-            .getElementById("products-section")
-            ?.scrollIntoView({ behavior: "smooth" });
-        });
-
-        const cartIcon = document.getElementById("cart-icon");
-        if (cartIcon) {
-          cartIcon.addEventListener("click", (event) => {
-            event.preventDefault();
-
-            let items = [];
-            try {
-              let raw = localStorage.getItem("burgerCart");
-              if (!raw) raw = localStorage.getItem("cart");
-              items = raw ? JSON.parse(raw) : [];
-              if (!Array.isArray(items)) items = [];
-            } catch (e) {
-              items = [];
-            }
-
-            if (!items || items.length === 0) {
-              openEmptyCartModal();
-              return;
-            }
-            window.location.href = "/cart";
-          });
-        }
+        openBtn?.addEventListener("click", openMenu);
+        closeBtn?.addEventListener("click", closeMenu);
+        backdrop?.addEventListener("click", closeMenu);
       })();
     </script>
-    <div
-      id="logout-modal"
-      class="hidden fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center"
-    >
-      <div class="bg-background-dark rounded-xl px-6 py-5 text-center">
-        <div class="loader-spinner mx-auto mb-3"></div>
-        <p class="text-sm text-white/80">Cerrando sesión…</p>
-      </div>
-    </div>
-    <script type="module" src="/auth.js"></script>
-    <script src="/session.js"></script>
-    <script type="module" src="/index.js"></script>
   </body>
 </html>
