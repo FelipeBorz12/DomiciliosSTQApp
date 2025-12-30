@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const suggestPvBtn = document.getElementById("suggest-pv-btn");
   const pvMessage = document.getElementById("pv-message");
-  const pvCard = document.getElementById("pv-card"); // ✅ ahora renderizamos HTML aquí
+  const pvCard = document.getElementById("pv-card");
 
   const pvDeptSelect = document.getElementById("pv-departamento");
   const pvMpioSelect = document.getElementById("pv-municipio");
@@ -31,13 +31,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendWhatsappBtn = document.getElementById("send-whatsapp-btn");
   const refreshMessageBtn = document.getElementById("refresh-message-btn");
 
+  const cartIcon = document.getElementById("cart-icon");
+  const cartCount = document.getElementById("cart-count");
+  const cartCountBadge = document.getElementById("cart-count-badge");
+
   // ---- Estado ----
   let antiBotOk = false;
   let cartItems = [];
-  let userData = null; // objeto que guardamos (incluye perfil)
+  let userData = null;
   let puntosVenta = [];
   let selectedPV = null;
-
   let syncingPV = false;
 
   // ---- Utils ----
@@ -77,23 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return "+57" + ten;
   }
 
-  // ---- LocalStorage ----
-  function saveUserToLocal(data) {
-    try {
-      if (!data) return;
-      localStorage.setItem("burgerUser", JSON.stringify(data));
-    } catch {}
-  }
-
-  function getLocalUserIfAny() {
-    try {
-      const raw = localStorage.getItem("burgerUser");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }
-
   // ---- Carrito ----
   function loadCart() {
     try {
@@ -109,13 +95,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ✅ El contador ya lo maneja session.js globalmente en la mayoría
-  // pero aquí igual recalculamos por si esta página usa burgerCart directo
-  function syncBadgesFallback() {
-    try {
-      if (window.tqSession?.updateCartBadges) window.tqSession.updateCartBadges();
-    } catch {}
+  function syncCartBadges() {
+    const count = Array.isArray(cartItems)
+      ? cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0)
+      : 0;
+
+    if (cartCount) cartCount.textContent = String(count || 0);
+    if (cartCountBadge) cartCountBadge.textContent = String(count || 0);
   }
+
+  cartIcon?.addEventListener("click", () => {
+    try {
+      const raw = localStorage.getItem("burgerCart");
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        alert("Tu carrito está vacío.");
+        return;
+      }
+      window.location.href = "/cart";
+    } catch {
+      window.location.href = "/cart";
+    }
+  });
 
   // ---- Validaciones ----
   function validatePhone10(value) {
@@ -139,15 +140,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 0);
   }
 
-  // ---- Hidratar inputs ----
+  // ---- Usuario (sesión + formulario) ----
+  function saveUserToLocal(data) {
+    try {
+      if (!data) return;
+      localStorage.setItem("burgerUser", JSON.stringify(data));
+    } catch {}
+  }
+
   function hydrateUserInputs(data) {
     if (!data) return;
-
     const correo = data.correo || data.email || "";
     const perfil = data.perfil || {};
 
     const nombre = perfil.nombre || data.nombre || "";
-    const celular = perfil.celular || data.celular || ""; // puede venir +57...
+    const celular = perfil.celular || data.celular || "";
     const direccion =
       perfil.direccionentrega ||
       perfil.direccion ||
@@ -160,113 +167,195 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (phoneInput && celular) {
       const d = digitsOnly(celular);
-      // ✅ dejamos SOLO los últimos 10 dígitos en el input
       phoneInput.value = d.length >= 10 ? d.slice(-10) : d;
     }
 
     if (addressInput && direccion) addressInput.value = direccion;
   }
 
-  function getCorreoFromURL() {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const c = params.get("correo");
-      return c ? c.trim() : "";
-    } catch {
-      return "";
-    }
-  }
-
-  // ✅ prioridad: sesión supabase -> query ?correo -> local burgerUser
-  async function resolveCorreo() {
-    // 1) sesión supabase
-    try {
-      const s = await window.tqSession?.getSession?.();
-      const mail = s?.user?.email ? String(s.user.email).trim() : "";
-      if (mail) return mail;
-    } catch {}
-
-    // 2) query
-    const correoUrl = getCorreoFromURL();
-    if (correoUrl) return correoUrl;
-
-    // 3) local
-    const local = getLocalUserIfAny();
-    const correoLocal = local?.correo ? String(local.correo).trim() : "";
-    if (correoLocal) return correoLocal;
-
-    return "";
-  }
-
-  // ✅ Carga perfil desde tabla formulario (Supabase) por correo
-  async function loadUserFromSupabase(correo) {
-    // si hay sesión, ocultamos aviso aunque no exista fila en formulario
-    noUserWarning?.classList.add("hidden");
-
-    // intentar traer datos de formulario
-    let form = null;
-    try {
-      if (window.tqSession?.fetchFormularioByCorreo) {
-        form = await window.tqSession.fetchFormularioByCorreo(correo);
-      }
-    } catch (e) {
-      console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
-    }
-
-    // session me (para email fijo)
-    let me = null;
-    try {
-      me = await window.tqSession?.fetchMe?.();
-    } catch {}
-
-    const merged = {
-      correo: correo || me?.email || "",
-      email: correo || me?.email || "",
-      perfil: {
-        nombre: form?.nombre || "",
-        celular: form?.celular ? String(form.celular) : "",
-        direccionentrega: form?.direccionentrega || "",
-        Departamento: form?.Departamento || "",
-        Municipio: form?.Municipio || "",
-        Barrio: form?.Barrio || "",
-        tipodocumento: form?.tipodocumento || "",
-        documento: form?.documento || "",
-      },
-      formulario: form || null,
-    };
-
-    userData = merged;
-    saveUserToLocal(merged);
-    hydrateUserInputs(merged);
-  }
-
   async function loadUser() {
     try {
-      const correo = await resolveCorreo();
-
-      // si NO hay sesión, mostramos aviso (pero ojo: confirm debe ser solo logueado)
       const session = await window.tqSession?.getSession?.();
-      const logged = !!session;
+      const email = session?.user?.email ? String(session.user.email) : "";
 
-      if (!logged) {
+      if (!email) {
         userData = null;
         noUserWarning?.classList.remove("hidden");
         return;
       }
 
-      if (!correo) {
-        // hay sesión pero no email? muy raro, pero manejamos
-        userData = null;
-        noUserWarning?.classList.remove("hidden");
-        return;
+      noUserWarning?.classList.add("hidden");
+
+      let form = null;
+      try {
+        form = await window.tqSession?.fetchFormularioByCorreo?.(email);
+      } catch (e) {
+        console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
       }
 
-      await loadUserFromSupabase(correo);
+      const merged = {
+        correo: email,
+        email,
+        perfil: {
+          nombre: form?.nombre || "",
+          celular: form?.celular ? String(form.celular) : "",
+          direccionentrega: form?.direccionentrega || "",
+          Departamento: form?.Departamento || "",
+          Municipio: form?.Municipio || "",
+          Barrio: form?.Barrio || "",
+        },
+        formulario: form || null,
+      };
+
+      userData = merged;
+      saveUserToLocal(merged);
+      hydrateUserInputs(merged);
     } catch (err) {
       console.error("[confirm.js] Error cargando usuario:", err);
       userData = null;
       noUserWarning?.classList.remove("hidden");
     }
+  }
+
+  // ---- PV Card estilo stores ----
+  function pvMapsLink(pv) {
+    const lat = Number(pv?.Latitud);
+    const lng = Number(pv?.Longitud);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    const addr = encodeURIComponent(
+      `${pv?.Direccion || ""} ${pv?.Municipio || ""} ${pv?.Departamento || ""}`
+    );
+    return `https://www.google.com/maps?q=${addr}`;
+  }
+
+  function renderPvCard(pv, distanceKmText = "") {
+    if (!pvCard) return;
+    if (!pv) {
+      pvCard.classList.add("hidden");
+      pvCard.innerHTML = "";
+      return;
+    }
+
+    const img =
+      pv.URL_image || pv.url_image || pv.imagen || pv.image || "/img/logo.png";
+    const name = pv.Barrio || "Punto de venta";
+    const addr = `${pv.Direccion || "Dirección no disponible"} - ${
+      pv.Municipio || ""
+    }`;
+    const whatsapp = String(pv.num_whatsapp || "").trim();
+    const maps = pvMapsLink(pv);
+
+    pvCard.classList.remove("hidden");
+    pvCard.innerHTML = `
+      <div class="rounded-2xl bg-surface-dark p-4 border border-border-dark shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div class="flex gap-4">
+          <div class="w-20 h-20 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
+            <img src="${img}" alt="${name}" class="w-full h-full object-cover" loading="lazy"
+                 onerror="this.src='/img/logo.png';" />
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-white font-extrabold text-base sm:text-lg leading-tight truncate">${name}</h3>
+              ${
+                distanceKmText
+                  ? `<span class="shrink-0 text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">${distanceKmText}</span>`
+                  : ""
+              }
+            </div>
+
+            <p class="text-white/60 text-sm font-semibold truncate mt-1">${addr}</p>
+            ${
+              whatsapp
+                ? `<p class="text-white/60 text-sm font-semibold truncate mt-1">WhatsApp: ${whatsapp}</p>`
+                : `<p class="text-white/50 text-sm font-semibold truncate mt-1">WhatsApp no disponible</p>`
+            }
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-4">
+          <a
+            href="${maps}"
+            target="_blank"
+            rel="noopener"
+            class="flex-1 inline-flex items-center justify-center rounded-full h-10 bg-primary hover:bg-red-700 text-white text-sm font-extrabold transition-colors gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">navigation</span>
+            Cómo llegar
+          </a>
+
+          ${
+            whatsapp
+              ? `<a
+                  href="https://wa.me/${whatsapp.replace(/\D/g, "")}"
+                  target="_blank"
+                  rel="noopener"
+                  class="inline-flex items-center justify-center rounded-full h-10 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-extrabold transition-colors gap-2"
+                >
+                  <span class="material-symbols-outlined text-[18px]">chat</span>
+                  WhatsApp
+                </a>`
+              : ""
+          }
+        </div>
+
+        <p class="text-xs text-white/45 mt-3">
+          Este WhatsApp será el destino del mensaje y el punto de venta del pedido.
+        </p>
+      </div>
+    `;
+  }
+
+  // ---- Form ----
+  function validateForm() {
+    if (!sendWhatsappBtn) return;
+
+    const nameOk = !!(nameInput && nameInput.value.trim());
+
+    const emailVal = emailInput ? emailInput.value.trim() : "";
+    const emailOk = validateEmail(emailVal);
+
+    const phoneVal = phoneInput ? phoneInput.value.trim() : "";
+    const phoneOk = validatePhone10(phoneVal);
+
+    const addressOk = !!(addressInput && addressInput.value.trim());
+
+    const cartOk = cartItems && cartItems.length > 0;
+
+    const pvId = Number(selectedPV?.id);
+    const pvOk = !!(
+      selectedPV &&
+      Number.isFinite(pvId) &&
+      pvId > 0 &&
+      String(selectedPV.num_whatsapp || "").trim()
+    );
+
+    const paymentOk = !!(
+      paymentMethodSelect && paymentMethodSelect.value.trim()
+    );
+
+    if (phoneError) {
+      if (phoneVal && !phoneOk) phoneError.classList.remove("hidden");
+      else phoneError.classList.add("hidden");
+    }
+
+    if (emailError) {
+      if (emailVal && !emailOk) emailError.classList.remove("hidden");
+      else emailError.classList.add("hidden");
+    }
+
+    if (paymentError) {
+      if (paymentTouched && !paymentOk) paymentError.classList.remove("hidden");
+      else paymentError.classList.add("hidden");
+    }
+
+    const allOk =
+      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
+
+    // ✅ CLAVE: solo habilita si el form está ok y Turnstile está ok
+    sendWhatsappBtn.disabled = !(allOk && antiBotOk);
   }
 
   // ---- WhatsApp message ----
@@ -360,145 +449,6 @@ document.addEventListener("DOMContentLoaded", () => {
   orderText?.addEventListener("input", () => {
     orderText.dataset.userEdited = "1";
   });
-
-  // ---- PV Card estilo stores ----
-  function pvMapsLink(pv) {
-    const lat = Number(pv?.Latitud);
-    const lng = Number(pv?.Longitud);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      return `https://www.google.com/maps?q=${lat},${lng}`;
-    }
-    const addr = encodeURIComponent(
-      `${pv?.Direccion || ""} ${pv?.Municipio || ""} ${pv?.Departamento || ""}`
-    );
-    return `https://www.google.com/maps?q=${addr}`;
-  }
-
-  function renderPvCard(pv, distanceKmText = "") {
-    if (!pvCard) return;
-    if (!pv) {
-      pvCard.classList.add("hidden");
-      pvCard.innerHTML = "";
-      return;
-    }
-
-    const img =
-      pv.URL_image || pv.url_image || pv.imagen || pv.image || "/img/logo.png";
-    const name = pv.Barrio || "Punto de venta";
-    const addr = `${pv.Direccion || "Dirección no disponible"} - ${
-      pv.Municipio || ""
-    }`;
-    const whatsapp = String(pv.num_whatsapp || "").trim();
-    const maps = pvMapsLink(pv);
-
-    pvCard.classList.remove("hidden");
-    pvCard.innerHTML = `
-      <div class="rounded-2xl bg-surface-dark p-4 border border-border-dark shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-        <div class="flex gap-4">
-          <div class="w-20 h-20 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
-            <img src="${img}" alt="${name}" class="w-full h-full object-cover" loading="lazy"
-                 onerror="this.src='/img/logo.png';" />
-          </div>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="text-white font-extrabold text-base sm:text-lg leading-tight truncate">${name}</h3>
-              ${
-                distanceKmText
-                  ? `<span class="shrink-0 text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">${distanceKmText}</span>`
-                  : ""
-              }
-            </div>
-
-            <p class="text-white/60 text-sm font-semibold truncate mt-1">${addr}</p>
-            ${
-              whatsapp
-                ? `<p class="text-white/60 text-sm font-semibold truncate mt-1">WhatsApp: ${whatsapp}</p>`
-                : `<p class="text-white/50 text-sm font-semibold truncate mt-1">WhatsApp no disponible</p>`
-            }
-          </div>
-        </div>
-
-        <div class="flex gap-3 mt-4">
-          <a
-            href="${maps}"
-            target="_blank"
-            rel="noopener"
-            class="flex-1 inline-flex items-center justify-center rounded-full h-10 bg-primary hover:bg-red-700 text-white text-sm font-extrabold transition-colors gap-2"
-          >
-            <span class="material-symbols-outlined text-[18px]">navigation</span>
-            Cómo llegar
-          </a>
-
-          ${
-            whatsapp
-              ? `<a
-                  href="https://wa.me/${whatsapp.replace(/\D/g, "")}"
-                  target="_blank"
-                  rel="noopener"
-                  class="inline-flex items-center justify-center rounded-full h-10 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-extrabold transition-colors gap-2"
-                >
-                  <span class="material-symbols-outlined text-[18px]">chat</span>
-                  WhatsApp
-                </a>`
-              : ""
-          }
-        </div>
-
-        <p class="text-xs text-white/45 mt-3">
-          Este WhatsApp será el destino del mensaje y el punto de venta del pedido.
-        </p>
-      </div>
-    `;
-  }
-
-  function validateForm() {
-    if (!sendWhatsappBtn) return;
-
-    const nameOk = !!(nameInput && nameInput.value.trim());
-
-    const emailVal = emailInput ? emailInput.value.trim() : "";
-    const emailOk = validateEmail(emailVal);
-
-    const phoneVal = phoneInput ? phoneInput.value.trim() : "";
-    const phoneOk = validatePhone10(phoneVal);
-
-    const addressOk = !!(addressInput && addressInput.value.trim());
-
-    const cartOk = cartItems && cartItems.length > 0;
-
-    const pvId = Number(selectedPV?.id);
-    const pvOk = !!(
-      selectedPV &&
-      Number.isFinite(pvId) &&
-      pvId > 0 &&
-      String(selectedPV.num_whatsapp || "").trim()
-    );
-
-    const paymentOk = !!(
-      paymentMethodSelect && paymentMethodSelect.value.trim()
-    );
-
-    if (phoneError) {
-      if (phoneVal && !phoneOk) phoneError.classList.remove("hidden");
-      else phoneError.classList.add("hidden");
-    }
-
-    if (emailError) {
-      if (emailVal && !emailOk) emailError.classList.remove("hidden");
-      else emailError.classList.add("hidden");
-    }
-
-    if (paymentError) {
-      if (paymentTouched && !paymentOk) paymentError.classList.remove("hidden");
-      else paymentError.classList.add("hidden");
-    }
-
-    const allOk =
-      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
-
-    sendWhatsappBtn.disabled = !(allOk && antiBotOk);
-  }
 
   // ---- Puntos de venta ----
   async function fetchPuntosVenta() {
@@ -705,7 +655,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
           selectedPV = best;
 
-          // ✅ sincroniza selects
           syncingPV = true;
           if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
             pvDeptSelect.value = best.Departamento || "";
@@ -719,8 +668,6 @@ document.addEventListener("DOMContentLoaded", () => {
           syncingPV = false;
 
           selectedPV = best;
-
-          // ✅ card estilo stores + distancia
           renderPvCard(best, `~${bestDist.toFixed(1)} km`);
 
           if (orderText) orderText.dataset.userEdited = "0";
@@ -752,7 +699,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const mapped = cartItems
       .map((item) => {
         const qty = Math.max(1, toInt(item.quantity ?? item.qty ?? 1, 1));
-
         const menuIdRaw =
           item.menu_id ?? item.menuId ?? item.id ?? item.productId;
         const menu_id = Number(menuIdRaw);
@@ -780,6 +726,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function sendOrder() {
+    // ✅ BLOQUEO FINAL: si no pasó Turnstile NO se envía
+    if (!antiBotOk) {
+      alert("Completa la verificación anti-bot para enviar el pedido.");
+      return;
+    }
+
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
     const phoneFull = phoneFullFromInput10();
@@ -897,7 +849,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 5) Limpiar carrito y redirigir
     localStorage.removeItem("burgerCart");
     cartItems = [];
-    syncBadgesFallback();
+    syncCartBadges();
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
@@ -930,7 +882,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   nameInput?.addEventListener("input", onAnyFormChange);
-
   emailInput?.addEventListener("input", onAnyFormChange);
   phoneInput?.addEventListener("input", onAnyFormChange);
   addressInput?.addEventListener("input", onAnyFormChange);
@@ -957,8 +908,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sendWhatsappBtn?.addEventListener("click", sendOrder);
 
-  // ---- Anti-bot ----
-  const sendBtn = document.getElementById("send-whatsapp-btn");
+  // ---- Anti-bot (Turnstile) ----
   const msgEl = document.getElementById("antibot-msg");
 
   function setAntiBotMsg(text, isError = false) {
@@ -982,9 +932,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return true;
   }
 
+  // ✅ Turnstile callbacks del HTML
   window.onOrderTurnstile = async function (token) {
     antiBotOk = false;
-    if (sendBtn) sendBtn.disabled = true;
+    if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
 
     try {
       setAntiBotMsg("Validando…");
@@ -1022,12 +973,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- init ----
   async function init() {
-    // ✅ Guard real: confirm debe requerir sesión
-    const ok = await window.tqSession?.requireLoginOrRedirect?.("/login");
+    // ✅ confirm requiere sesión
+    const ok = await window.tqSession?.requireLoginOrRedirect?.();
     if (!ok) return;
 
     loadCart();
-    syncBadgesFallback();
+    syncCartBadges();
 
     await loadUser();
 
@@ -1051,6 +1002,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (orderText) orderText.dataset.userEdited = "0";
     updateOrderTextLive(true);
+
+    // ✅ por seguridad: si no pasó Turnstile, NO habilitar aunque el form esté ok
+    antiBotOk = false;
+    setAntiBotMsg("Completa la verificación para habilitar el envío.");
     validateForm();
   }
 
