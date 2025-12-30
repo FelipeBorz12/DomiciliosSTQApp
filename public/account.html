@@ -185,11 +185,12 @@
               <span class="material-symbols-outlined text-[20px]"
                 >shopping_bag</span
               >
-              <span class="font-extrabold text-sm hidden sm:block" id="cart-count"
+              <span
+                class="font-extrabold text-sm hidden sm:block"
+                id="cart-count"
                 >0</span
               >
 
-              <!-- Badge móvil -->
               <span
                 class="cart-count absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-primary sm:hidden"
               >
@@ -227,11 +228,17 @@
           <div class="flex items-center justify-between mb-6">
             <div class="flex items-center gap-3">
               <div class="size-9 rounded-full overflow-hidden bg-primary">
-                <img src="/img/logo.png" alt="Logo" class="w-full h-full object-cover" />
+                <img
+                  src="/img/logo.png"
+                  alt="Logo"
+                  class="w-full h-full object-cover"
+                />
               </div>
               <div class="leading-tight">
                 <p class="font-extrabold">Tierra Querida</p>
-                <p class="text-[11px] text-white/60 uppercase tracking-[0.2em] font-semibold">
+                <p
+                  class="text-[11px] text-white/60 uppercase tracking-[0.2em] font-semibold"
+                >
                   menú
                 </p>
               </div>
@@ -249,19 +256,35 @@
 
           <ul class="space-y-3 font-bold text-sm">
             <li>
-              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/#products-section">Menú</a>
+              <a
+                class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
+                href="/#products-section"
+                >Menú</a
+              >
             </li>
             <li>
-              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/#about-section">Nosotros</a>
+              <a
+                class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
+                href="/#about-section"
+                >Nosotros</a
+              >
             </li>
             <li>
-              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/stores">Sedes</a>
+              <a
+                class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
+                href="/stores"
+                >Sedes</a
+              >
             </li>
 
             <li class="pt-3 border-t border-border-dark"></li>
 
             <li id="mobile-login-item">
-              <a class="block px-4 py-3 rounded-xl bg-primary hover:bg-red-700 text-center" href="/login">Iniciar sesión</a>
+              <a
+                class="block px-4 py-3 rounded-xl bg-primary hover:bg-red-700 text-center"
+                href="/login"
+                >Iniciar sesión</a
+              >
             </li>
 
             <li id="mobile-profile-item" class="hidden">
@@ -296,16 +319,18 @@
 
       <!-- ================= MAIN ================= -->
       <main
-        class="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8"
+        class="flex-1 w-full max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6"
       >
         <div class="flex items-start justify-between gap-4">
           <div>
-            <p class="text-primary font-extrabold uppercase tracking-[0.2em] text-[11px] mb-2">
-              Perfil
+            <p
+              class="text-primary font-extrabold uppercase tracking-[0.2em] text-[11px] mb-2"
+            >
+              Cuenta
             </p>
             <h1 class="text-3xl sm:text-4xl font-black">Mi cuenta</h1>
             <p class="text-white/60 mt-2">
-              Aquí se carga tu información desde <span class="font-bold">formulario</span> usando tu correo.
+              Gestiona tu perfil, direcciones, pedidos y soporte.
             </p>
           </div>
 
@@ -319,134 +344,442 @@
           </button>
         </div>
 
-        <!-- Card -->
-        <section class="rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <h2 class="text-lg font-extrabold">Datos de entrega</h2>
-            <span id="status-pill" class="text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/80">
-              —
-            </span>
-          </div>
-
-          <form id="profile-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="sm:col-span-2">
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Correo</label>
-              <input
-                id="f-correo"
-                type="email"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                readonly
-              />
-            </div>
-
-            <div>
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Nombre</label>
-              <input
-                id="f-nombre"
-                type="text"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="Tu nombre"
-              />
-            </div>
-
-            <div>
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Tipo documento</label>
-              <select
-                id="f-tipodocumento"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+        <!-- Layout: sidebar + contenido -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          <!-- SIDEBAR -->
+          <aside
+            class="md:col-span-4 lg:col-span-3 rounded-2xl border border-border-dark bg-surface-dark p-3"
+          >
+            <div class="flex items-center gap-3 p-3">
+              <div
+                class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"
               >
-                <option value="">Selecciona</option>
-                <option value="CC">CC</option>
-                <option value="CE">CE</option>
-                <option value="NIT">NIT</option>
-                <option value="PAS">PAS</option>
-              </select>
+                <span class="material-symbols-outlined text-primary"
+                  >person</span
+                >
+              </div>
+              <div class="min-w-0">
+                <p
+                  id="sidebar-name"
+                  class="font-extrabold text-white truncate"
+                >
+                  —
+                </p>
+                <p
+                  id="sidebar-email"
+                  class="text-xs text-white/50 font-semibold truncate"
+                >
+                  —
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Documento</label>
-              <input
-                id="f-documento"
-                type="text"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="Número"
-              />
-            </div>
+            <div class="h-px bg-white/10 my-2"></div>
 
-            <div>
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Celular</label>
-              <input
-                id="f-celular"
-                type="tel"
-                inputmode="numeric"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="3000000000"
-              />
-            </div>
-
-            <div class="sm:col-span-2">
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Dirección de entrega</label>
-              <input
-                id="f-direccion"
-                type="text"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="Calle 123 #45-67"
-              />
-            </div>
-
-            <div>
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Departamento</label>
-              <input
-                id="f-departamento"
-                type="text"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="Antioquia"
-              />
-            </div>
-
-            <div>
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Municipio</label>
-              <input
-                id="f-municipio"
-                type="text"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="Medellín"
-              />
-            </div>
-
-            <div class="sm:col-span-2">
-              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Barrio</label>
-              <input
-                id="f-barrio"
-                type="text"
-                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                placeholder="Laureles"
-              />
-            </div>
-
-            <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 pt-2">
+            <nav class="flex md:flex-col gap-2 overflow-x-auto no-scrollbar">
               <button
-                id="save-btn"
-                type="submit"
-                class="h-12 px-6 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
+                class="tq-tab-btn shrink-0 w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 font-extrabold text-sm flex items-center gap-3"
+                data-tab="perfil"
+                type="button"
               >
-                <span class="material-symbols-outlined text-[18px]">save</span>
-                Guardar
+                <span class="material-symbols-outlined text-[18px]"
+                  >badge</span
+                >
+                Perfil
               </button>
 
-              <a
-                href="/"
-                class="h-12 px-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
+              <button
+                class="tq-tab-btn shrink-0 w-full text-left px-4 py-3 rounded-xl bg-transparent hover:bg-white/5 border border-transparent font-extrabold text-sm flex items-center gap-3 text-white/80"
+                data-tab="direcciones"
+                type="button"
               >
-                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                Volver al inicio
-              </a>
-            </div>
-          </form>
+                <span class="material-symbols-outlined text-[18px]"
+                  >home_pin</span
+                >
+                Direcciones
+              </button>
 
-          <p id="error-box" class="hidden mt-4 text-sm text-red-300 font-semibold"></p>
-        </section>
+              <button
+                class="tq-tab-btn shrink-0 w-full text-left px-4 py-3 rounded-xl bg-transparent hover:bg-white/5 border border-transparent font-extrabold text-sm flex items-center gap-3 text-white/80"
+                data-tab="pedidos"
+                type="button"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >receipt_long</span
+                >
+                Pedidos
+              </button>
+
+              <button
+                class="tq-tab-btn shrink-0 w-full text-left px-4 py-3 rounded-xl bg-transparent hover:bg-white/5 border border-transparent font-extrabold text-sm flex items-center gap-3 text-white/80"
+                data-tab="contacto"
+                type="button"
+              >
+                <span class="material-symbols-outlined text-[18px]"
+                  >support_agent</span
+                >
+                Contacto
+              </button>
+            </nav>
+          </aside>
+
+          <!-- CONTENT -->
+          <section class="md:col-span-8 lg:col-span-9 flex flex-col gap-6">
+            <!-- PERFIL -->
+            <div
+              id="tab-perfil"
+              class="tq-tab-panel rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <h2 class="text-lg font-extrabold">Perfil</h2>
+                <span
+                  id="status-pill"
+                  class="text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/80"
+                  >—</span
+                >
+              </div>
+
+              <form id="profile-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Correo</label
+                  >
+                  <input
+                    id="f-correo"
+                    type="email"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    readonly
+                  />
+                </div>
+
+                <div>
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Nombre</label
+                  >
+                  <input
+                    id="f-nombre"
+                    type="text"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="Tu nombre"
+                  />
+                </div>
+
+                <div>
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Celular</label
+                  >
+                  <input
+                    id="f-celular"
+                    type="tel"
+                    inputmode="numeric"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="3000000000"
+                  />
+                </div>
+
+                <div>
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Tipo documento</label
+                  >
+                  <select
+                    id="f-tipodocumento"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                  >
+                    <option value="">Selecciona</option>
+                    <option value="CC">CC</option>
+                    <option value="CE">CE</option>
+                    <option value="NIT">NIT</option>
+                    <option value="PAS">PAS</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Documento</label
+                  >
+                  <input
+                    id="f-documento"
+                    type="text"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="Número"
+                  />
+                </div>
+
+                <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 pt-2">
+                  <button
+                    id="save-btn"
+                    type="submit"
+                    class="h-12 px-6 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >save</span
+                    >
+                    Guardar perfil
+                  </button>
+
+                  <button
+                    id="go-direcciones"
+                    type="button"
+                    class="h-12 px-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
+                  >
+                    <span class="material-symbols-outlined text-[18px]"
+                      >home_pin</span
+                    >
+                    Editar direcciones
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- DIRECCIONES -->
+            <div
+              id="tab-direcciones"
+              class="tq-tab-panel hidden rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="text-lg font-extrabold">Direcciones</h2>
+                  <p class="text-sm text-white/55 font-semibold mt-1">
+                    Esta info viene de tu tabla <span class="text-white/80">formulario</span>.
+                  </p>
+                </div>
+
+                <button
+                  id="save-address-btn"
+                  type="button"
+                  class="h-10 px-4 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold text-sm transition-colors inline-flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-[18px]">save</span>
+                  Guardar
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Dirección de entrega</label
+                  >
+                  <input
+                    id="f-direccion"
+                    type="text"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="Calle 123 #45-67"
+                  />
+                </div>
+
+                <div>
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Departamento</label
+                  >
+                  <input
+                    id="f-departamento"
+                    type="text"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="Antioquia"
+                  />
+                </div>
+
+                <div>
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Municipio</label
+                  >
+                  <input
+                    id="f-municipio"
+                    type="text"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="Medellín"
+                  />
+                </div>
+
+                <div class="sm:col-span-2">
+                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Barrio</label
+                  >
+                  <input
+                    id="f-barrio"
+                    type="text"
+                    class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                    placeholder="Laureles"
+                  />
+                </div>
+              </div>
+
+              <div class="mt-5 flex flex-col sm:flex-row gap-3">
+                <button
+                  id="add-address-btn"
+                  type="button"
+                  class="h-12 px-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-[18px]">add</span>
+                  Agregar otra dirección
+                </button>
+
+                <p class="text-white/45 text-sm font-semibold sm:self-center">
+                  (Si quieres múltiples direcciones reales, me pasas la tabla y lo conecto.)
+                </p>
+              </div>
+            </div>
+
+            <!-- PEDIDOS -->
+            <div
+              id="tab-pedidos"
+              class="tq-tab-panel hidden rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6"
+            >
+              <div class="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 class="text-lg font-extrabold">Mis pedidos</h2>
+                  <p class="text-sm text-white/55 font-semibold mt-1">
+                    Historial de pedidos (cuando me pases el nombre de tu tabla de pedidos lo conecto).
+                  </p>
+                </div>
+
+                <a
+                  href="/#products-section"
+                  class="h-10 px-4 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold text-sm transition-colors inline-flex items-center gap-2"
+                >
+                  <span class="material-symbols-outlined text-[18px]">lunch_dining</span>
+                  Ir al menú
+                </a>
+              </div>
+
+              <div
+                class="rounded-2xl border border-white/10 bg-background-dark/40 p-5"
+              >
+                <p class="text-white/70 font-semibold">
+                  Aún no hay pedidos para mostrar.
+                </p>
+                <p class="text-white/45 text-sm font-semibold mt-1">
+                  Apenas confirmes un pedido, aparecerá aquí.
+                </p>
+              </div>
+
+              <div id="orders-list" class="mt-5 grid grid-cols-1 gap-3"></div>
+            </div>
+
+            <!-- CONTACTO -->
+            <div
+              id="tab-contacto"
+              class="tq-tab-panel hidden rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6"
+            >
+              <h2 class="text-lg font-extrabold mb-1">Contacto</h2>
+              <p class="text-sm text-white/55 font-semibold">
+                ¿Necesitas ayuda? Escríbenos y lo resolvemos.
+              </p>
+
+              <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="rounded-2xl border border-white/10 bg-background-dark/40 p-5">
+                  <div class="flex items-center gap-3">
+                    <span class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary">
+                      <span class="material-symbols-outlined">chat</span>
+                    </span>
+                    <div>
+                      <p class="font-extrabold">WhatsApp</p>
+                      <p class="text-white/45 text-sm font-semibold">
+                        Soporte rápido
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    id="contact-whatsapp"
+                    type="button"
+                    class="mt-4 w-full h-11 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold text-sm transition-colors"
+                  >
+                    Escribir por WhatsApp
+                  </button>
+                </div>
+
+                <div class="rounded-2xl border border-white/10 bg-background-dark/40 p-5">
+                  <div class="flex items-center gap-3">
+                    <span class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary">
+                      <span class="material-symbols-outlined">mail</span>
+                    </span>
+                    <div>
+                      <p class="font-extrabold">Correo</p>
+                      <p class="text-white/45 text-sm font-semibold">
+                        Atención al cliente
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    id="contact-email"
+                    type="button"
+                    class="mt-4 w-full h-11 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold text-sm transition-colors"
+                  >
+                    Enviar correo
+                  </button>
+                </div>
+              </div>
+
+              <div class="mt-5 rounded-2xl border border-white/10 bg-background-dark/40 p-5">
+                <p class="text-white/70 font-semibold">Tip:</p>
+                <p class="text-white/45 text-sm font-semibold mt-1">
+                  Si el problema es con un pedido, incluye tu nombre y celular.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
       </main>
+    </div>
+
+    <!-- ================= MODAL MENSAJES (INFO/ERROR/SUCCESS) ================= -->
+    <div
+      id="tq-modal"
+      class="fixed inset-0 z-[9999] hidden items-center justify-center p-4"
+      aria-hidden="true"
+    >
+      <div
+        id="tq-modal-backdrop"
+        class="absolute inset-0 bg-black/80 backdrop-blur-sm"
+      ></div>
+
+      <div
+        class="relative w-[94vw] max-w-md rounded-[1.5rem] border border-white/10 bg-[#120a0a] shadow-2xl overflow-hidden"
+      >
+        <div class="p-5 border-b border-white/10 bg-black/20">
+          <div class="flex items-start gap-3">
+            <span
+              id="tq-modal-icon"
+              class="shrink-0 size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary"
+            >
+              <span class="material-symbols-outlined">info</span>
+            </span>
+
+            <div class="min-w-0">
+              <p id="tq-modal-title" class="font-extrabold text-white text-base">
+                —
+              </p>
+              <p
+                id="tq-modal-message"
+                class="text-white/70 text-sm font-semibold mt-1 whitespace-pre-line"
+              >
+                —
+              </p>
+            </div>
+
+            <button
+              id="tq-modal-close"
+              type="button"
+              class="ml-auto size-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 inline-flex items-center justify-center"
+              aria-label="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="p-5 flex items-center justify-end gap-2">
+          <button
+            id="tq-modal-ok"
+            type="button"
+            class="h-11 px-5 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold text-sm transition-colors"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- MENU MÓVIL (inline, igual a index) -->

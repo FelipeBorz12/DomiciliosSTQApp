@@ -3,22 +3,98 @@ function $(id) {
   return document.getElementById(id);
 }
 
+/* =========================
+   MODAL (mensajes)
+========================= */
+function modalIcon(type) {
+  switch (type) {
+    case "success":
+      return { icon: "check_circle", label: "Éxito" };
+    case "error":
+      return { icon: "error", label: "Error" };
+    case "info":
+    default:
+      return { icon: "info", label: "Info" };
+  }
+}
+
+function showModal({ title, message, type = "info" }) {
+  const m = $("tq-modal");
+  if (!m) return;
+
+  const { icon } = modalIcon(type);
+  const iconWrap = $("tq-modal-icon");
+  const titleEl = $("tq-modal-title");
+  const msgEl = $("tq-modal-message");
+
+  if (iconWrap) {
+    iconWrap.innerHTML = `<span class="material-symbols-outlined">${icon}</span>`;
+  }
+  if (titleEl) titleEl.textContent = title || "Mensaje";
+  if (msgEl) msgEl.textContent = message || "";
+
+  m.classList.remove("hidden");
+  m.classList.add("flex");
+  m.setAttribute("aria-hidden", "false");
+}
+
+function closeModal() {
+  const m = $("tq-modal");
+  if (!m) return;
+  m.classList.add("hidden");
+  m.classList.remove("flex");
+  m.setAttribute("aria-hidden", "true");
+}
+
+function bindModal() {
+  $("tq-modal-backdrop")?.addEventListener("click", closeModal);
+  $("tq-modal-close")?.addEventListener("click", closeModal);
+  $("tq-modal-ok")?.addEventListener("click", closeModal);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeModal();
+  });
+}
+
+/* =========================
+   Tabs / Panels
+========================= */
+function setActiveTab(tab) {
+  const buttons = document.querySelectorAll(".tq-tab-btn");
+  const panels = document.querySelectorAll(".tq-tab-panel");
+
+  buttons.forEach((b) => {
+    const active = b.dataset.tab === tab;
+    b.classList.toggle("bg-white/5", active);
+    b.classList.toggle("border-white/10", active);
+    b.classList.toggle("hover:bg-white/10", active);
+
+    b.classList.toggle("bg-transparent", !active);
+    b.classList.toggle("border-transparent", !active);
+    b.classList.toggle("text-white/80", !active);
+  });
+
+  panels.forEach((p) => p.classList.add("hidden"));
+
+  const panel = $(`tab-${tab}`);
+  panel?.classList.remove("hidden");
+}
+
+function bindTabs() {
+  document.querySelectorAll(".tq-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+  });
+
+  $("go-direcciones")?.addEventListener("click", () => setActiveTab("direcciones"));
+}
+
+/* =========================
+   Helpers
+========================= */
 function setStatus(text) {
   const pill = $("status-pill");
   if (!pill) return;
   pill.textContent = text || "—";
-}
-
-function showError(msg) {
-  const box = $("error-box");
-  if (!box) return;
-  if (!msg) {
-    box.classList.add("hidden");
-    box.textContent = "";
-    return;
-  }
-  box.textContent = msg;
-  box.classList.remove("hidden");
 }
 
 function normalizePayload(correo) {
@@ -26,13 +102,16 @@ function normalizePayload(correo) {
   const tipodocumento = ($("f-tipodocumento")?.value || "").trim();
   const documento = ($("f-documento")?.value || "").trim();
   const celularRaw = ($("f-celular")?.value || "").trim();
+
   const direccionentrega = ($("f-direccion")?.value || "").trim();
   const Departamento = ($("f-departamento")?.value || "...").trim() || "...";
   const Municipio = ($("f-municipio")?.value || "...").trim() || "...";
   const Barrio = ($("f-barrio")?.value || "...").trim() || "...";
 
-  // celular es numeric en tu tabla
-  const celular = celularRaw ? Number(String(celularRaw).replace(/\D/g, "")) : NaN;
+  // numeric
+  const celular = celularRaw
+    ? Number(String(celularRaw).replace(/\D/g, ""))
+    : NaN;
 
   return {
     correo,
@@ -47,22 +126,33 @@ function normalizePayload(correo) {
   };
 }
 
-function fillFormFromRow(me, row) {
-  $("f-correo").value = me?.email || "";
+function fillFromRow(me, row) {
+  // sidebar + header
+  const displayName = row?.nombre || me?.user_metadata?.full_name || me?.email || "—";
+  $("sidebar-name").textContent = displayName;
+  $("sidebar-email").textContent = me?.email || "—";
 
+  const nameHeader = $("user-name-header");
+  if (nameHeader) nameHeader.textContent = displayName;
+
+  // perfil
+  $("f-correo").value = me?.email || "";
   $("f-nombre").value = row?.nombre || me?.user_metadata?.full_name || "";
   $("f-tipodocumento").value = row?.tipodocumento || "";
   $("f-documento").value = row?.documento || "";
   $("f-celular").value = row?.celular != null ? String(row.celular) : "";
-  $("f-direccion").value = row?.direccionentrega || "";
 
+  // direcciones
+  $("f-direccion").value = row?.direccionentrega || "";
   $("f-departamento").value = row?.Departamento || "...";
   $("f-municipio").value = row?.Municipio || "...";
   $("f-barrio").value = row?.Barrio || "...";
 }
 
+/* =========================
+   Load profile + formulario
+========================= */
 async function loadProfile() {
-  showError("");
   setStatus("Cargando...");
 
   const ok = await window.tqSession.requireLoginOrRedirect();
@@ -71,83 +161,173 @@ async function loadProfile() {
   const me = await window.tqSession.fetchMe();
   if (!me?.email) {
     setStatus("Sin correo");
-    showError("No pude detectar tu correo de sesión. Revisa tu login.");
+    showModal({
+      type: "error",
+      title: "No pude cargar tu sesión",
+      message: "No detecté un correo en tu sesión. Revisa tu login.",
+    });
     return;
   }
-
-  // pinta nombre en header (si existe)
-  const nameHeader = document.getElementById("user-name-header");
-  if (nameHeader) {
-    const nm = me.user_metadata?.full_name || me.email;
-    nameHeader.textContent = nm || "";
-  }
-
-  $("f-correo").value = me.email;
 
   try {
     const row = await window.tqSession.fetchFormularioByCorreo(me.email);
 
     if (row) {
-      fillFormFromRow(me, row);
-      setStatus("Datos cargados");
+      fillFromRow(me, row);
+      setStatus("Listo");
     } else {
-      // no hay fila en formulario aún
-      fillFormFromRow(me, null);
-      setStatus("Completa tu info");
+      fillFromRow(me, null);
+      setStatus("Completar");
+      showModal({
+        type: "info",
+        title: "Completa tu información",
+        message:
+          "Aún no encontramos tus datos en formulario.\nCompleta tu perfil y direcciones y guarda.",
+      });
     }
   } catch (e) {
     console.error("[account] fetch formulario error:", e);
     setStatus("Error");
-    showError(
-      "No pude leer tu información. Revisa RLS/policies en Supabase para la tabla formulario."
-    );
+    showModal({
+      type: "error",
+      title: "No pude leer tus datos",
+      message:
+        "No pude leer tu información desde Supabase.\n\nRevisa RLS/Policies en la tabla formulario y que el usuario tenga permiso para leer su fila por correo.",
+    });
   }
 }
 
-async function onSave(e) {
-  e.preventDefault();
-  showError("");
+/* =========================
+   Save (perfil + direcciones)
+========================= */
+function validatePayload(payload) {
+  // tu tabla tiene NOT NULL en casi todo
+  if (!payload.nombre) return "Escribe tu nombre.";
+  if (!payload.tipodocumento) return "Selecciona tipo de documento.";
+  if (!payload.documento) return "Escribe tu documento.";
+  if (!payload.celular || Number.isNaN(payload.celular)) return "Escribe un celular válido.";
+  if (!payload.direccionentrega) return "Escribe tu dirección de entrega.";
+  return "";
+}
+
+async function saveAll() {
   setStatus("Guardando...");
 
   const me = await window.tqSession.fetchMe();
   if (!me?.email) {
     setStatus("Error");
-    showError("No hay sesión activa.");
+    showModal({
+      type: "error",
+      title: "Sesión no válida",
+      message: "No hay sesión activa.",
+    });
     return;
   }
 
   const payload = normalizePayload(me.email);
-
-  // validaciones mínimas (tu tabla tiene NOT NULL en casi todo)
-  if (!payload.nombre) return showError("Escribe tu nombre.");
-  if (!payload.tipodocumento) return showError("Selecciona tipo de documento.");
-  if (!payload.documento) return showError("Escribe tu documento.");
-  if (!payload.celular || Number.isNaN(payload.celular))
-    return showError("Escribe un celular válido.");
-  if (!payload.direccionentrega) return showError("Escribe tu dirección.");
+  const err = validatePayload(payload);
+  if (err) {
+    setStatus("Revisar");
+    showModal({ type: "info", title: "Faltan datos", message: err });
+    return;
+  }
 
   try {
     await window.tqSession.saveFormulario(payload);
     setStatus("Guardado ✅");
-  } catch (e2) {
-    console.error("[account] save error:", e2);
+    showModal({
+      type: "success",
+      title: "Guardado",
+      message: "Tu información fue guardada correctamente.",
+    });
+  } catch (e) {
+    console.error("[account] save error:", e);
     setStatus("Error");
-    showError(
-      e2?.message ||
-        "No pude guardar. Revisa policies/RLS y que exista el correo en usuarios."
-    );
+    showModal({
+      type: "error",
+      title: "No pude guardar",
+      message:
+        e?.message ||
+        "No pude guardar. Revisa policies/RLS y que exista el correo en usuarios (FK).",
+    });
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  // botón logout
-  document.getElementById("logout-btn")?.addEventListener("click", () => {
-    window.tqSession.logout();
+/* =========================
+   Pedidos (placeholder)
+========================= */
+function bindOrdersPlaceholder() {
+  // aquí luego conectamos tabla pedidos
+}
+
+/* =========================
+   Contacto
+========================= */
+function bindContact() {
+  $("contact-whatsapp")?.addEventListener("click", () => {
+    // Cambia el número real
+    const phone = "573000000000";
+    const text = encodeURIComponent("Hola, necesito ayuda con mi pedido.");
+    window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
   });
 
-  // form submit
-  document.getElementById("profile-form")?.addEventListener("submit", onSave);
+  $("contact-email")?.addEventListener("click", () => {
+    // Cambia el correo real
+    const to = "hola@tierraquerida.com";
+    const subject = encodeURIComponent("Soporte - Tierra Querida");
+    const body = encodeURIComponent("Hola, necesito ayuda con...");
+    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  });
+}
 
-  // cargar perfil
+/* =========================
+   Bind
+========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  bindModal();
+  bindTabs();
+  bindOrdersPlaceholder();
+  bindContact();
+
+  // Tab default
+  setActiveTab("perfil");
+
+  // logout
+  $("logout-btn")?.addEventListener("click", () => {
+    showModal({
+      type: "info",
+      title: "Cerrar sesión",
+      message: "¿Seguro que quieres cerrar sesión?",
+    });
+
+    // hack simple: al darle OK, cerramos sesión (sin añadir un modal confirm extra)
+    const okBtn = $("tq-modal-ok");
+    const handler = () => {
+      okBtn?.removeEventListener("click", handler);
+      window.tqSession.logout();
+    };
+    okBtn?.addEventListener("click", handler);
+  });
+
+  // guardar desde perfil (submit)
+  $("profile-form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    saveAll();
+  });
+
+  // guardar desde direcciones
+  $("save-address-btn")?.addEventListener("click", () => saveAll());
+
+  // agregar otra dirección (por ahora modal informativo)
+  $("add-address-btn")?.addEventListener("click", () => {
+    showModal({
+      type: "info",
+      title: "Múltiples direcciones",
+      message:
+        "Ahora mismo estás guardando una dirección en la tabla formulario.\n\nSi quieres múltiples direcciones reales, créame/compárteme la tabla (por ejemplo: direcciones) y lo conecto para que puedas agregar varias.",
+    });
+  });
+
+  // cargar datos
   loadProfile();
 });
