@@ -12,18 +12,14 @@
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
     </script>
 
-    <!-- ✅ Forzar SIEMPRE el tema oscuro SIN depender del modo del dispositivo -->
+    <!-- ✅ Forzar SIEMPRE el tema oscuro -->
     <script>
       (function () {
         const root = document.documentElement;
-
         const forceDark = () => {
           if (!root.classList.contains("dark")) root.classList.add("dark");
         };
-
         forceDark();
-
-        // Si algún script intenta quitar "dark", lo volvemos a poner
         const obs = new MutationObserver(forceDark);
         obs.observe(root, { attributes: true, attributeFilter: ["class"] });
       })();
@@ -57,11 +53,7 @@
     ></script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin="anonymous"
-    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
     <link
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
       rel="stylesheet"
@@ -80,9 +72,7 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
 
-  <body
-    class="bg-background-dark text-white font-display min-h-screen flex flex-col"
-  >
+  <body class="bg-background-dark text-white font-display min-h-screen flex flex-col">
     <!-- justo después de <body> -->
     <div id="global-loader" class="hidden">
       <div class="loader-box">
@@ -99,23 +89,17 @@
           class="flex size-10 items-center justify-center rounded-full bg-black/30 border border-gray-700"
           type="button"
         >
-          <span class="material-symbols-outlined text-white text-xl">
-            arrow_back
-          </span>
+          <span class="material-symbols-outlined text-white text-xl">arrow_back</span>
         </button>
         <div class="flex-1 text-center">
-          <h2 class="text-white text-lg font-bold leading-tight">
-            Iniciar sesión
-          </h2>
+          <h2 class="text-white text-lg font-bold leading-tight">Iniciar sesión</h2>
         </div>
         <div class="w-10"></div>
       </div>
 
       <!-- Headline -->
       <div class="pt-2 pb-4">
-        <h1
-          class="text-white text-[32px] font-bold leading-tight tracking-tight"
-        >
+        <h1 class="text-white text-[32px] font-bold leading-tight tracking-tight">
           Bienvenido
         </h1>
         <p class="text-gray-400 text-base leading-normal pt-1">
@@ -165,21 +149,13 @@
             data-theme="dark"
             data-size="normal"
           ></div>
-          <p class="text-xs text-white/50 mt-2">
-            Verificación para evitar bots.
-          </p>
+          <p class="text-xs text-white/50 mt-2">Verificación para evitar bots.</p>
         </div>
 
-        <p
-          id="login-error"
-          class="text-red-500 text-sm font-medium mt-1 hidden"
-        ></p>
+        <p id="login-error" class="text-red-500 text-sm font-medium mt-1 hidden"></p>
 
         <div class="flex justify-end mt-1">
-          <a
-            href="/recover"
-            class="text-sm text-accent hover:underline font-medium"
-          >
+          <a href="/recover" class="text-sm text-accent hover:underline font-medium">
             ¿Olvidaste tu contraseña?
           </a>
         </div>
@@ -190,27 +166,12 @@
           type="button"
           class="mt-2 flex items-center justify-center h-14 w-full rounded-xl bg-white text-black font-bold shadow-sm hover:opacity-90 transition"
         >
-          <span
-            class="mr-3 inline-flex items-center justify-center size-6 rounded-full bg-black/5"
-          >
-            <!-- SVG Google -->
+          <span class="mr-3 inline-flex items-center justify-center size-6 rounded-full bg-black/5">
             <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
-              <path
-                fill="#FFC107"
-                d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.8 6.1 29.7 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.1-.4-3.5z"
-              />
-              <path
-                fill="#FF3D00"
-                d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.8 6.1 29.7 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
-              />
-              <path
-                fill="#4CAF50"
-                d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.2 35.7 26.7 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.6 5.1C9.3 39.6 16.1 44 24 44z"
-              />
-              <path
-                fill="#1976D2"
-                d="M43.6 20.5H42V20H24v8h11.3c-1 2.7-3 5-5.7 6.3l.1-.1 6.3 5.2C39.7 36.1 44 30.7 44 24c0-1.1-.1-2.1-.4-3.5z"
-              />
+              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.8 6.1 29.7 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.1-.4-3.5z"/>
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.8 6.1 29.7 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+              <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.2C29.2 35.7 26.7 36 24 36c-5.3 0-9.8-3.4-11.4-8.1l-6.6 5.1C9.3 39.6 16.1 44 24 44z"/>
+              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.7-3 5-5.7 6.3l.1-.1 6.3 5.2C39.7 36.1 44 30.7 44 24c0-1.1-.1-2.1-.4-3.5z"/>
             </svg>
           </span>
           Continuar con Google
@@ -227,12 +188,9 @@
       <!-- Link a registro -->
       <div class="mt-4 text-center text-sm text-gray-400">
         ¿No tienes cuenta?
-        <a href="/register" class="font-bold text-accent hover:underline">
-          Regístrate
-        </a>
+        <a href="/register" class="font-bold text-accent hover:underline">Regístrate</a>
       </div>
 
-      <!-- Botón Volver al inicio -->
       <div class="mt-6">
         <button
           type="button"
@@ -245,51 +203,26 @@
     </div>
 
     <footer class="bg-surface-dark border-t border-border-dark py-12">
-      <div
-        class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8"
-      >
+      <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div class="col-span-1 md:col-span-2">
           <div class="flex items-center gap-3 mb-4">
-            <div
-              class="size-9 bg-primary rounded-full flex items-center justify-center text-white"
-            >
-              <span class="material-symbols-outlined text-sm"
-                >lunch_dining</span
-              >
+            <div class="size-9 bg-primary rounded-full flex items-center justify-center text-white">
+              <span class="material-symbols-outlined text-sm">lunch_dining</span>
             </div>
             <h2 class="text-lg font-extrabold">Tierra Querida</h2>
           </div>
           <p class="text-white/60 text-sm max-w-xs">
-            Las mejores hamburguesas, hechas con ingredientes locales y mucha
-            pasión.
+            Las mejores hamburguesas, hechas con ingredientes locales y mucha pasión.
           </p>
         </div>
 
         <div>
           <h3 class="font-extrabold text-white mb-4">Enlaces</h3>
           <ul class="flex flex-col gap-2 text-sm text-white/60">
-            <li>
-              <a
-                class="hover:text-primary transition-colors"
-                href="#products-section"
-                >Menú</a
-              >
-            </li>
-            <li>
-              <a class="hover:text-primary transition-colors" href="/stores"
-                >Ubicaciones</a
-              >
-            </li>
-            <li>
-              <a class="hover:text-primary transition-colors" href="/history"
-                >Histórico</a
-              >
-            </li>
-            <li>
-              <a class="hover:text-primary transition-colors" href="#"
-                >Política de Privacidad</a
-              >
-            </li>
+            <li><a class="hover:text-primary transition-colors" href="#products-section">Menú</a></li>
+            <li><a class="hover:text-primary transition-colors" href="/stores">Ubicaciones</a></li>
+            <li><a class="hover:text-primary transition-colors" href="/history">Histórico</a></li>
+            <li><a class="hover:text-primary transition-colors" href="#">Política de Privacidad</a></li>
           </ul>
         </div>
 
@@ -297,24 +230,19 @@
           <h3 class="font-extrabold text-white mb-4">Contacto</h3>
           <ul class="flex flex-col gap-2 text-sm text-white/60">
             <li class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-xs">location_on</span>
-              Colombia
+              <span class="material-symbols-outlined text-xs">location_on</span> Colombia
             </li>
             <li class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-xs">call</span>
-              +57 300 000 0000
+              <span class="material-symbols-outlined text-xs">call</span> +57 300 000 0000
             </li>
             <li class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-xs">mail</span>
-              hola@tierraquerida.com
+              <span class="material-symbols-outlined text-xs">mail</span> hola@tierraquerida.com
             </li>
           </ul>
         </div>
       </div>
 
-      <div
-        class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 mt-10 pt-8 border-t border-border-dark flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40"
-      >
+      <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 mt-10 pt-8 border-t border-border-dark flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/40">
         <p>© 2025 Tierra Querida. Todos los derechos reservados.</p>
         <div class="flex gap-4">
           <span class="cursor-pointer hover:text-white">Facebook</span>
@@ -323,8 +251,36 @@
         </div>
       </div>
     </footer>
+
+    <!-- ✅ Supabase JS (CDN) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/src/supabaseClient.ts"></script>
+
+    <!-- ✅ SIN ARCHIVOS NUEVOS: creamos window.sb aquí mismo -->
+    <script>
+      (function () {
+        if (!window.supabase || !window.supabase.createClient) {
+          console.error("[login] supabase-js no cargó desde CDN");
+          return;
+        }
+        if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+          console.error("[login] faltan SUPABASE_URL / SUPABASE_ANON_KEY");
+          return;
+        }
+        window.sb = window.supabase.createClient(
+          window.SUPABASE_URL,
+          window.SUPABASE_ANON_KEY,
+          {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: true,
+            },
+          }
+        );
+      })();
+    </script>
+
+    <!-- ✅ Tu lógica -->
     <script src="/auth.js"></script>
   </body>
 </html>

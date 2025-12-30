@@ -1,5 +1,6 @@
 // public/auth.js
-// Login por contraseña + Google OAuth
+// Login por contraseña + Google OAuth (sin archivos extra)
+
 (function () {
   "use strict";
 
@@ -10,7 +11,7 @@
   function setError(msg) {
     const el = $("login-error");
     if (!el) return alert(msg);
-    el.textContent = msg;
+    el.textContent = msg || "";
     el.classList.toggle("hidden", !msg);
   }
 
@@ -32,7 +33,7 @@
 
   function ensureSb() {
     if (!window.sb) {
-      console.error("[auth] window.sb no existe. Revisa que cargues supabase-js + config.js + supabaseClient.js.");
+      console.error("[auth] window.sb no existe. Debes crear el cliente Supabase en login.html (inline).");
       setError("Error interno: cliente de autenticación no cargó.");
       return false;
     }
@@ -42,22 +43,19 @@
   function getNextParam() {
     const params = new URLSearchParams(window.location.search);
     const next = params.get("next") || "";
-    // evita open-redirect
     if (!next.startsWith("/")) return "";
     if (next.startsWith("//")) return "";
     return next;
   }
 
   function getTurnstileToken() {
-    // Turnstile mete un input hidden llamado "cf-turnstile-response"
     const el = document.querySelector('input[name="cf-turnstile-response"]');
     return String(el?.value || "").trim();
   }
 
   async function verifyAntiBotIfPresent() {
-    // Si tienes Turnstile en la página, verificamos antes de auth (opcional pero recomendado)
     const token = getTurnstileToken();
-    if (!token) return { ok: true }; // si no hay token, no bloqueamos
+    if (!token) return { ok: true };
 
     try {
       const res = await fetch("/api/antibot/verify", {
@@ -78,6 +76,64 @@
     }
   }
 
+  async function handleOAuthReturnIfAny() {
+    // Si Supabase vuelve con ?code=..., detectSessionInUrl ya lo procesa,
+    // pero hacemos esto para asegurar redirección automática.
+    if (!ensureSb()) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const hasCode = params.has("code");
+    const hasError = params.has("error") || params.has("error_description");
+
+    if (hasError) {
+      const desc = params.get("error_description") || params.get("error") || "Error en Google";
+      setError(decodeURIComponent(desc));
+      return;
+    }
+
+    // Si volvimos de Google, espera sesión y redirige
+    if (hasCode) {
+      showLoader("Procesando inicio de sesión…");
+
+      // supabase-js suele intercambiar el code automáticamente,
+      // pero por estabilidad intentamos obtener sesión y, si no, intercambiamos.
+      try {
+        let { data } = await window.sb.auth.getSession();
+        let session = data?.session;
+
+        if (!session) {
+          const code = params.get("code");
+          if (code) {
+            const ex = await window.sb.auth.exchangeCodeForSession(code);
+            if (ex?.data?.session) session = ex.data.session;
+          }
+        }
+
+        if (session) {
+          const next = getNextParam();
+          window.location.replace(next || "/account");
+          return;
+        }
+
+        setError("No se pudo completar el inicio de sesión con Google.");
+      } catch (e) {
+        console.error("[oauth return] error:", e);
+        setError("Error procesando el inicio de sesión con Google.");
+      } finally {
+        hideLoader();
+      }
+    } else {
+      // Si ya hay sesión (usuario vuelve a /login estando logueado), reenvía
+      try {
+        const { data } = await window.sb.auth.getSession();
+        if (data?.session) {
+          const next = getNextParam();
+          window.location.replace(next || "/account");
+        }
+      } catch {}
+    }
+  }
+
   async function onSubmitLogin(e) {
     e.preventDefault();
     setError("");
@@ -95,7 +151,6 @@
 
     showLoader("Iniciando sesión…");
 
-    // (opcional) captcha
     const anti = await verifyAntiBotIfPresent();
     if (!anti.ok) {
       hideLoader();
@@ -104,15 +159,10 @@
     }
 
     try {
-      const { data, error } = await window.sb.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
 
       if (error || !data?.session) {
         const msg = String(error?.message || "No se pudo iniciar sesión");
-
-        // mensaje más útil
         if (msg.toLowerCase().includes("invalid login credentials")) {
           setError("Credenciales inválidas. Verifica correo/contraseña.");
         } else {
@@ -133,15 +183,12 @@
 
   async function onGoogleClick() {
     setError("");
-
     if (!ensureSb()) return;
 
     showLoader("Redirigiendo a Google…");
 
-    // mandamos next también al callback para volver donde quieres
     const next = getNextParam();
-    const redirectTo =
-      window.location.origin + "/auth/callback" + (next ? `?next=${encodeURIComponent(next)}` : "");
+    const redirectTo = window.location.origin + "/login" + (next ? `?next=${encodeURIComponent(next)}` : "");
 
     try {
       const { error } = await window.sb.auth.signInWithOAuth({
@@ -154,7 +201,6 @@
         setError(error.message || "No se pudo iniciar con Google.");
         hideLoader();
       }
-      // si no hay error, Supabase redirige (no hacemos nada más)
     } catch (err) {
       console.error("[google] error:", err);
       setError("Error inesperado con Google.");
@@ -162,15 +208,15 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
     const form = $("login-form");
     const googleBtn = $("google-login");
 
-    if (!form) console.warn("[auth] No existe #login-form");
-    if (!googleBtn) console.warn("[auth] No existe #google-login");
-
     form?.addEventListener("submit", onSubmitLogin);
     googleBtn?.addEventListener("click", onGoogleClick);
+
+    // ✅ importante: procesa retorno de Google y/o sesión existente
+    await handleOAuthReturnIfAny();
 
     console.log("[auth] listeners listos");
   });
