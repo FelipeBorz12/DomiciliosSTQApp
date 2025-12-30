@@ -2,6 +2,15 @@
 (function () {
   "use strict";
 
+  // =========================
+  // Config
+  // =========================
+  const CART_KEYS = ["tqCart", "cart", "burgerCart", "tq_cart", "tq-cart"];
+  const CART_PATH = window.TQ_CART_PATH || "/cart"; // cambia a "/cart.html" si lo usas así
+
+  // =========================
+  // Utils
+  // =========================
   function clearSupabaseStorageEverywhere() {
     try {
       for (let i = localStorage.length - 1; i >= 0; i--) {
@@ -46,7 +55,7 @@
     window.location.href = next ? `${loginPath}?next=${next}` : loginPath;
   }
 
-  // ✅ IMPORTANTE: si tu archivo es /account.html, apunta allí
+  // ✅ si tu archivo es account.html, esto evita rutas raras
   function goAccount() {
     window.location.href = "/account.html";
   }
@@ -165,7 +174,221 @@
     }
   }
 
-  // ✅ FORMULARIO: trae la fila por correo
+  // =========================
+  // Carrito (global)
+  // =========================
+  function tryParseJSON(v) {
+    try {
+      return JSON.parse(v);
+    } catch {
+      return null;
+    }
+  }
+
+  function normalizeCartItems(raw) {
+    if (!raw) return [];
+
+    // Caso 1: ya es array
+    if (Array.isArray(raw)) return raw;
+
+    // Caso 2: objeto con items
+    if (typeof raw === "object") {
+      if (Array.isArray(raw.items)) return raw.items;
+      if (Array.isArray(raw.cart)) return raw.cart;
+      if (Array.isArray(raw.productos)) return raw.productos;
+      if (Array.isArray(raw.products)) return raw.products;
+    }
+
+    return [];
+  }
+
+  function getCartState() {
+    for (const key of CART_KEYS) {
+      const v = localStorage.getItem(key);
+      if (!v) continue;
+      const parsed = tryParseJSON(v);
+      const items = normalizeCartItems(parsed);
+      if (items && Array.isArray(items)) {
+        return { key, raw: parsed, items };
+      }
+    }
+    return { key: null, raw: null, items: [] };
+  }
+
+  function getCartCount() {
+    const { items } = getCartState();
+    if (!items?.length) return 0;
+
+    let total = 0;
+    for (const it of items) {
+      const q =
+        Number(it?.qty ?? it?.cantidad ?? it?.quantity ?? it?.count ?? 1) || 1;
+      total += q;
+    }
+    return total;
+  }
+
+  function setText(el, txt) {
+    if (!el) return;
+    el.textContent = String(txt);
+  }
+
+  function updateCartBadges() {
+    const count = getCartCount();
+
+    // IDs típicos en tus páginas
+    const cartCount = document.getElementById("cart-count");
+    const cartBadge = document.getElementById("cart-count-badge");
+
+    setText(cartCount, count);
+    setText(cartBadge, count);
+
+    // Mostrar/ocultar badge “puntico”
+    // (en tu index el contenedor tiene class="cart-count ...", lo dejamos visible solo si hay items)
+    const badgeWraps = document.querySelectorAll(".cart-count");
+    badgeWraps.forEach((w) => {
+      if (!w) return;
+      w.classList.toggle("hidden", count <= 0);
+    });
+
+    // si hay spans badges alternativos, también
+    if (cartBadge && cartBadge.parentElement) {
+      cartBadge.parentElement.classList.toggle("hidden", count <= 0);
+    }
+  }
+
+  function ensureEmptyCartModal() {
+    // Si la página ya lo tiene (index), lo usamos
+    let modal = document.getElementById("empty-cart-modal");
+    if (modal) return modal;
+
+    // Si no existe, lo creamos con el mismo estilo
+    modal = document.createElement("div");
+    modal.id = "empty-cart-modal";
+    modal.className = "modal hidden";
+
+    modal.innerHTML = `
+      <div class="modal-backdrop fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div class="modal-content fixed inset-0 flex items-center justify-center p-4">
+        <div class="relative max-w-sm w-full bg-[#120a0a] rounded-2xl p-5 shadow-2xl border border-white/10 flex flex-col gap-3">
+          <button
+            id="empty-cart-close"
+            class="absolute top-3 right-3 text-gray-300 hover:text-[#e02424] transition-colors text-sm"
+            aria-label="Cerrar"
+            type="button"
+          >✕</button>
+
+          <h2 class="text-lg font-black text-white">Tu carrito está vacío</h2>
+          <p class="text-sm text-white/70">
+            Aún no has agregado nada. Explora el menú y arma tu pedido 🍔🍟
+          </p>
+
+          <button
+            id="empty-cart-go"
+            class="mt-2 inline-flex items-center justify-center px-4 py-3 rounded-full bg-[#e02424] hover:bg-red-700 text-white text-sm font-extrabold tracking-wide transition"
+            type="button"
+          >Ir al menú</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const backdrop = modal.querySelector(".modal-backdrop");
+    const closeBtn = modal.querySelector("#empty-cart-close");
+    const goBtn = modal.querySelector("#empty-cart-go");
+
+    function closeEmptyCartModal() {
+      modal.classList.add("hidden");
+      modal.classList.remove("open");
+    }
+
+    closeBtn?.addEventListener("click", closeEmptyCartModal);
+    backdrop?.addEventListener("click", closeEmptyCartModal);
+
+    goBtn?.addEventListener("click", () => {
+      closeEmptyCartModal();
+      // ir a home y posicionar en menú
+      window.location.href = "/#products-section";
+    });
+
+    return modal;
+  }
+
+  function openEmptyCartModal() {
+    const modal = ensureEmptyCartModal();
+    if (!modal) return;
+
+    modal.classList.remove("hidden");
+    modal.classList.add("open");
+  }
+
+  function goCartOrEmpty() {
+    const count = getCartCount();
+    if (count > 0) {
+      window.location.href = CART_PATH;
+    } else {
+      openEmptyCartModal();
+    }
+  }
+
+  function bindCartButtons() {
+    const ids = ["cart-icon", "cart-btn", "cart-button"];
+
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.dataset.tqCartBound === "1") return;
+      el.dataset.tqCartBound = "1";
+
+      el.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          goCartOrEmpty();
+        },
+        { capture: true }
+      );
+    });
+  }
+
+  function patchLocalStorageForCartUpdates() {
+    if (window.__tqCartPatched) return;
+    window.__tqCartPatched = true;
+
+    try {
+      const _setItem = localStorage.setItem.bind(localStorage);
+      const _removeItem = localStorage.removeItem.bind(localStorage);
+
+      localStorage.setItem = (k, v) => {
+        _setItem(k, v);
+        if (CART_KEYS.includes(k)) {
+          updateCartBadges();
+          window.dispatchEvent(new CustomEvent("tq:cart:updated"));
+        }
+      };
+
+      localStorage.removeItem = (k) => {
+        _removeItem(k);
+        if (CART_KEYS.includes(k)) {
+          updateCartBadges();
+          window.dispatchEvent(new CustomEvent("tq:cart:updated"));
+        }
+      };
+    } catch {}
+  }
+
+  // sync cross-tab
+  window.addEventListener("storage", (e) => {
+    if (!e?.key) return;
+    if (CART_KEYS.includes(e.key)) updateCartBadges();
+  });
+
+  // =========================
+  // Formulario + Cobertura + Pedidos (lo que ya tenías)
+  // =========================
   async function fetchFormularioByCorreo(correo) {
     if (!correo) return null;
 
@@ -184,12 +407,10 @@
     return data?.[0] || null;
   }
 
-  // ✅ FORMULARIO: guarda (si existe actualiza, si no inserta)
   async function saveFormulario(payload) {
     await ensureSupabaseLoaded();
     const sb = getSupabase();
     if (!sb) throw new Error("Supabase no inicializado");
-
     if (!payload?.correo) throw new Error("Falta correo");
 
     const existing = await fetchFormularioByCorreo(payload.correo);
@@ -214,9 +435,6 @@
     }
   }
 
-  // =========================
-  // Cobertura: Departamentos/Municipios/Barrios
-  // =========================
   async function fetchDepartamentos() {
     await ensureSupabaseLoaded();
     const sb = getSupabase();
@@ -247,7 +465,6 @@
     return (data || []).map((r) => r?.Nombre).filter(Boolean);
   }
 
-  // ⚠️ No hay tabla de barrios: se sugiere con lo que ya existe en formulario
   async function fetchBarriosByDeptMun(departamento, municipio) {
     await ensureSupabaseLoaded();
     const sb = getSupabase();
@@ -270,9 +487,6 @@
     return Array.from(new Set(barrios)).sort((a, b) => a.localeCompare(b, "es"));
   }
 
-  // =========================
-  // Pedidos: últimos N por celular
-  // =========================
   function normalizePhone(v) {
     return String(v || "").replace(/\D/g, "");
   }
@@ -346,11 +560,13 @@
     if (logoutItem) logoutItem.classList.toggle("hidden", !logged);
   }
 
+  // =========================
   // Exponer API
+  // =========================
   window.tqSession = {
     // core
     getSupabase,
-    client: getSupabase(), // alias útil
+    client: getSupabase(),
     getSession,
     isLoggedIn,
     fetchMe,
@@ -361,6 +577,13 @@
 
     // utils
     formatMoney,
+
+    // cart
+    CART_PATH,
+    getCartCount,
+    updateCartBadges,
+    goCartOrEmpty,
+    openEmptyCartModal,
 
     // formulario
     fetchFormularioByCorreo,
@@ -375,8 +598,21 @@
     fetchLastPedidosByCelular,
   };
 
+  // =========================
+  // Boot
+  // =========================
   document.addEventListener("DOMContentLoaded", () => {
     bindAccountButtons();
+    bindCartButtons();
+    patchLocalStorageForCartUpdates();
+
+    // contador apenas carga
+    updateCartBadges();
+
+    // y menú móvil
     syncMobileMenu();
   });
+
+  // si alguna página dispara esto manualmente
+  window.addEventListener("tq:cart:updated", updateCartBadges);
 })();
