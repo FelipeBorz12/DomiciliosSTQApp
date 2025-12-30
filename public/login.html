@@ -9,7 +9,7 @@
       // ✅ Reemplaza con tu proyecto
       window.SUPABASE_URL = "https://zvuzrpvsnkhnlfqtscrl.supabase.co";
       window.SUPABASE_ANON_KEY =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsImJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
     </script>
 
     <!-- ✅ Forzar SIEMPRE el tema oscuro -->
@@ -252,12 +252,14 @@
       </div>
     </footer>
 
-    <!-- ✅ Supabase JS (CDN) -->
+    <!-- ✅ Supabase JS (CDN) SOLO UNA VEZ -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- ✅ SIN ARCHIVOS NUEVOS: creamos window.sb aquí mismo -->
     <script>
       (function () {
+        if (window.sb) return;
+
         if (!window.supabase || !window.supabase.createClient) {
           console.error("[login] supabase-js no cargó desde CDN");
           return;
@@ -266,6 +268,7 @@
           console.error("[login] faltan SUPABASE_URL / SUPABASE_ANON_KEY");
           return;
         }
+
         window.sb = window.supabase.createClient(
           window.SUPABASE_URL,
           window.SUPABASE_ANON_KEY,
@@ -274,6 +277,7 @@
               persistSession: true,
               autoRefreshToken: true,
               detectSessionInUrl: true,
+              flowType: "pkce",
             },
           }
         );

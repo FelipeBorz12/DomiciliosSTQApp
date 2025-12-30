@@ -31,19 +31,13 @@
 
   function ensureSb() {
     if (!window.sb) {
-      console.error("[auth] window.sb no existe. Debes crear el cliente Supabase en login.html (inline).");
+      console.error(
+        "[auth] window.sb no existe. Debes crear el cliente Supabase en login.html (inline)."
+      );
       setError("Error interno: cliente de autenticación no cargó.");
       return false;
     }
     return true;
-  }
-
-  function getNextParam() {
-    const params = new URLSearchParams(window.location.search);
-    const next = params.get("next") || "";
-    if (!next.startsWith("/")) return "";
-    if (next.startsWith("//")) return "";
-    return next;
   }
 
   function getTurnstileToken() {
@@ -74,38 +68,41 @@
     }
   }
 
+  // ✅ Aquí SOLO nos importa: si hay sesión -> index.html
   async function handleOAuthReturnIfAny() {
     if (!ensureSb()) return;
 
     const params = new URLSearchParams(window.location.search);
-    const hasCode = params.has("code");
     const hasError = params.has("error") || params.has("error_description");
+    const hasCode = params.has("code");
 
     if (hasError) {
-      const desc = params.get("error_description") || params.get("error") || "Error en Google";
+      const desc =
+        params.get("error_description") || params.get("error") || "Error en Google";
       setError(decodeURIComponent(desc));
       return;
     }
 
+    // Si supabase ya procesó la URL, con getSession basta.
     if (hasCode) {
       showLoader("Procesando inicio de sesión…");
-
       try {
-        let { data } = await window.sb.auth.getSession();
-        let session = data?.session;
+        const { data, error } = await window.sb.auth.getSession();
+        if (error) console.warn("[oauth return] getSession error:", error);
 
-        if (!session) {
-          const code = params.get("code");
-          if (code) {
-            const ex = await window.sb.auth.exchangeCodeForSession(code);
-            if (ex?.data?.session) session = ex.data.session;
-          }
+        if (data?.session?.access_token) {
+          window.location.replace("/index.html");
+          return;
         }
 
-        if (session) {
-          const next = getNextParam();
-          window.location.replace(next || "/account");
-          return;
+        // fallback: intenta exchange explícito
+        const code = params.get("code");
+        if (code) {
+          const ex = await window.sb.auth.exchangeCodeForSession(code);
+          if (ex?.data?.session?.access_token) {
+            window.location.replace("/index.html");
+            return;
+          }
         }
 
         setError("No se pudo completar el inicio de sesión con Google.");
@@ -115,24 +112,38 @@
       } finally {
         hideLoader();
       }
-    } else {
-      try {
-        const { data } = await window.sb.auth.getSession();
-        if (data?.session) {
-          const next = getNextParam();
-          window.location.replace(next || "/account");
-        }
-      } catch {}
+      return;
     }
+
+    // Si entras manualmente a /login y ya hay sesión: manda a index
+    try {
+      const { data } = await window.sb.auth.getSession();
+      if (data?.session?.access_token) {
+        window.location.replace("/index.html");
+      }
+    } catch {}
   }
 
   function readEmailPasswordFromForm(form) {
+    // 1) por name (form.elements)
+    const emailElByElements =
+      (form?.elements && (form.elements["correo"] || form.elements["email"])) || null;
+    const passElByElements =
+      (form?.elements &&
+        (form.elements["contrasena"] ||
+          form.elements["password"] ||
+          form.elements["contraseña"])) ||
+      null;
+
+    // 2) por querySelector
     const emailEl =
+      emailElByElements ||
       form?.querySelector('input[name="correo"]') ||
       form?.querySelector('input[name="email"]') ||
       form?.querySelector('input[type="email"]');
 
     const passEl =
+      passElByElements ||
       form?.querySelector('input[name="contrasena"]') ||
       form?.querySelector('input[name="password"]') ||
       form?.querySelector('input[type="password"]');
@@ -167,22 +178,27 @@
     }
 
     try {
-      const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+      const { data, error } = await window.sb.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       if (error || !data?.session) {
         const msg = String(error?.message || "No se pudo iniciar sesión");
         console.error("[login password] error:", error);
 
         if (msg.toLowerCase().includes("invalid login credentials")) {
-          setError("Credenciales inválidas. Verifica correo/contraseña.");
+          setError(
+            "Credenciales inválidas. Si tu cuenta fue creada con Google, no tiene contraseña. Usa Google o crea contraseña en 'Olvidaste tu contraseña'."
+          );
         } else {
           setError(msg);
         }
         return;
       }
 
-      const next = getNextParam();
-      window.location.href = next || "/account";
+      // ✅ SIEMPRE index.html
+      window.location.href = "/index.html";
     } catch (err) {
       console.error("[login] error:", err);
       setError("Error inesperado iniciando sesión.");
@@ -197,9 +213,8 @@
 
     showLoader("Redirigiendo a Google…");
 
-    const next = getNextParam();
-    const redirectTo =
-      window.location.origin + "/login" + (next ? `?next=${encodeURIComponent(next)}` : "");
+    // ✅ Vuelve a /login (esta misma página), luego handleOAuthReturnIfAny manda a index.
+    const redirectTo = window.location.origin + "/login";
 
     try {
       const { error } = await window.sb.auth.signInWithOAuth({
@@ -222,6 +237,9 @@
   document.addEventListener("DOMContentLoaded", async () => {
     const form = $("login-form");
     const googleBtn = $("google-login");
+
+    if (!form) console.warn("[auth] No existe #login-form");
+    if (!googleBtn) console.warn("[auth] No existe #google-login");
 
     form?.addEventListener("submit", onSubmitLogin);
     googleBtn?.addEventListener("click", onGoogleClick);
