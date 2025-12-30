@@ -69,14 +69,14 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function normalizePhoneCO(raw: any) {
-  // Devuelve formato "+57XXXXXXXXXX" o "" si no se puede
-  const digits = String(raw || "").replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.length === 10) return `+57${digits}`;
-  if (digits.length === 12 && digits.startsWith("57")) return `+${digits}`;
-  if (digits.length > 10) return `+57${digits.slice(-10)}`;
-  return "";
+function toNumber(v: any, def = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : def;
+}
+
+function toInt(v: any, def = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : def;
 }
 
 async function requireAuthSupabase(
@@ -135,12 +135,9 @@ app.get("/confirm", (_req, res) =>
 app.get("/stores", (_req, res) =>
   res.sendFile(path.join(publicPath, "store.html"))
 );
-
-// ✅ Historial (usar ESTE, sin rutas nuevas)
 app.get("/history", (_req, res) =>
   res.sendFile(path.join(publicPath, "history.html"))
 );
-
 app.get("/account", (_req, res) =>
   res.sendFile(path.join(publicPath, "account.html"))
 );
@@ -308,8 +305,7 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
         .status(400)
         .json({ message: "Nombre, correo y contraseña son obligatorios" });
     }
-    if (!isValidEmail(correo))
-      return res.status(400).json({ message: "Correo inválido" });
+    if (!isValidEmail(correo)) return res.status(400).json({ message: "Correo inválido" });
     if (contrasena.length < 8) {
       return res
         .status(400)
@@ -387,7 +383,7 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
   }
 });
 
-// ❌ Login manual por API ya NO se usa
+// ❌ Login manual por API ya NO se usa (frontend usa sb.auth.signInWithPassword)
 app.post("/api/auth/login", authLimiter, (_req: Request, res: Response) => {
   return res
     .status(410)
@@ -402,6 +398,7 @@ app.get("/api/auth/me", requireAuthSupabase, async (req: Request, res: Response)
     if (!correo || !isValidEmail(correo))
       return res.status(400).json({ message: "Email inválido" });
 
+    // Asegura fila en usuarios
     await supabaseAdmin
       .from("usuarios")
       .upsert([{ correo, Rol: "0", auth_user_id: user.id }], { onConflict: "correo" });
@@ -498,37 +495,28 @@ app.get("/api/puntos-venta", async (_req: Request, res: Response) => {
 
 // ===================== API: PEDIDOS =====================
 
-// ✅ Listado (por correo como lo tenías, y opcional por celular)
+// ✅ Lista pedidos por correo (nombre_cliente)
 app.get("/api/pedidos", async (req: Request, res: Response) => {
   try {
     const correo = normalizeEmail(req.query.correo as string);
-    const celular = String(req.query.celular || "").trim();
 
-    if (!correo && !celular) {
-      return res.status(400).json({
-        message: 'Debes enviar "correo" o "celular" como query param',
-      });
+    if (!correo) {
+      return res
+        .status(400)
+        .json({ message: 'El parámetro "correo" es obligatorio' });
     }
 
-    let query = supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("pedidos")
       .select("*")
+      .eq("nombre_cliente", correo)
       .order("id", { ascending: false });
-
-    if (correo) {
-      // Compatibilidad: tu tabla guarda el correo en nombre_cliente
-      query = query.eq("nombre_cliente", correo);
-    } else {
-      const phone = normalizePhoneCO(celular);
-      if (!phone) return res.status(400).json({ message: "Celular inválido" });
-      query = query.eq("celular_cliente", phone);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       console.error("[GET /api/pedidos] error supabase:", error);
-      return res.status(500).json({ message: "Error al obtener pedidos", detail: error.message });
+      return res
+        .status(500)
+        .json({ message: "Error al obtener pedidos", detail: error.message });
     }
 
     return res.json(data || []);
@@ -538,101 +526,210 @@ app.get("/api/pedidos", async (req: Request, res: Response) => {
   }
 });
 
-// ✅ Crear pedido REAL
-app.post("/api/pedidos", verifyTurnstile, async (req: Request, res: Response) => {
+// ✅ Crear pedido (cabecera en pedidos + detalle en pedido_items)
+app.post("/api/pedidos", async (req: Request, res: Response) => {
   try {
-    const correo = normalizeEmail(
-      req.body?.nombre_cliente || req.body?.correo || req.body?.correo_cliente
-    );
-    if (!correo || !isValidEmail(correo)) {
-      return res.status(400).json({ message: "Correo inválido en nombre_cliente" });
-    }
-
+    const nombre_cliente = normalizeEmail(req.body?.nombre_cliente);
     const direccion_cliente = String(req.body?.direccion_cliente || "").trim();
-    const celular_cliente = normalizePhoneCO(req.body?.celular_cliente);
+    const celular_cliente = String(req.body?.celular_cliente || "").trim();
     const metodo_pago = String(req.body?.metodo_pago || "").trim();
+    const pv_id = toInt(req.body?.pv_id, 0);
 
-    const pv_id = Number(req.body?.pv_id);
-    const delivery_fee = Number(req.body?.delivery_fee ?? 0);
-    const subtotal = Number(req.body?.subtotal ?? 0);
-    const total = Number(req.body?.total ?? 0);
+    const delivery_fee = toNumber(req.body?.delivery_fee, 0);
+    const subtotal = toNumber(req.body?.subtotal, 0);
+    const total = toNumber(req.body?.total, 0);
 
+    const resumen_pedido = String(req.body?.resumen_pedido ?? "").toString(); // puede ser "" (no null)
     const items = Array.isArray(req.body?.items) ? req.body.items : [];
-    const resumen_pedido = String(req.body?.resumen_pedido || "").trim();
 
-    if (!direccion_cliente) return res.status(400).json({ message: "Falta direccion_cliente" });
-    if (!celular_cliente) return res.status(400).json({ message: "Celular inválido" });
-    if (!metodo_pago) return res.status(400).json({ message: "Falta metodo_pago" });
-
-    if (!Number.isFinite(pv_id) || pv_id <= 0) {
-      return res.status(400).json({ message: "pv_id inválido" });
+    if (!nombre_cliente || !isValidEmail(nombre_cliente)) {
+      return res.status(400).json({ message: "nombre_cliente inválido (email)" });
+    }
+    if (!direccion_cliente) {
+      return res.status(400).json({ message: "direccion_cliente es obligatorio" });
+    }
+    if (!celular_cliente) {
+      return res.status(400).json({ message: "celular_cliente es obligatorio" });
+    }
+    if (!metodo_pago) {
+      return res.status(400).json({ message: "metodo_pago es obligatorio" });
+    }
+    if (!pv_id || pv_id <= 0) {
+      return res.status(400).json({ message: "pv_id es obligatorio" });
+    }
+    if (!items.length) {
+      return res.status(400).json({ message: "items es obligatorio (array)" });
     }
 
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "items inválidos" });
-    }
+    // 1) Traer info del PV para puntoventa (opcional)
+    let puntoventa = "";
+    try {
+      const { data: pvRow } = await supabaseAdmin
+        .from("Coordenadas_PV")
+        .select('id, "Barrio", "Municipio", "Departamento", "Direccion"')
+        .eq("id", pv_id)
+        .maybeSingle();
 
-    const row = {
-      nombre_cliente: correo, // ✅ aquí guardas correo (como tu GET actual)
-      direccion_cliente,
-      celular_cliente, // "+57XXXXXXXXXX"
-      metodo_pago,
-      pv_id,
-      delivery_fee: Number.isFinite(delivery_fee) ? delivery_fee : 0,
-      subtotal: Number.isFinite(subtotal) ? subtotal : 0,
-      total: Number.isFinite(total) ? total : 0,
-      items, // jsonb
-      resumen_pedido: resumen_pedido || "",
-    };
+      if (pvRow) {
+        const barrio = String((pvRow as any).Barrio || "").trim();
+        const mpio = String((pvRow as any).Municipio || "").trim();
+        puntoventa = [barrio, mpio].filter(Boolean).join(" - ");
+      }
+    } catch {}
 
-    const { data, error } = await supabaseAdmin
+    // 2) Insertar CABECERA en pedidos (OJO: NO existe columna items aquí)
+    const { data: pedidoInserted, error: pedidoErr } = await supabaseAdmin
       .from("pedidos")
-      .insert([row])
-      .select("*")
+      .insert([
+        {
+          nombre_cliente,
+          resumen_pedido, // "" permitido, no null
+          direccion_cliente,
+          celular_cliente,
+          metodo_pago,
+          pv_id,
+          subtotal,
+          total,
+          delivery_fee,
+          puntoventa: puntoventa || "",
+        },
+      ])
+      .select("id")
       .maybeSingle();
 
-    if (error) {
-      console.error("[POST /api/pedidos] error supabase:", error);
-      return res.status(500).json({ message: "Error creando pedido", detail: error.message });
+    if (pedidoErr || !pedidoInserted?.id) {
+      console.error("[POST /api/pedidos] insert pedidos error:", pedidoErr);
+      return res.status(500).json({
+        message: "Error creando pedido",
+        detail: pedidoErr?.message || "No se pudo insertar en pedidos",
+      });
     }
 
-    return res.status(201).json(data);
+    const pedidoId = Number(pedidoInserted.id);
+
+    // 3) Obtener menu para snapshots y precios
+    const menuIds: number[] = items
+      .map((it: any) => toInt(it?.menu_id, 0))
+      .filter((x: number) => x > 0);
+
+    const uniqueMenuIds = Array.from(new Set(menuIds));
+    const { data: menuRows, error: menuErr } = await supabaseAdmin
+      .from("menu")
+      .select('id, "Nombre", "PrecioOriente", "PrecioRestoPais", "PrecioAreaMetrop"')
+      .in("id", uniqueMenuIds);
+
+    if (menuErr) {
+      console.error("[POST /api/pedidos] fetch menu error:", menuErr);
+      // rollback: borrar pedido
+      await supabaseAdmin.from("pedidos").delete().eq("id", pedidoId);
+      return res.status(500).json({
+        message: "Error creando pedido (menu)",
+        detail: menuErr.message,
+      });
+    }
+
+    const menuMap = new Map<number, any>();
+    (menuRows || []).forEach((m: any) => menuMap.set(Number(m.id), m));
+
+    // 4) Construir filas de pedido_items
+    // Regla usada aquí: unit_price = PrecioOriente (como tu frontend)
+    const PRICE_SOURCE = "PrecioOriente";
+
+    const itemRows = items.map((it: any) => {
+      const menu_id = toInt(it?.menu_id, 0);
+      const qty = Math.max(1, toInt(it?.qty, 1));
+
+      const menu = menuMap.get(menu_id);
+      const nombre_snapshot = String(menu?.Nombre || "Producto").trim();
+
+      const unit_price = toNumber(menu?.PrecioOriente, 0);
+
+      const extrasArr = Array.isArray(it?.extras) ? it.extras : [];
+      const modificationsArr = Array.isArray(it?.modifications) ? it.modifications : [];
+
+      const extrasTotalUnit = extrasArr.reduce((acc: number, ex: any) => {
+        const p = toNumber(ex?.precio, 0);
+        return acc + (p > 0 ? p : 0);
+      }, 0);
+
+      const line_total = (unit_price + extrasTotalUnit) * qty;
+
+      return {
+        pedido_id: pedidoId,
+        menu_id,
+        nombre_snapshot,
+        qty,
+        unit_price,
+        line_total,
+        price_source: PRICE_SOURCE,
+        extras: extrasArr,
+        modifications: modificationsArr,
+        pv_id, // tu tabla pedido_items tiene pv_id numeric NOT NULL
+      };
+    });
+
+    // Validar que todos tienen menu_id válido
+    for (const r of itemRows) {
+      if (!r.menu_id || Number.isNaN(r.menu_id)) {
+        await supabaseAdmin.from("pedidos").delete().eq("id", pedidoId);
+        return res.status(400).json({
+          message: "items contiene productos inválidos (menu_id)",
+        });
+      }
+    }
+
+    // 5) Insertar detalle en pedido_items
+    const { error: itemsErr } = await supabaseAdmin
+      .from("pedido_items")
+      .insert(itemRows);
+
+    if (itemsErr) {
+      console.error("[POST /api/pedidos] insert pedido_items error:", itemsErr);
+      // rollback: borrar pedido (cascade borra items si alcanzaron a insertarse)
+      await supabaseAdmin.from("pedidos").delete().eq("id", pedidoId);
+      return res.status(500).json({
+        message: "Error guardando items del pedido",
+        detail: itemsErr.message,
+      });
+    }
+
+    return res.status(201).json({ id: pedidoId });
   } catch (err) {
     console.error("[POST /api/pedidos] error inesperado:", err);
     return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
 
-// ✅ Actualizar resumen / metodo_pago
+// ✅ Actualizar resumen (mensaje compuesto) y/o método de pago
 app.patch("/api/pedidos/:id", async (req: Request, res: Response) => {
   try {
-    const id = Number(req.params.id);
-    if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ message: "ID inválido" });
+    const id = toInt(req.params.id, 0);
+    if (!id || id <= 0) return res.status(400).json({ message: "ID inválido" });
 
-    const resumen_pedido = String(req.body?.resumen_pedido || "").trim();
-    const metodo_pago = String(req.body?.metodo_pago || "").trim();
+    const resumen_pedido =
+      typeof req.body?.resumen_pedido === "string"
+        ? req.body.resumen_pedido
+        : undefined;
 
-    if (!resumen_pedido && !metodo_pago) {
+    const metodo_pago =
+      typeof req.body?.metodo_pago === "string" ? req.body.metodo_pago : undefined;
+
+    const patch: any = {};
+    if (typeof resumen_pedido !== "undefined") patch.resumen_pedido = resumen_pedido;
+    if (typeof metodo_pago !== "undefined") patch.metodo_pago = metodo_pago;
+
+    if (Object.keys(patch).length === 0) {
       return res.status(400).json({ message: "Nada para actualizar" });
     }
 
-    const patch: any = {};
-    if (resumen_pedido) patch.resumen_pedido = resumen_pedido;
-    if (metodo_pago) patch.metodo_pago = metodo_pago;
-
-    const { data, error } = await supabaseAdmin
-      .from("pedidos")
-      .update(patch)
-      .eq("id", id)
-      .select("*")
-      .maybeSingle();
+    const { error } = await supabaseAdmin.from("pedidos").update(patch).eq("id", id);
 
     if (error) {
-      console.error("[PATCH /api/pedidos/:id] error supabase:", error);
-      return res.status(500).json({ message: "Error actualizando pedido", detail: error.message });
+      console.error("[PATCH /api/pedidos/:id] error:", error);
+      return res.status(500).json({ message: "No se pudo actualizar pedido", detail: error.message });
     }
 
-    return res.json(data || { ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     console.error("[PATCH /api/pedidos/:id] error inesperado:", err);
     return res.status(500).json({ message: "Error inesperado" });
