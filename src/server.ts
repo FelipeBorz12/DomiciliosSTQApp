@@ -69,7 +69,16 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-async function requireAuthSupabase(req: Request, res: Response, next: NextFunction) {
+function normalizePhone(input: any) {
+  const digits = String(input || "").replace(/\D/g, "");
+  return digits;
+}
+
+async function requireAuthSupabase(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
     const auth = req.header("authorization") || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
@@ -78,7 +87,8 @@ async function requireAuthSupabase(req: Request, res: Response, next: NextFuncti
 
     // ✅ Validación con supabaseAnon (no admin)
     const { data, error } = await supabaseAnon.auth.getUser(token);
-    if (error || !data?.user) return res.status(401).json({ message: "Token inválido" });
+    if (error || !data?.user)
+      return res.status(401).json({ message: "Token inválido" });
 
     (req as any).authUser = data.user;
     next();
@@ -97,23 +107,64 @@ const authLimiter = rateLimit({
   message: { message: "Demasiados intentos. Intenta más tarde." },
 });
 
+// Rate limit pedidos (anti spam)
+const pedidosLimiter = rateLimit({
+  windowMs: 2 * 60 * 1000,
+  limit: 12,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { message: "Demasiados pedidos seguidos. Intenta en un momento." },
+});
+
 // ===================== PAGES =====================
 app.get("/", (_req, res) => res.sendFile(path.join(publicPath, "index.html")));
-app.get("/login", (_req, res) => res.sendFile(path.join(publicPath, "login.html")));
-app.get("/register", (_req, res) => res.sendFile(path.join(publicPath, "register.html")));
-app.get("/recover", (_req, res) => res.sendFile(path.join(publicPath, "recover.html")));
-app.get("/product", (_req, res) => res.sendFile(path.join(publicPath, "product.html")));
-app.get("/cart", (_req, res) => res.sendFile(path.join(publicPath, "cart.html")));
-app.get("/confirm", (_req, res) => res.sendFile(path.join(publicPath, "confirm.html")));
-app.get("/stores", (_req, res) => res.sendFile(path.join(publicPath, "store.html")));
-app.get("/history", (_req, res) => res.sendFile(path.join(publicPath, "history.html")));
-app.get("/account", (_req, res) => res.sendFile(path.join(publicPath, "account.html")));
-app.get("/auth/callback", (_req, res) => res.sendFile(path.join(publicPath, "auth-callback.html")));
+app.get("/login", (_req, res) =>
+  res.sendFile(path.join(publicPath, "login.html"))
+);
+app.get("/register", (_req, res) =>
+  res.sendFile(path.join(publicPath, "register.html"))
+);
+app.get("/recover", (_req, res) =>
+  res.sendFile(path.join(publicPath, "recover.html"))
+);
+app.get("/product", (_req, res) =>
+  res.sendFile(path.join(publicPath, "product.html"))
+);
+app.get("/cart", (_req, res) =>
+  res.sendFile(path.join(publicPath, "cart.html"))
+);
+app.get("/confirm", (_req, res) =>
+  res.sendFile(path.join(publicPath, "confirm.html"))
+);
+app.get("/stores", (_req, res) =>
+  res.sendFile(path.join(publicPath, "store.html"))
+);
+
+// ✅ Mantengo /history por compatibilidad
+app.get("/history", (_req, res) =>
+  res.sendFile(path.join(publicPath, "history.html"))
+);
+
+// ✅ NUEVO: /pedido (alias de history) para que tu link apunte aquí
+app.get("/pedido", (_req, res) =>
+  res.sendFile(path.join(publicPath, "history.html"))
+);
+
+app.get("/account", (_req, res) =>
+  res.sendFile(path.join(publicPath, "account.html"))
+);
+app.get("/auth/callback", (_req, res) =>
+  res.sendFile(path.join(publicPath, "auth-callback.html"))
+);
 
 // ===================== ANTI-BOT =====================
-app.post("/api/antibot/verify", verifyTurnstile, (_req: Request, res: Response) => {
-  return res.json({ ok: true });
-});
+app.post(
+  "/api/antibot/verify",
+  verifyTurnstile,
+  (_req: Request, res: Response) => {
+    return res.json({ ok: true });
+  }
+);
 
 // ===================== API: LANDING =====================
 app.get("/api/landing/hero", async (_req: Request, res: Response) => {
@@ -195,7 +246,8 @@ app.get("/api/menu", async (req: Request, res: Response) => {
 app.get("/api/menu/item/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    if (!id || Number.isNaN(id)) return res.status(400).json({ message: "ID inválido" });
+    if (!id || Number.isNaN(id))
+      return res.status(400).json({ message: "ID inválido" });
 
     const { data, error } = await supabaseAdmin
       .from("menu")
@@ -224,7 +276,8 @@ app.get("/api/menu/item/:id", async (req: Request, res: Response) => {
 app.get("/api/auth/exists", async (req, res) => {
   try {
     const correo = normalizeEmail(req.query?.correo);
-    if (!correo) return res.status(400).json({ exists: false, message: "Falta correo" });
+    if (!correo)
+      return res.status(400).json({ exists: false, message: "Falta correo" });
 
     const { data, error } = await supabaseAdmin
       .from("usuarios")
@@ -260,11 +313,15 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
     const Barrio = String(req.body?.Barrio || "...");
 
     if (!nombre || !correo || !contrasena) {
-      return res.status(400).json({ message: "Nombre, correo y contraseña son obligatorios" });
+      return res
+        .status(400)
+        .json({ message: "Nombre, correo y contraseña son obligatorios" });
     }
     if (!isValidEmail(correo)) return res.status(400).json({ message: "Correo inválido" });
     if (contrasena.length < 8) {
-      return res.status(400).json({ message: "La contraseña debe tener mínimo 8 caracteres" });
+      return res
+        .status(400)
+        .json({ message: "La contraseña debe tener mínimo 8 caracteres" });
     }
 
     // Si ya existe en usuarios -> conflicto
@@ -274,7 +331,8 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
       .eq("correo", correo)
       .maybeSingle();
 
-    if (already?.id) return res.status(409).json({ message: "El correo ya está registrado" });
+    if (already?.id)
+      return res.status(409).json({ message: "El correo ya está registrado" });
 
     // 1) Crear user en Supabase Auth (admin)
     const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
@@ -285,7 +343,9 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
     });
 
     if (createErr || !created?.user) {
-      return res.status(400).json({ message: createErr?.message || "Error creando usuario" });
+      return res
+        .status(400)
+        .json({ message: createErr?.message || "Error creando usuario" });
     }
 
     const authUserId = created.user.id;
@@ -322,7 +382,9 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
 
     if (fErr) {
       console.error("[register] upsert formulario:", fErr);
-      return res.status(500).json({ message: "Usuario creado, pero error al guardar datos" });
+      return res
+        .status(500)
+        .json({ message: "Usuario creado, pero error al guardar datos" });
     }
 
     return res.status(201).json({ message: "Registro exitoso" });
@@ -334,7 +396,9 @@ app.post("/api/auth/register", authLimiter, async (req: Request, res: Response) 
 
 // ❌ Login manual por API ya NO se usa (frontend usa sb.auth.signInWithPassword)
 app.post("/api/auth/login", authLimiter, (_req: Request, res: Response) => {
-  return res.status(410).json({ message: "Login se hace con Supabase Auth en el frontend." });
+  return res
+    .status(410)
+    .json({ message: "Login se hace con Supabase Auth en el frontend." });
 });
 
 // ✅ /api/auth/me: valida Bearer token y devuelve perfil/rol
@@ -342,7 +406,8 @@ app.get("/api/auth/me", requireAuthSupabase, async (req: Request, res: Response)
   try {
     const user = (req as any).authUser as any;
     const correo = normalizeEmail(user?.email || "");
-    if (!correo || !isValidEmail(correo)) return res.status(400).json({ message: "Email inválido" });
+    if (!correo || !isValidEmail(correo))
+      return res.status(400).json({ message: "Email inválido" });
 
     // Asegura fila en usuarios
     await supabaseAdmin
@@ -379,7 +444,8 @@ app.put("/api/profile", requireAuthSupabase, authLimiter, async (req: Request, r
   try {
     const user = (req as any).authUser as any;
     const correo = normalizeEmail(user?.email || "");
-    if (!correo || !isValidEmail(correo)) return res.status(400).json({ message: "Email inválido" });
+    if (!correo || !isValidEmail(correo))
+      return res.status(400).json({ message: "Email inválido" });
 
     const nombre = String(req.body?.nombre || "").trim();
     const celularRaw = String(req.body?.celular || "");
@@ -439,37 +505,151 @@ app.get("/api/puntos-venta", async (_req: Request, res: Response) => {
 });
 
 // ===================== API: PEDIDOS =====================
+// ✅ GET /api/pedidos?celular=3001234567&limit=5
+// ✅ GET /api/pedidos?correo=hola@correo.com&limit=5  (con fallback)
 app.get("/api/pedidos", async (req: Request, res: Response) => {
   try {
-    const correo = normalizeEmail(req.query.correo as string);
+    const limit = Math.max(1, Math.min(50, Number(req.query.limit || 50)));
 
-    if (!correo) {
-      return res.status(400).json({ message: 'El parámetro "correo" es obligatorio' });
+    const celular = normalizePhone(req.query.celular);
+    const correo = normalizeEmail(req.query.correo);
+
+    if (!celular && !correo) {
+      return res.status(400).json({
+        message: 'Debes enviar "celular" o "correo" como query param',
+      });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("pedidos")
-      .select("*")
-      .eq("nombre_cliente", correo)
-      .order("id", { ascending: false });
+    // helper para intentar columnas sin romper
+    const tryQuery = async (column: string, value: any) => {
+      return await supabaseAdmin
+        .from("pedidos")
+        .select("*")
+        .eq(column as any, value)
+        .order("id", { ascending: false })
+        .limit(limit);
+    };
 
-    if (error) {
-      console.error("[GET /api/pedidos] error supabase:", error);
-      return res.status(500).json({ message: "Error al obtener pedidos", detail: error.message });
+    // 1) Si viene celular => intentar celular_cliente
+    if (celular) {
+      const q1 = await tryQuery("celular_cliente", celular);
+      if (!q1.error) return res.json(q1.data || []);
+
+      // fallback por si la columna tiene otro nombre
+      console.warn("[GET /api/pedidos] celular_cliente error:", q1.error?.message);
+      const q2 = await tryQuery("celular", celular);
+      if (!q2.error) return res.json(q2.data || []);
+      console.error("[GET /api/pedidos] error supabase:", q2.error);
+      return res
+        .status(500)
+        .json({ message: "Error al obtener pedidos", detail: q2.error?.message });
     }
 
-    return res.json(data || []);
+    // 2) Si viene correo => intentar correo_cliente y si no existe, nombre_cliente (tu código viejo)
+    if (correo) {
+      if (!isValidEmail(correo)) {
+        return res.status(400).json({ message: "Correo inválido" });
+      }
+
+      const q1 = await tryQuery("correo_cliente", correo);
+      if (!q1.error) return res.json(q1.data || []);
+
+      // fallback a tu implementación previa (nombre_cliente = correo)
+      console.warn("[GET /api/pedidos] correo_cliente error:", q1.error?.message);
+      const q2 = await tryQuery("nombre_cliente", correo);
+      if (!q2.error) return res.json(q2.data || []);
+
+      console.error("[GET /api/pedidos] error supabase:", q2.error);
+      return res
+        .status(500)
+        .json({ message: "Error al obtener pedidos", detail: q2.error?.message });
+    }
+
+    return res.json([]);
   } catch (err) {
     console.error("[GET /api/pedidos] error inesperado:", err);
     return res.status(500).json({ message: "Error inesperado en el servidor" });
   }
 });
 
-app.post("/api/pedidos", async (_req: Request, res: Response) => {
-  return res.status(501).json({
-    message: "Pega aquí tu bloque de /api/pedidos tal cual y cambia supabase->supabaseAdmin",
-  });
-});
+// ✅ POST /api/pedidos (YA NO 501)
+// ✅ Protegido con Turnstile (anti-bot)
+app.post(
+  "/api/pedidos",
+  pedidosLimiter,
+  verifyTurnstile,
+  async (req: Request, res: Response) => {
+    try {
+      // Nota: verifyTurnstile debe validar el token (normalmente viene en req.body.turnstileToken o cf-turnstile-response)
+      const {
+        nombre_cliente,
+        correo_cliente,
+        celular_cliente,
+        direccion_cliente,
+        metodo_pago,
+        resumen_pedido,
+        pv_id,
+        items,
+        subtotal,
+        delivery_fee,
+        total,
+      } = req.body || {};
+
+      const celular = normalizePhone(celular_cliente);
+      const direccion = String(direccion_cliente || "").trim();
+
+      if (!celular || celular.length < 7) {
+        return res.status(400).json({ message: "celular_cliente inválido" });
+      }
+      if (!direccion) {
+        return res.status(400).json({ message: "direccion_cliente es obligatoria" });
+      }
+      if (!pv_id || !Number.isFinite(Number(pv_id))) {
+        return res.status(400).json({ message: "pv_id inválido" });
+      }
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items es obligatorio" });
+      }
+
+      const payload: any = {
+        nombre_cliente: nombre_cliente ? String(nombre_cliente).trim() : null,
+        correo_cliente: correo_cliente ? normalizeEmail(correo_cliente) : null,
+        celular_cliente: celular,
+        direccion_cliente: direccion,
+        metodo_pago: metodo_pago ? String(metodo_pago).trim() : null,
+        resumen_pedido: resumen_pedido ? String(resumen_pedido) : "",
+
+        pv_id: Number(pv_id),
+
+        subtotal: Number.isFinite(Number(subtotal)) ? Number(subtotal) : 0,
+        delivery_fee: Number.isFinite(Number(delivery_fee)) ? Number(delivery_fee) : 0,
+        total: Number.isFinite(Number(total)) ? Number(total) : 0,
+
+        // recomendado JSON/JSONB en la tabla
+        items,
+
+        estado: "pendiente",
+        created_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabaseAdmin
+        .from("pedidos")
+        .insert([payload])
+        .select("id")
+        .single();
+
+      if (error) {
+        console.error("[POST /api/pedidos] error supabase:", error);
+        return res.status(500).json({ message: "Error creando pedido", detail: error.message });
+      }
+
+      return res.status(200).json({ ok: true, id: data?.id });
+    } catch (err) {
+      console.error("[POST /api/pedidos] error inesperado:", err);
+      return res.status(500).json({ message: "Error inesperado en el servidor" });
+    }
+  }
+);
 
 // ===================== FALLBACKS =====================
 app.use("/api", (_req, res) => res.status(404).json({ message: "Ruta API no encontrada" }));
