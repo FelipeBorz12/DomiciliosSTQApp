@@ -106,7 +106,9 @@
                 <span class="material-symbols-outlined">lunch_dining</span>
               </div>
               <div class="hidden sm:block">
-                <h2 class="text-lg font-extrabold leading-none">Tierra Querida</h2>
+                <h2 class="text-lg font-extrabold leading-none">
+                  Tierra Querida
+                </h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
                   Historial de pedidos
                 </p>
@@ -146,7 +148,9 @@
               class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-4 h-10 rounded-full transition-all group"
               aria-label="Carrito"
             >
-              <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+              <span class="material-symbols-outlined text-[20px]"
+                >shopping_bag</span
+              >
               <span
                 id="cart-count-desktop"
                 class="font-extrabold text-sm hidden sm:block"
@@ -167,15 +171,23 @@
         class="sticky top-[74px] z-40 w-full bg-background-light/95 dark:bg-background-dark/95 backdrop-blur border-b border-gray-200 dark:border-[#382929]"
       >
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+          <div
+            class="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in"
+          >
             <div>
-              <h1 class="text-2xl md:text-3xl font-extrabold">Historial de Pedidos</h1>
-              <p class="text-xs text-gray-500 dark:text-gray-400 hidden md:block">
+              <h1 class="text-2xl md:text-3xl font-extrabold">
+                Historial de Pedidos
+              </h1>
+              <p
+                class="text-xs text-gray-500 dark:text-gray-400 hidden md:block"
+              >
                 Revisa el estado de tus órdenes y consulta detalles.
               </p>
             </div>
 
-            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <div
+              class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1"
+            >
               <button
                 class="filter-chip whitespace-nowrap px-4 py-2 rounded-full bg-primary text-white text-sm font-extrabold shadow-lg shadow-primary/30 hover:scale-[1.02] transition-transform"
                 data-filter="all"
@@ -240,21 +252,31 @@
         </div>
       </section>
 
-      <main class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-8 flex flex-col gap-6">
+      <main
+        class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-8 flex flex-col gap-6"
+      >
         <!-- TOP INFO + SEARCH -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
           <!-- Info -->
-          <div class="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6 flex items-start gap-4">
-            <div class="p-2 bg-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 shrink-0">
+          <div
+            class="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6 flex items-start gap-4"
+          >
+            <div
+              class="p-2 bg-blue-500/20 rounded-full text-blue-600 dark:text-blue-400 shrink-0"
+            >
               <span class="material-symbols-outlined">history_toggle_off</span>
             </div>
             <div>
-              <h3 class="font-extrabold text-blue-700 dark:text-blue-300 text-sm mb-1">
+              <h3
+                class="font-extrabold text-blue-700 dark:text-blue-300 text-sm mb-1"
+              >
                 Historial temporal
               </h3>
-              <p class="text-xs text-blue-600/80 dark:text-blue-400/80 leading-relaxed">
-                Por seguridad, los pedidos se consultan por correo.
-                Si haces pedidos como invitado, guarda tu correo para poder verlos luego.
+              <p
+                class="text-xs text-blue-600/80 dark:text-blue-400/80 leading-relaxed"
+              >
+                Por seguridad, los pedidos se consultan por correo. Si haces
+                pedidos como invitado, guarda tu correo para poder verlos luego.
               </p>
             </div>
           </div>
@@ -265,22 +287,38 @@
           >
             <!-- sesión -->
             <div id="session-info" class="hidden mb-4">
-              <div class="flex items-center gap-3 rounded-2xl bg-background-light dark:bg-background-dark border border-gray-200 dark:border-[#382929] px-4 py-3">
-                <span class="material-symbols-outlined text-emerald-400">verified_user</span>
+              <div
+                class="flex items-center gap-3 rounded-2xl bg-background-light dark:bg-background-dark border border-gray-200 dark:border-[#382929] px-4 py-3"
+              >
+                <span class="material-symbols-outlined text-emerald-400"
+                  >verified_user</span
+                >
                 <div>
                   <p class="text-sm font-extrabold">Sesión detectada</p>
-                  <p id="session-email-label" class="text-xs text-gray-500 dark:text-gray-400"></p>
+                  <p
+                    id="session-email-label"
+                    class="text-xs text-gray-500 dark:text-gray-400"
+                  ></p>
                 </div>
               </div>
             </div>
 
             <!-- buscador -->
             <div id="email-search-wrapper">
-              <form id="email-search-form" class="flex flex-col md:flex-row md:items-center gap-3">
+              <form
+                id="email-search-form"
+                class="flex flex-col md:flex-row md:items-center gap-3"
+              >
                 <div class="flex-1">
-                  <label class="block text-xs font-extrabold uppercase text-gray-500 mb-1">Buscar por correo</label>
+                  <label
+                    class="block text-xs font-extrabold uppercase text-gray-500 mb-1"
+                    >Buscar por correo</label
+                  >
                   <div class="relative">
-                    <span class="material-symbols-outlined absolute left-4 top-2.5 text-gray-400">alternate_email</span>
+                    <span
+                      class="material-symbols-outlined absolute left-4 top-2.5 text-gray-400"
+                      >alternate_email</span
+                    >
                     <input
                       id="email-input"
                       class="w-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl pl-12 pr-4 py-2.5 text-sm font-semibold transition-colors"
@@ -290,7 +328,8 @@
                     />
                   </div>
                   <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    Tip: si vienes desde WhatsApp, este correo suele venir ya cargado.
+                    Tip: si vienes desde WhatsApp, este correo suele venir ya
+                    cargado.
                   </p>
                 </div>
 
@@ -304,7 +343,10 @@
               </form>
             </div>
 
-            <p id="load-status-message" class="text-xs text-gray-500 dark:text-gray-400 mt-4 hidden"></p>
+            <p
+              id="load-status-message"
+              class="text-xs text-gray-500 dark:text-gray-400 mt-4 hidden"
+            ></p>
           </div>
         </div>
 
@@ -320,8 +362,12 @@
             class="hidden flex-col items-center gap-2 text-gray-400 hover:text-primary transition-colors group"
             type="button"
           >
-            <span class="material-symbols-outlined animate-bounce">expand_more</span>
-            <span class="text-xs font-extrabold uppercase tracking-wider group-hover:underline">
+            <span class="material-symbols-outlined animate-bounce"
+              >expand_more</span
+            >
+            <span
+              class="text-xs font-extrabold uppercase tracking-wider group-hover:underline"
+            >
               Cargar más
             </span>
           </button>
@@ -329,25 +375,46 @@
       </main>
 
       <footer class="bg-surface-dark border-t border-[#382929] py-12">
-        <div class="max-w-[1440px] mx-auto px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div
+          class="max-w-[1440px] mx-auto px-6 lg:px-12 grid grid-cols-1 md:grid-cols-4 gap-8"
+        >
           <div class="col-span-1 md:col-span-2">
             <div class="flex items-center gap-3 mb-4">
-              <div class="size-8 bg-primary rounded-full flex items-center justify-center text-white">
-                <span class="material-symbols-outlined text-sm">lunch_dining</span>
+              <div
+                class="size-8 bg-primary rounded-full flex items-center justify-center text-white"
+              >
+                <span class="material-symbols-outlined text-sm"
+                  >lunch_dining</span
+                >
               </div>
               <h2 class="text-lg font-extrabold text-white">Tierra Querida</h2>
             </div>
             <p class="text-gray-400 text-sm max-w-xs">
-              Las mejores hamburguesas de la ciudad, hechas con ingredientes locales y mucha pasión.
+              Las mejores hamburguesas de la ciudad, hechas con ingredientes
+              locales y mucha pasión.
             </p>
           </div>
 
           <div>
             <h3 class="font-extrabold text-white mb-4">Enlaces</h3>
             <ul class="flex flex-col gap-2 text-sm text-gray-400">
-              <li><a class="hover:text-primary transition-colors" href="/#products-section">Menú</a></li>
-              <li><a class="hover:text-primary transition-colors" href="/stores">Ubicaciones</a></li>
-              <li><a class="hover:text-primary transition-colors" href="/history">Historial</a></li>
+              <li>
+                <a
+                  class="hover:text-primary transition-colors"
+                  href="/#products-section"
+                  >Menú</a
+                >
+              </li>
+              <li>
+                <a class="hover:text-primary transition-colors" href="/stores"
+                  >Ubicaciones</a
+                >
+              </li>
+              <li>
+                <a class="hover:text-primary transition-colors" href="/history"
+                  >Historial</a
+                >
+              </li>
             </ul>
           </div>
 
@@ -355,13 +422,18 @@
             <h3 class="font-extrabold text-white mb-4">Contacto</h3>
             <ul class="flex flex-col gap-2 text-sm text-gray-400">
               <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-xs">location_on</span> Colombia
+                <span class="material-symbols-outlined text-xs"
+                  >location_on</span
+                >
+                Colombia
               </li>
               <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-xs">call</span> +57 300 000 0000
+                <span class="material-symbols-outlined text-xs">call</span> +57
+                300 000 0000
               </li>
               <li class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-xs">mail</span> hola@tierraquerida.com
+                <span class="material-symbols-outlined text-xs">mail</span>
+                hola@tierraquerida.com
               </li>
             </ul>
           </div>
@@ -379,7 +451,10 @@
         </div>
       </footer>
     </div>
+    <script src="/supabase-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/session.js"></script>
+
     <script type="module" src="/history.js"></script>
   </body>
 </html>

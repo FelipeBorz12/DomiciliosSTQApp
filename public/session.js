@@ -22,6 +22,58 @@
     } catch {}
   }
 
+  function hasStoredSbSession() {
+    // Supabase v2 suele guardar algo como: sb-<ref>-auth-token
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || "";
+        if (k.startsWith("sb-") && k.includes("-auth-token")) {
+          const raw = localStorage.getItem(k);
+          if (raw && raw.length > 10) return true;
+        }
+      }
+    } catch {}
+    return false;
+  }
+
+  function safePath(path) {
+    if (!path) return "/";
+    if (path.startsWith("http://") || path.startsWith("https://")) return "/";
+    if (!path.startsWith("/")) return "/";
+    if (path.startsWith("//")) return "/";
+    return path;
+  }
+
+  function buildNext() {
+    const p = safePath(window.location.pathname);
+    const q = window.location.search || "";
+    if (p.startsWith("/login") || p.startsWith("/auth/callback")) return "";
+    return encodeURIComponent(p + q);
+  }
+
+  function goLoginWithNext() {
+    const next = buildNext();
+    window.location.href = next ? `/login?next=${next}` : "/login";
+  }
+
+  function goAccount() {
+    window.location.href = "/account";
+  }
+
+  function ensureSupabaseLoaded() {
+    return new Promise((resolve) => {
+      if (window.supabase && window.supabase.createClient) return resolve(true);
+
+      // si no está cargada la lib, la inyectamos
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      s.async = true;
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+  }
+
   function getSupabase() {
     if (window.__tqSupabase) return window.__tqSupabase;
 
@@ -29,14 +81,8 @@
     const url = window.SUPABASE_URL;
     const anonKey = window.SUPABASE_ANON_KEY;
 
-    if (!supabaseLib || !supabaseLib.createClient) {
-      console.warn("[session.js] Falta cargar supabase-js (CDN).");
-      return null;
-    }
-    if (!url || !anonKey) {
-      console.warn("[session.js] Faltan SUPABASE_URL / SUPABASE_ANON_KEY.");
-      return null;
-    }
+    if (!supabaseLib || !supabaseLib.createClient) return null;
+    if (!url || !anonKey) return null;
 
     window.__tqSupabase = supabaseLib.createClient(url, anonKey, {
       auth: {
@@ -51,6 +97,9 @@
   }
 
   async function getSession() {
+    // si no hay lib o config, igual evitamos mandarte a login si ya hay token guardado
+    if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
+
     const sb = getSupabase();
     if (!sb) return null;
 
@@ -62,45 +111,21 @@
     return data?.session || null;
   }
 
-  async function isLoggedIn() {
-    const s = await getSession();
-    return !!s;
-  }
-
-  function safePath(path) {
-    if (!path) return "/";
-    // solo rutas internas
-    if (path.startsWith("http://") || path.startsWith("https://")) return "/";
-    if (!path.startsWith("/")) return "/";
-    if (path.startsWith("//")) return "/";
-    return path;
-  }
-
-  function buildNext() {
-    // guarda ruta + query actual para volver después del login
-    const p = safePath(window.location.pathname);
-    const q = window.location.search || "";
-    // no queremos next hacia /login ni /auth/callback
-    if (p.startsWith("/login") || p.startsWith("/auth/callback")) return "";
-    return encodeURIComponent(p + q);
-  }
-
-  function goLoginWithNext() {
-    const next = buildNext();
-    window.location.href = next ? `/login?next=${next}` : "/login";
-  }
-
-  function goAccount() {
-    window.location.href = "/account";
-  }
-
   async function goAccountOrLogin() {
+    // 1) si hay token guardado, NO rebotes al login
+    if (hasStoredSbSession()) return goAccount();
+
+    // 2) intenta supabase real
+    await ensureSupabaseLoaded();
     const s = await getSession();
     if (s) return goAccount();
+
+    // 3) no hay sesión
     return goLoginWithNext();
   }
 
   async function logout() {
+    await ensureSupabaseLoaded();
     const sb = getSupabase();
     try {
       if (sb) {
@@ -115,19 +140,11 @@
     }
   }
 
-  // ✅ En páginas con navbar: engancha el botón de usuario
   function bindAccountButtons() {
-    const ids = [
-      "user-icon",         // la mayoría de páginas
-      "user-btn",          // history.html usa este
-      "mobile-profile-btn" // menú móvil (si existe)
-    ];
-
+    const ids = ["user-icon", "user-btn", "mobile-profile-btn"];
     ids.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-
-      // evita doble binding si session.js se carga dos veces
       if (el.dataset.tqBound === "1") return;
       el.dataset.tqBound = "1";
 
@@ -138,10 +155,9 @@
     });
   }
 
-  // ✅ Alterna items del menú móvil si existen
   async function syncMobileMenu() {
-    const s = await getSession();
-    const logged = !!s;
+    // Si hay token guardado, asumimos logueado para UI (sin esperar red)
+    const logged = hasStoredSbSession() || !!(await getSession());
 
     const loginItem = document.getElementById("mobile-login-item");
     const profileItem = document.getElementById("mobile-profile-item");
@@ -161,11 +177,9 @@
     }
   }
 
-  // ✅ Exponer API global (lo que ya usas)
   window.tqSession = {
     getSupabase,
     getSession,
-    isLoggedIn,
     logout,
     goAccountOrLogin,
   };

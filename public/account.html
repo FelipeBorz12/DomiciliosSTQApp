@@ -23,9 +23,13 @@
     <main class="max-w-6xl mx-auto px-4 -mt-24 pb-10">
       <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
         <!-- Menú izquierdo -->
-        <aside class="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden">
+        <aside
+          class="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden"
+        >
           <div class="p-5 flex items-center gap-3 border-b border-black/5">
-            <div class="size-10 rounded-full bg-black/5 flex items-center justify-center">
+            <div
+              class="size-10 rounded-full bg-black/5 flex items-center justify-center"
+            >
               <span class="text-xl">👤</span>
             </div>
             <div>
@@ -35,27 +39,42 @@
           </div>
 
           <nav class="py-2">
-            <button data-tab="empty" class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+            <button
+              data-tab="empty"
+              class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
+            >
               <span class="opacity-70">🏠</span>
               <span class="font-semibold">Inicio</span>
             </button>
 
-            <button data-tab="perfil" class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+            <button
+              data-tab="perfil"
+              class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
+            >
               <span class="opacity-70">👤</span>
               <span class="font-semibold">Perfil</span>
             </button>
 
-            <button id="go-history" class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+            <button
+              id="go-history"
+              class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
+            >
               <span class="opacity-70">🍽️</span>
               <span class="font-semibold">Pedidos</span>
             </button>
 
-            <button data-tab="pqrs" class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+            <button
+              data-tab="pqrs"
+              class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
+            >
               <span class="opacity-70">🎧</span>
               <span class="font-semibold">Contáctanos - PQRS</span>
             </button>
 
-            <button id="logout-menu" class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+            <button
+              id="logout-menu"
+              class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
+            >
               <span class="opacity-70">🚪</span>
               <span class="font-semibold">Cerrar sesión</span>
             </button>
@@ -63,14 +82,27 @@
         </aside>
 
         <!-- Panel central -->
-        <section class="bg-white rounded-3xl shadow-sm border border-black/5 p-6 md:p-10 min-h-[520px]">
+        <section
+          class="bg-white rounded-3xl shadow-sm border border-black/5 p-6 md:p-10 min-h-[520px]"
+        >
           <!-- Empty -->
           <div id="panel-empty">
-            <div class="h-full flex flex-col items-center justify-center text-center py-16">
-              <img src="/images/logo.png" alt="Tierra Querida" class="w-20 h-20 rounded-2xl mb-5" />
-              <h2 class="text-2xl md:text-3xl font-extrabold">Todavía no has realizado un pedido</h2>
+            <div
+              class="h-full flex flex-col items-center justify-center text-center py-16"
+            >
+              <img
+                src="/images/logo.png"
+                alt="Tierra Querida"
+                class="w-20 h-20 rounded-2xl mb-5"
+              />
+              <h2 class="text-2xl md:text-3xl font-extrabold">
+                Todavía no has realizado un pedido
+              </h2>
               <p class="text-black/60 mt-2">Realiza tu primer orden</p>
-              <a href="/" class="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3b0a0f] text-white font-extrabold">
+              <a
+                href="/"
+                class="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3b0a0f] text-white font-extrabold"
+              >
                 Ir al menú
               </a>
             </div>
@@ -81,43 +113,83 @@
             <div class="flex items-start justify-between gap-4">
               <div>
                 <h2 class="text-2xl md:text-3xl font-extrabold">Perfil</h2>
-                <p class="text-black/60 mt-1">Actualiza tus datos para agilizar tus pedidos.</p>
+                <p class="text-black/60 mt-1">
+                  Actualiza tus datos para agilizar tus pedidos.
+                </p>
               </div>
-              <button id="edit-btn" class="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 font-bold">
+              <button
+                id="edit-btn"
+                class="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 font-bold"
+              >
                 Editar
               </button>
             </div>
 
             <div class="mt-6">
-              <form id="account-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <form
+                id="account-form"
+                class="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
                 <div>
                   <label class="block text-sm text-black/70 mb-1">Nombre</label>
-                  <input id="nombre" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                  <input
+                    id="nombre"
+                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
+                    disabled
+                  />
                 </div>
 
                 <div>
-                  <label class="block text-sm text-black/70 mb-1">Celular</label>
-                  <input id="celular" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                  <label class="block text-sm text-black/70 mb-1"
+                    >Celular</label
+                  >
+                  <input
+                    id="celular"
+                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
+                    disabled
+                  />
                 </div>
 
                 <div class="md:col-span-2">
-                  <label class="block text-sm text-black/70 mb-1">Dirección de entrega</label>
-                  <input id="direccionentrega" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                  <label class="block text-sm text-black/70 mb-1"
+                    >Dirección de entrega</label
+                  >
+                  <input
+                    id="direccionentrega"
+                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
+                    disabled
+                  />
                 </div>
 
                 <div>
-                  <label class="block text-sm text-black/70 mb-1">Departamento</label>
-                  <input id="Departamento" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                  <label class="block text-sm text-black/70 mb-1"
+                    >Departamento</label
+                  >
+                  <input
+                    id="Departamento"
+                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
+                    disabled
+                  />
                 </div>
 
                 <div>
-                  <label class="block text-sm text-black/70 mb-1">Municipio</label>
-                  <input id="Municipio" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                  <label class="block text-sm text-black/70 mb-1"
+                    >Municipio</label
+                  >
+                  <input
+                    id="Municipio"
+                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
+                    disabled
+                  />
                 </div>
 
                 <div class="md:col-span-2">
                   <label class="block text-sm text-black/70 mb-1">Barrio</label>
-                  <input id="Barrio" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                  <input
+                    id="Barrio"
+                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
+                    disabled
+                  />
                 </div>
 
                 <div class="md:col-span-2 flex items-center gap-3 mt-2">
@@ -137,17 +209,23 @@
 
           <!-- PQRS -->
           <div id="panel-pqrs" class="hidden">
-            <h2 class="text-2xl md:text-3xl font-extrabold">Contáctanos - PQRS</h2>
+            <h2 class="text-2xl md:text-3xl font-extrabold">
+              Contáctanos - PQRS
+            </h2>
             <p class="text-black/60 mt-2">
-              Si tienes una petición, queja, reclamo o sugerencia, escríbenos por estos canales:
+              Si tienes una petición, queja, reclamo o sugerencia, escríbenos
+              por estos canales:
             </p>
 
             <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="p-5 rounded-2xl bg-black/5 border border-black/10">
                 <div class="font-extrabold">WhatsApp</div>
-                <p class="text-black/60 text-sm mt-1">Atención rápida por chat.</p>
-                <a class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
-                   href="#"
+                <p class="text-black/60 text-sm mt-1">
+                  Atención rápida por chat.
+                </p>
+                <a
+                  class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
+                  href="#"
                 >
                   Abrir WhatsApp
                 </a>
@@ -155,9 +233,12 @@
 
               <div class="p-5 rounded-2xl bg-black/5 border border-black/10">
                 <div class="font-extrabold">Correo</div>
-                <p class="text-black/60 text-sm mt-1">Envíanos tu caso con detalles.</p>
-                <a class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
-                   href="mailto:hola@tierraquerida.com"
+                <p class="text-black/60 text-sm mt-1">
+                  Envíanos tu caso con detalles.
+                </p>
+                <a
+                  class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
+                  href="mailto:hola@tierraquerida.com"
                 >
                   hola@tierraquerida.com
                 </a>
@@ -168,8 +249,10 @@
       </div>
     </main>
 
+    <script src="/supabase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/session.js"></script>
+
     <script src="/account.js"></script>
   </body>
 </html>
