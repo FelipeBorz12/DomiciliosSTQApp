@@ -9,12 +9,12 @@ function $(id) {
 function modalIcon(type) {
   switch (type) {
     case "success":
-      return { icon: "check_circle", label: "Éxito" };
+      return { icon: "check_circle" };
     case "error":
-      return { icon: "error", label: "Error" };
+      return { icon: "error" };
     case "info":
     default:
-      return { icon: "info", label: "Info" };
+      return { icon: "info" };
   }
 }
 
@@ -65,6 +65,7 @@ function setActiveTab(tab) {
 
   buttons.forEach((b) => {
     const active = b.dataset.tab === tab;
+
     b.classList.toggle("bg-white/5", active);
     b.classList.toggle("border-white/10", active);
     b.classList.toggle("hover:bg-white/10", active);
@@ -75,9 +76,7 @@ function setActiveTab(tab) {
   });
 
   panels.forEach((p) => p.classList.add("hidden"));
-
-  const panel = $(`tab-${tab}`);
-  panel?.classList.remove("hidden");
+  $(`tab-${tab}`)?.classList.remove("hidden");
 }
 
 function bindTabs() {
@@ -85,7 +84,9 @@ function bindTabs() {
     btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
   });
 
-  $("go-direcciones")?.addEventListener("click", () => setActiveTab("direcciones"));
+  $("go-direcciones")?.addEventListener("click", () =>
+    setActiveTab("direcciones")
+  );
 }
 
 /* =========================
@@ -108,7 +109,6 @@ function normalizePayload(correo) {
   const Municipio = ($("f-municipio")?.value || "...").trim() || "...";
   const Barrio = ($("f-barrio")?.value || "...").trim() || "...";
 
-  // numeric
   const celular = celularRaw
     ? Number(String(celularRaw).replace(/\D/g, ""))
     : NaN;
@@ -127,22 +127,21 @@ function normalizePayload(correo) {
 }
 
 function fillFromRow(me, row) {
-  // sidebar + header
-  const displayName = row?.nombre || me?.user_metadata?.full_name || me?.email || "—";
+  const displayName =
+    row?.nombre || me?.user_metadata?.full_name || me?.email || "—";
+
   $("sidebar-name").textContent = displayName;
   $("sidebar-email").textContent = me?.email || "—";
 
   const nameHeader = $("user-name-header");
   if (nameHeader) nameHeader.textContent = displayName;
 
-  // perfil
   $("f-correo").value = me?.email || "";
   $("f-nombre").value = row?.nombre || me?.user_metadata?.full_name || "";
   $("f-tipodocumento").value = row?.tipodocumento || "";
   $("f-documento").value = row?.documento || "";
   $("f-celular").value = row?.celular != null ? String(row.celular) : "";
 
-  // direcciones
   $("f-direccion").value = row?.direccionentrega || "";
   $("f-departamento").value = row?.Departamento || "...";
   $("f-municipio").value = row?.Municipio || "...";
@@ -182,7 +181,7 @@ async function loadProfile() {
         type: "info",
         title: "Completa tu información",
         message:
-          "Aún no encontramos tus datos en formulario.\nCompleta tu perfil y direcciones y guarda.",
+          "Aún no encontramos tus datos en formulario.\nCompleta tu perfil y dirección y guarda.",
       });
     }
   } catch (e) {
@@ -198,14 +197,14 @@ async function loadProfile() {
 }
 
 /* =========================
-   Save (perfil + direcciones)
+   Save (perfil + dirección)
 ========================= */
 function validatePayload(payload) {
-  // tu tabla tiene NOT NULL en casi todo
   if (!payload.nombre) return "Escribe tu nombre.";
   if (!payload.tipodocumento) return "Selecciona tipo de documento.";
   if (!payload.documento) return "Escribe tu documento.";
-  if (!payload.celular || Number.isNaN(payload.celular)) return "Escribe un celular válido.";
+  if (!payload.celular || Number.isNaN(payload.celular))
+    return "Escribe un celular válido.";
   if (!payload.direccionentrega) return "Escribe tu dirección de entrega.";
   return "";
 }
@@ -254,26 +253,17 @@ async function saveAll() {
 }
 
 /* =========================
-   Pedidos (placeholder)
-========================= */
-function bindOrdersPlaceholder() {
-  // aquí luego conectamos tabla pedidos
-}
-
-/* =========================
    Contacto
 ========================= */
 function bindContact() {
   $("contact-whatsapp")?.addEventListener("click", () => {
-    // Cambia el número real
-    const phone = "573000000000";
+    const phone = "573000000000"; // cambia al real
     const text = encodeURIComponent("Hola, necesito ayuda con mi pedido.");
     window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
   });
 
   $("contact-email")?.addEventListener("click", () => {
-    // Cambia el correo real
-    const to = "hola@tierraquerida.com";
+    const to = "hola@tierraquerida.com"; // cambia al real
     const subject = encodeURIComponent("Soporte - Tierra Querida");
     const body = encodeURIComponent("Hola, necesito ayuda con...");
     window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
@@ -281,18 +271,15 @@ function bindContact() {
 }
 
 /* =========================
-   Bind
+   Init
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
   bindModal();
   bindTabs();
-  bindOrdersPlaceholder();
   bindContact();
 
-  // Tab default
   setActiveTab("perfil");
 
-  // logout
   $("logout-btn")?.addEventListener("click", () => {
     showModal({
       type: "info",
@@ -300,7 +287,6 @@ document.addEventListener("DOMContentLoaded", () => {
       message: "¿Seguro que quieres cerrar sesión?",
     });
 
-    // hack simple: al darle OK, cerramos sesión (sin añadir un modal confirm extra)
     const okBtn = $("tq-modal-ok");
     const handler = () => {
       okBtn?.removeEventListener("click", handler);
@@ -309,25 +295,12 @@ document.addEventListener("DOMContentLoaded", () => {
     okBtn?.addEventListener("click", handler);
   });
 
-  // guardar desde perfil (submit)
   $("profile-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     saveAll();
   });
 
-  // guardar desde direcciones
   $("save-address-btn")?.addEventListener("click", () => saveAll());
 
-  // agregar otra dirección (por ahora modal informativo)
-  $("add-address-btn")?.addEventListener("click", () => {
-    showModal({
-      type: "info",
-      title: "Múltiples direcciones",
-      message:
-        "Ahora mismo estás guardando una dirección en la tabla formulario.\n\nSi quieres múltiples direcciones reales, créame/compárteme la tabla (por ejemplo: direcciones) y lo conecto para que puedas agregar varias.",
-    });
-  });
-
-  // cargar datos
   loadProfile();
 });

@@ -330,7 +330,7 @@
             </p>
             <h1 class="text-3xl sm:text-4xl font-black">Mi cuenta</h1>
             <p class="text-white/60 mt-2">
-              Gestiona tu perfil, direcciones, pedidos y soporte.
+              Gestiona tu perfil, dirección de entrega, pedidos y soporte.
             </p>
           </div>
 
@@ -344,7 +344,6 @@
           </button>
         </div>
 
-        <!-- Layout: sidebar + contenido -->
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
           <!-- SIDEBAR -->
           <aside
@@ -396,7 +395,7 @@
                 <span class="material-symbols-outlined text-[18px]"
                   >home_pin</span
                 >
-                Direcciones
+                Dirección
               </button>
 
               <button
@@ -439,9 +438,13 @@
                 >
               </div>
 
-              <form id="profile-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <form
+                id="profile-form"
+                class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+              >
                 <div class="sm:col-span-2">
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Correo</label
                   >
                   <input
@@ -453,7 +456,8 @@
                 </div>
 
                 <div>
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Nombre</label
                   >
                   <input
@@ -465,7 +469,8 @@
                 </div>
 
                 <div>
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Celular</label
                   >
                   <input
@@ -478,7 +483,8 @@
                 </div>
 
                 <div>
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Tipo documento</label
                   >
                   <select
@@ -494,7 +500,8 @@
                 </div>
 
                 <div>
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Documento</label
                   >
                   <input
@@ -514,7 +521,7 @@
                     <span class="material-symbols-outlined text-[18px]"
                       >save</span
                     >
-                    Guardar perfil
+                    Guardar
                   </button>
 
                   <button
@@ -525,22 +532,23 @@
                     <span class="material-symbols-outlined text-[18px]"
                       >home_pin</span
                     >
-                    Editar direcciones
+                    Editar dirección
                   </button>
                 </div>
               </form>
             </div>
 
-            <!-- DIRECCIONES -->
+            <!-- DIRECCIÓN ÚNICA -->
             <div
               id="tab-direcciones"
               class="tq-tab-panel hidden rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6"
             >
               <div class="flex items-center justify-between gap-3 mb-4">
                 <div>
-                  <h2 class="text-lg font-extrabold">Direcciones</h2>
+                  <h2 class="text-lg font-extrabold">Dirección de entrega</h2>
                   <p class="text-sm text-white/55 font-semibold mt-1">
-                    Esta info viene de tu tabla <span class="text-white/80">formulario</span>.
+                    Guardamos <span class="text-white/80">una sola dirección</span>
+                    (tabla <span class="text-white/80">formulario</span>).
                   </p>
                 </div>
 
@@ -556,8 +564,9 @@
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="sm:col-span-2">
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
-                    >Dirección de entrega</label
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                    >Dirección</label
                   >
                   <input
                     id="f-direccion"
@@ -568,7 +577,8 @@
                 </div>
 
                 <div>
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Departamento</label
                   >
                   <input
@@ -580,7 +590,8 @@
                 </div>
 
                 <div>
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Municipio</label
                   >
                   <input
@@ -592,7 +603,8 @@
                 </div>
 
                 <div class="sm:col-span-2">
-                  <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
+                  <label
+                    class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
                     >Barrio</label
                   >
                   <input
@@ -602,21 +614,6 @@
                     placeholder="Laureles"
                   />
                 </div>
-              </div>
-
-              <div class="mt-5 flex flex-col sm:flex-row gap-3">
-                <button
-                  id="add-address-btn"
-                  type="button"
-                  class="h-12 px-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
-                >
-                  <span class="material-symbols-outlined text-[18px]">add</span>
-                  Agregar otra dirección
-                </button>
-
-                <p class="text-white/45 text-sm font-semibold sm:self-center">
-                  (Si quieres múltiples direcciones reales, me pasas la tabla y lo conecto.)
-                </p>
               </div>
             </div>
 
@@ -629,16 +626,19 @@
                 <div>
                   <h2 class="text-lg font-extrabold">Mis pedidos</h2>
                   <p class="text-sm text-white/55 font-semibold mt-1">
-                    Historial de pedidos (cuando me pases el nombre de tu tabla de pedidos lo conecto).
+                    Revisa tu historial completo.
                   </p>
                 </div>
 
                 <a
-                  href="/#products-section"
+                  id="orders-history-link"
+                  href="/orders"
                   class="h-10 px-4 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold text-sm transition-colors inline-flex items-center gap-2"
                 >
-                  <span class="material-symbols-outlined text-[18px]">lunch_dining</span>
-                  Ir al menú
+                  <span class="material-symbols-outlined text-[18px]"
+                    >history</span
+                  >
+                  Ver historial
                 </a>
               </div>
 
@@ -646,10 +646,10 @@
                 class="rounded-2xl border border-white/10 bg-background-dark/40 p-5"
               >
                 <p class="text-white/70 font-semibold">
-                  Aún no hay pedidos para mostrar.
+                  Aquí verás un resumen cuando conectemos la tabla de pedidos.
                 </p>
                 <p class="text-white/45 text-sm font-semibold mt-1">
-                  Apenas confirmes un pedido, aparecerá aquí.
+                  El botón “Ver historial” ya te lleva al listado completo.
                 </p>
               </div>
 
@@ -667,9 +667,13 @@
               </p>
 
               <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="rounded-2xl border border-white/10 bg-background-dark/40 p-5">
+                <div
+                  class="rounded-2xl border border-white/10 bg-background-dark/40 p-5"
+                >
                   <div class="flex items-center gap-3">
-                    <span class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary">
+                    <span
+                      class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary"
+                    >
                       <span class="material-symbols-outlined">chat</span>
                     </span>
                     <div>
@@ -689,9 +693,13 @@
                   </button>
                 </div>
 
-                <div class="rounded-2xl border border-white/10 bg-background-dark/40 p-5">
+                <div
+                  class="rounded-2xl border border-white/10 bg-background-dark/40 p-5"
+                >
                   <div class="flex items-center gap-3">
-                    <span class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary">
+                    <span
+                      class="size-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-primary"
+                    >
                       <span class="material-symbols-outlined">mail</span>
                     </span>
                     <div>
@@ -712,7 +720,9 @@
                 </div>
               </div>
 
-              <div class="mt-5 rounded-2xl border border-white/10 bg-background-dark/40 p-5">
+              <div
+                class="mt-5 rounded-2xl border border-white/10 bg-background-dark/40 p-5"
+              >
                 <p class="text-white/70 font-semibold">Tip:</p>
                 <p class="text-white/45 text-sm font-semibold mt-1">
                   Si el problema es con un pedido, incluye tu nombre y celular.
@@ -724,7 +734,7 @@
       </main>
     </div>
 
-    <!-- ================= MODAL MENSAJES (INFO/ERROR/SUCCESS) ================= -->
+    <!-- ================= MODAL MENSAJES ================= -->
     <div
       id="tq-modal"
       class="fixed inset-0 z-[9999] hidden items-center justify-center p-4"
@@ -782,7 +792,7 @@
       </div>
     </div>
 
-    <!-- MENU MÓVIL (inline, igual a index) -->
+    <!-- MENU MÓVIL -->
     <script>
       (function () {
         const menu = document.getElementById("mobile-menu");
