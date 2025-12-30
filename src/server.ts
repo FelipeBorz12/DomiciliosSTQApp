@@ -449,6 +449,32 @@ app.post("/api/auth/recover", authLimiter, async (req: Request, res: Response) =
   }
 });
 
+// ✅ Verificar si existe correo (para decidir login vs register)
+app.get("/api/auth/exists", async (req, res) => {
+  try {
+    const correo = String(req.query?.correo || "").trim().toLowerCase();
+    if (!correo) return res.status(400).json({ exists: false, message: "Falta correo" });
+
+    // Opción A (recomendada): revisar en tu tabla "usuarios"
+    const { data, error } = await supabaseAdmin
+      .from("usuarios")
+      .select("id")
+      .eq("correo", correo)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("[/api/auth/exists] error:", error);
+      return res.status(200).json({ exists: false });
+    }
+
+    return res.status(200).json({ exists: !!data });
+  } catch (e) {
+    console.error("[/api/auth/exists] error:", e);
+    return res.status(200).json({ exists: false });
+  }
+});
+
+
 // ===================== API: PUNTOS DE VENTA =====================
 app.get("/api/puntos-venta", async (_req: Request, res: Response) => {
   try {

@@ -5,569 +5,171 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Mi cuenta | Tierra Querida</title>
 
-    <!-- ✅ Supabase config INLINE (NO config.js) -->
     <script>
       window.SUPABASE_URL = "https://zvuzrpvsnkhnlfqtscrl.supabase.co";
       window.SUPABASE_ANON_KEY =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
     </script>
 
-    <!-- Supabase-js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <!-- ✅ Forzar siempre dark -->
-    <meta name="color-scheme" content="dark" />
-    <meta name="supported-color-schemes" content="dark" />
-    <script>
-      (function () {
-        const root = document.documentElement;
-        const forceDark = () => {
-          if (!root.classList.contains("dark")) root.classList.add("dark");
-        };
-        forceDark();
-        const obs = new MutationObserver(forceDark);
-        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
-      })();
-    </script>
-
+    <meta name="color-scheme" content="light dark" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-    <!-- Iconos -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      rel="stylesheet"
-    />
-
     <link rel="stylesheet" href="/styles.css" />
-
-    <style>
-      /* Fondo similar a la referencia */
-      .tq-bg {
-        background: radial-gradient(1200px 700px at 60% 10%, #7a0f1a 0%, #2b070a 40%, #140304 100%);
-      }
-      /* Scroll limpio en sidebar en móvil */
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
   </head>
 
-  <body class="tq-bg text-white min-h-screen">
-    <!-- Toast -->
-    <div
-      id="toast"
-      class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] bg-black/80 px-4 py-2 rounded-xl border border-white/10 text-sm"
-    ></div>
+  <body class="bg-[#f7f3f3] text-[#1e1e1e]">
+    <!-- franja superior -->
+    <div class="h-40 bg-[#3b0a0f]"></div>
 
-    <!-- Loader global -->
-    <div id="global-loader" class="hidden fixed inset-0 z-[9998] bg-black/70 backdrop-blur-sm">
-      <div class="min-h-screen flex items-center justify-center p-6">
-        <div class="bg-[#1a0b0b] border border-white/10 rounded-2xl px-6 py-5 flex items-center gap-3">
-          <div class="loader-spinner"></div>
-          <p id="loader-text" class="text-sm text-white/80">Cargando…</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- HEADER (mismas acciones: user / cart / menú móvil) -->
-    <header class="sticky top-0 z-50 w-full backdrop-blur-md bg-[#140304]/60 border-b border-white/10">
-      <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between gap-4">
-        <a href="/" class="flex items-center gap-3">
-          <div class="size-10 rounded-full overflow-hidden bg-white/10 border border-white/10">
-            <img src="/img/logo.png" alt="Logo Tierra Querida" class="w-full h-full object-cover" />
-          </div>
-          <div class="leading-tight">
-            <div class="font-extrabold text-lg">Tierra Querida</div>
-            <div class="text-xs text-white/60">Mi cuenta</div>
-          </div>
-        </a>
-
-        <div class="flex items-center gap-2 sm:gap-3">
-          <!-- Nombre usuario (si existe, session.js lo llena si encuentra el id) -->
-          <span
-            id="user-name-header"
-            class="hidden md:inline text-sm font-semibold text-white/80 truncate max-w-[220px]"
-          ></span>
-
-          <!-- Usuario -->
-          <button
-            class="p-2 hover:bg-white/10 rounded-full transition-colors"
-            id="user-icon"
-            aria-label="Perfil"
-            type="button"
-            title="Perfil"
-          >
-            <span class="material-symbols-outlined">person</span>
-          </button>
-
-          <!-- Carrito -->
-          <button
-            class="relative flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white px-4 h-10 rounded-full border border-white/10 transition-all"
-            id="cart-icon"
-            aria-label="Carrito"
-            type="button"
-            title="Carrito"
-          >
-            <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
-            <span class="font-extrabold text-sm hidden sm:block" id="cart-count">0</span>
-            <span
-              class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-[#7a0f1a] sm:hidden"
-            >
-              <span id="cart-count-badge">0</span>
-            </span>
-          </button>
-
-          <!-- Menú móvil -->
-          <button
-            class="md:hidden p-2 hover:bg-white/10 rounded-full transition-colors"
-            id="menu-toggle"
-            aria-label="Menú"
-            type="button"
-          >
-            <span class="material-symbols-outlined">menu</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <!-- MENÚ MÓVIL (simple, mismo id que otras páginas) -->
-    <nav
-      id="mobile-menu"
-      class="fixed inset-0 z-40 hidden bg-black/70 backdrop-blur-sm"
-      aria-hidden="true"
-    >
-      <div class="h-full w-80 max-w-[88vw] bg-[#1a0b0b] border-r border-white/10 p-6">
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-3">
-            <div class="size-9 rounded-full overflow-hidden bg-white/10 border border-white/10">
-              <img src="/img/logo.png" alt="Logo" class="w-full h-full object-cover" />
+    <main class="max-w-6xl mx-auto px-4 -mt-24 pb-10">
+      <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
+        <!-- Menú izquierdo -->
+        <aside class="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden">
+          <div class="p-5 flex items-center gap-3 border-b border-black/5">
+            <div class="size-10 rounded-full bg-black/5 flex items-center justify-center">
+              <span class="text-xl">👤</span>
             </div>
-            <div class="leading-tight">
-              <p class="font-extrabold">Tierra Querida</p>
-              <p class="text-[11px] text-white/60 uppercase tracking-[0.2em] font-semibold">
-                cuenta
-              </p>
+            <div>
+              <div class="font-extrabold">Mi cuenta</div>
+              <div id="account-email" class="text-sm text-black/60"></div>
             </div>
           </div>
 
-          <button
-            id="menu-close"
-            class="p-2 rounded-full hover:bg-white/10"
-            type="button"
-            aria-label="Cerrar"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-
-        <ul class="space-y-3 font-bold text-sm">
-          <li>
-            <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/"
-              >Inicio</a
-            >
-          </li>
-          <li>
-            <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/history"
-              >Mis pedidos</a
-            >
-          </li>
-
-          <li class="pt-3 border-t border-white/10"></li>
-
-          <!-- Login / Perfil / Logout (session.js los alterna si existen) -->
-          <li id="mobile-login-item">
-            <a class="block px-4 py-3 rounded-xl bg-white text-black text-center" href="/login"
-              >Iniciar sesión</a
-            >
-          </li>
-
-          <li id="mobile-profile-item" class="hidden">
-            <button
-              id="mobile-profile-btn"
-              class="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
-              type="button"
-            >
-              Mi perfil
+          <nav class="py-2">
+            <button data-tab="empty" class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+              <span class="opacity-70">🏠</span>
+              <span class="font-semibold">Inicio</span>
             </button>
-          </li>
 
-          <li id="mobile-logout-item" class="hidden">
-            <button
-              id="mobile-logout-btn"
-              class="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
-              type="button"
-            >
-              Cerrar sesión
+            <button data-tab="perfil" class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+              <span class="opacity-70">👤</span>
+              <span class="font-semibold">Perfil</span>
             </button>
-          </li>
-        </ul>
-      </div>
 
-      <button
-        id="menu-backdrop"
-        class="absolute inset-0 -z-10 w-full h-full"
-        type="button"
-        aria-label="Cerrar menú"
-      ></button>
-    </nav>
+            <button id="go-history" class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+              <span class="opacity-70">🍽️</span>
+              <span class="font-semibold">Pedidos</span>
+            </button>
 
-    <!-- MAIN LAYOUT (similar a la imagen) -->
-    <main class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-8">
-      <section
-        class="bg-white text-[#1a1a1a] rounded-3xl shadow-2xl overflow-hidden border border-black/5"
-      >
-        <div class="grid grid-cols-1 lg:grid-cols-12 min-h-[660px]">
-          <!-- SIDEBAR -->
-          <aside class="lg:col-span-4 xl:col-span-3 border-b lg:border-b-0 lg:border-r border-black/5 bg-[#faf7f7]">
-            <div class="p-6">
-              <div class="flex items-center gap-3">
-                <div class="size-11 rounded-2xl overflow-hidden bg-white border border-black/5">
-                  <img src="/img/logo.png" alt="Tierra Querida" class="w-full h-full object-cover" />
-                </div>
+            <button data-tab="pqrs" class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+              <span class="opacity-70">🎧</span>
+              <span class="font-semibold">Contáctanos - PQRS</span>
+            </button>
+
+            <button id="logout-menu" class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3">
+              <span class="opacity-70">🚪</span>
+              <span class="font-semibold">Cerrar sesión</span>
+            </button>
+          </nav>
+        </aside>
+
+        <!-- Panel central -->
+        <section class="bg-white rounded-3xl shadow-sm border border-black/5 p-6 md:p-10 min-h-[520px]">
+          <!-- Empty -->
+          <div id="panel-empty">
+            <div class="h-full flex flex-col items-center justify-center text-center py-16">
+              <img src="/images/logo.png" alt="Tierra Querida" class="w-20 h-20 rounded-2xl mb-5" />
+              <h2 class="text-2xl md:text-3xl font-extrabold">Todavía no has realizado un pedido</h2>
+              <p class="text-black/60 mt-2">Realiza tu primer orden</p>
+              <a href="/" class="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3b0a0f] text-white font-extrabold">
+                Ir al menú
+              </a>
+            </div>
+          </div>
+
+          <!-- Perfil -->
+          <div id="panel-perfil" class="hidden">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h2 class="text-2xl md:text-3xl font-extrabold">Perfil</h2>
+                <p class="text-black/60 mt-1">Actualiza tus datos para agilizar tus pedidos.</p>
+              </div>
+              <button id="edit-btn" class="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 font-bold">
+                Editar
+              </button>
+            </div>
+
+            <div class="mt-6">
+              <form id="account-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div class="text-lg font-extrabold">Mi cuenta</div>
-                  <div class="text-xs text-black/50">
-                    <span id="account-email" class="font-semibold"></span>
-                    <span id="account-status" class="ml-2"></span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Tabs móvil (arriba) -->
-              <div class="mt-4 lg:hidden overflow-x-auto no-scrollbar">
-                <div class="flex gap-2 min-w-max">
-                  <button class="tq-tab px-4 py-2 rounded-full bg-black/5 font-bold" data-view="home">
-                    Inicio
-                  </button>
-                  <button class="tq-tab px-4 py-2 rounded-full bg-black/5 font-bold" data-view="profile">
-                    Perfil
-                  </button>
-                  <button class="tq-tab px-4 py-2 rounded-full bg-black/5 font-bold" data-view="orders">
-                    Pedidos
-                  </button>
-                  <button class="tq-tab px-4 py-2 rounded-full bg-black/5 font-bold" data-view="pqrs">
-                    PQRS
-                  </button>
-                  <button class="tq-tab px-4 py-2 rounded-full bg-black/5 font-bold" data-view="logout">
-                    Salir
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Menú desktop (izquierda) -->
-            <nav class="hidden lg:block">
-              <ul class="px-3 pb-6">
-                <li>
-                  <button class="tq-item w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-black/5 transition" data-view="home" type="button">
-                    <span class="material-symbols-outlined">apps</span>
-                    <span class="font-extrabold">Inicio</span>
-                  </button>
-                </li>
-
-                <li>
-                  <button class="tq-item w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-black/5 transition" data-view="profile" type="button">
-                    <span class="material-symbols-outlined">person</span>
-                    <span class="font-extrabold">Perfil</span>
-                  </button>
-                </li>
-
-                <li>
-                  <button class="tq-item w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-black/5 transition" data-view="orders" type="button">
-                    <span class="material-symbols-outlined">restaurant</span>
-                    <span class="font-extrabold">Pedidos</span>
-                  </button>
-                </li>
-
-                <li>
-                  <button class="tq-item w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-black/5 transition" data-view="pqrs" type="button">
-                    <span class="material-symbols-outlined">support_agent</span>
-                    <span class="font-extrabold">Contáctanos - PQRS</span>
-                  </button>
-                </li>
-
-                <li class="mt-2">
-                  <button class="tq-item w-full flex items-center gap-3 px-4 py-4 rounded-2xl hover:bg-black/5 transition" data-view="logout" type="button">
-                    <span class="material-symbols-outlined">logout</span>
-                    <span class="font-extrabold">Cerrar sesión</span>
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </aside>
-
-          <!-- CONTENT -->
-          <div class="lg:col-span-8 xl:col-span-9 bg-white">
-            <!-- Card container -->
-            <div class="p-6 sm:p-10">
-              <!-- HOME VIEW -->
-              <section id="view-home" class="tq-view">
-                <div class="min-h-[520px] flex flex-col items-center justify-center text-center">
-                  <div class="size-20 rounded-3xl overflow-hidden bg-[#faf7f7] border border-black/5 shadow-sm mb-4">
-                    <img src="/img/logo.png" alt="Tierra Querida" class="w-full h-full object-cover" />
-                  </div>
-                  <h2 class="text-3xl sm:text-4xl font-black tracking-tight">Bienvenido</h2>
-                  <p class="text-black/60 mt-2 max-w-xl">
-                    Selecciona una opción en el menú para ver tu perfil, revisar tus pedidos o contactarnos.
-                  </p>
-
-                  <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
-                    <button class="quick-btn px-4 py-2 rounded-full bg-[#7a0f1a] text-white font-extrabold" data-view="profile" type="button">
-                      Ir a Perfil
-                    </button>
-                    <button class="quick-btn px-4 py-2 rounded-full bg-black/5 text-black font-extrabold" data-view="orders" type="button">
-                      Ver Pedidos
-                    </button>
-                    <a class="px-4 py-2 rounded-full bg-black/5 text-black font-extrabold" href="/">
-                      Ir al menú
-                    </a>
-                  </div>
-                </div>
-              </section>
-
-              <!-- PROFILE VIEW -->
-              <section id="view-profile" class="tq-view hidden">
-                <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-                  <div>
-                    <h2 class="text-2xl sm:text-3xl font-black">Perfil</h2>
-                    <p class="text-black/60">Revisa y actualiza tus datos.</p>
-                  </div>
-
-                  <div class="flex gap-2">
-                    <button
-                      id="edit-profile-btn"
-                      class="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 font-extrabold"
-                      type="button"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      id="save-profile-btn"
-                      class="px-4 py-2 rounded-xl bg-[#7a0f1a] hover:bg-[#5f0c14] text-white font-extrabold"
-                      type="button"
-                      disabled
-                    >
-                      Guardar
-                    </button>
-                  </div>
+                  <label class="block text-sm text-black/70 mb-1">Nombre</label>
+                  <input id="nombre" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
                 </div>
 
-                <div id="legacy-note" class="hidden mb-5 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-700 text-sm"></div>
-
-                <div class="bg-[#faf7f7] border border-black/5 rounded-3xl p-5 sm:p-6">
-                  <form id="account-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-sm text-black/60 mb-1 font-semibold">Nombre</label>
-                      <input id="nombre" class="w-full bg-white border border-black/10 rounded-xl px-3 py-3" />
-                    </div>
-
-                    <div>
-                      <label class="block text-sm text-black/60 mb-1 font-semibold">Celular</label>
-                      <input id="celular" class="w-full bg-white border border-black/10 rounded-xl px-3 py-3" />
-                    </div>
-
-                    <div class="md:col-span-2">
-                      <label class="block text-sm text-black/60 mb-1 font-semibold">Dirección de entrega</label>
-                      <input id="direccionentrega" class="w-full bg-white border border-black/10 rounded-xl px-3 py-3" />
-                    </div>
-
-                    <div>
-                      <label class="block text-sm text-black/60 mb-1 font-semibold">Departamento</label>
-                      <input id="Departamento" class="w-full bg-white border border-black/10 rounded-xl px-3 py-3" />
-                    </div>
-
-                    <div>
-                      <label class="block text-sm text-black/60 mb-1 font-semibold">Municipio</label>
-                      <input id="Municipio" class="w-full bg-white border border-black/10 rounded-xl px-3 py-3" />
-                    </div>
-
-                    <div class="md:col-span-2">
-                      <label class="block text-sm text-black/60 mb-1 font-semibold">Barrio</label>
-                      <input id="Barrio" class="w-full bg-white border border-black/10 rounded-xl px-3 py-3" />
-                    </div>
-
-                    <div class="md:col-span-2">
-                      <div id="save-status" class="text-sm text-black/50"></div>
-                    </div>
-                  </form>
-                </div>
-              </section>
-
-              <!-- ORDERS VIEW -->
-              <section id="view-orders" class="tq-view hidden">
-                <div class="mb-6">
-                  <h2 class="text-2xl sm:text-3xl font-black">Pedidos</h2>
-                  <p class="text-black/60">Te llevaremos a tu historial de pedidos.</p>
+                <div>
+                  <label class="block text-sm text-black/70 mb-1">Celular</label>
+                  <input id="celular" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
                 </div>
 
-                <div class="bg-[#faf7f7] border border-black/5 rounded-3xl p-6 flex flex-col items-center text-center">
-                  <div class="text-5xl mb-2">🍔</div>
-                  <div class="font-extrabold text-xl">Histórico de pedidos</div>
-                  <p class="text-black/60 mt-2 max-w-md">
-                    Presiona el botón y verás tus pedidos asociados a tu cuenta.
-                  </p>
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-black/70 mb-1">Dirección de entrega</label>
+                  <input id="direccionentrega" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                </div>
 
+                <div>
+                  <label class="block text-sm text-black/70 mb-1">Departamento</label>
+                  <input id="Departamento" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                </div>
+
+                <div>
+                  <label class="block text-sm text-black/70 mb-1">Municipio</label>
+                  <input id="Municipio" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                </div>
+
+                <div class="md:col-span-2">
+                  <label class="block text-sm text-black/70 mb-1">Barrio</label>
+                  <input id="Barrio" class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2" disabled />
+                </div>
+
+                <div class="md:col-span-2 flex items-center gap-3 mt-2">
                   <button
-                    id="go-history-btn"
-                    class="mt-5 px-5 py-3 rounded-2xl bg-[#7a0f1a] hover:bg-[#5f0c14] text-white font-extrabold"
-                    type="button"
+                    id="save-btn"
+                    type="submit"
+                    class="px-6 py-3 rounded-2xl bg-[#3b0a0f] text-white font-extrabold hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled
                   >
-                    Ir a mis pedidos
+                    Guardar cambios
                   </button>
+                  <div id="save-status" class="text-sm text-black/60"></div>
                 </div>
-              </section>
-
-              <!-- PQRS VIEW -->
-              <section id="view-pqrs" class="tq-view hidden">
-                <div class="mb-6">
-                  <h2 class="text-2xl sm:text-3xl font-black">Contáctanos - PQRS</h2>
-                  <p class="text-black/60">Peticiones, quejas, reclamos y sugerencias.</p>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div class="bg-[#faf7f7] border border-black/5 rounded-3xl p-6">
-                    <div class="font-extrabold text-lg">Canales de atención</div>
-                    <p class="text-black/60 mt-1 text-sm">
-                      Escríbenos por WhatsApp o envíanos un correo.
-                    </p>
-
-                    <div class="mt-4 flex flex-col gap-2">
-                      <a
-                        id="pqrs-wa"
-                        class="px-4 py-3 rounded-2xl bg-white border border-black/10 hover:bg-black/5 font-extrabold flex items-center gap-2"
-                        href="#"
-                      >
-                        <span class="material-symbols-outlined">chat</span>
-                        WhatsApp
-                      </a>
-
-                      <a
-                        id="pqrs-mail"
-                        class="px-4 py-3 rounded-2xl bg-white border border-black/10 hover:bg-black/5 font-extrabold flex items-center gap-2"
-                        href="#"
-                      >
-                        <span class="material-symbols-outlined">mail</span>
-                        Email
-                      </a>
-                    </div>
-                  </div>
-
-                  <div class="bg-[#faf7f7] border border-black/5 rounded-3xl p-6">
-                    <div class="font-extrabold text-lg">Enviar PQRS</div>
-                    <p class="text-black/60 mt-1 text-sm">
-                      Completa el formulario y abriremos tu correo con el mensaje listo.
-                    </p>
-
-                    <div class="mt-4 grid grid-cols-1 gap-3">
-                      <input
-                        id="pqrs-subject"
-                        class="w-full bg-white border border-black/10 rounded-xl px-3 py-3"
-                        placeholder="Asunto (ej: Pedido / Sugerencia / Reclamo)"
-                      />
-                      <textarea
-                        id="pqrs-message"
-                        class="w-full bg-white border border-black/10 rounded-xl px-3 py-3 min-h-[120px]"
-                        placeholder="Escribe tu mensaje…"
-                      ></textarea>
-
-                      <button
-                        id="pqrs-send-btn"
-                        class="px-5 py-3 rounded-2xl bg-[#7a0f1a] hover:bg-[#5f0c14] text-white font-extrabold"
-                        type="button"
-                      >
-                        Enviar
-                      </button>
-
-                      <div class="text-xs text-black/50">
-                        *Esto abre tu app de correo (no enviamos nada desde el servidor).
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <!-- LOGOUT VIEW -->
-              <section id="view-logout" class="tq-view hidden">
-                <div class="mb-6">
-                  <h2 class="text-2xl sm:text-3xl font-black">Cerrar sesión</h2>
-                  <p class="text-black/60">¿Seguro que quieres salir?</p>
-                </div>
-
-                <div class="bg-[#faf7f7] border border-black/5 rounded-3xl p-6 flex flex-col items-center text-center">
-                  <div class="text-5xl mb-2">👋</div>
-                  <div class="font-extrabold text-xl">Hasta pronto</div>
-                  <p class="text-black/60 mt-2 max-w-md">
-                    Al cerrar sesión se eliminarán los tokens guardados en el navegador.
-                  </p>
-
-                  <div class="mt-5 flex gap-2 flex-wrap justify-center">
-                    <button
-                      id="logout-confirm-btn"
-                      class="px-5 py-3 rounded-2xl bg-[#7a0f1a] hover:bg-[#5f0c14] text-white font-extrabold"
-                      type="button"
-                    >
-                      Cerrar sesión
-                    </button>
-
-                    <button
-                      class="px-5 py-3 rounded-2xl bg-black/5 hover:bg-black/10 text-black font-extrabold"
-                      type="button"
-                      data-view="home"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              </section>
+              </form>
             </div>
           </div>
-        </div>
-      </section>
+
+          <!-- PQRS -->
+          <div id="panel-pqrs" class="hidden">
+            <h2 class="text-2xl md:text-3xl font-extrabold">Contáctanos - PQRS</h2>
+            <p class="text-black/60 mt-2">
+              Si tienes una petición, queja, reclamo o sugerencia, escríbenos por estos canales:
+            </p>
+
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-5 rounded-2xl bg-black/5 border border-black/10">
+                <div class="font-extrabold">WhatsApp</div>
+                <p class="text-black/60 text-sm mt-1">Atención rápida por chat.</p>
+                <a class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
+                   href="#"
+                >
+                  Abrir WhatsApp
+                </a>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-black/5 border border-black/10">
+                <div class="font-extrabold">Correo</div>
+                <p class="text-black/60 text-sm mt-1">Envíanos tu caso con detalles.</p>
+                <a class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
+                   href="mailto:hola@tierraquerida.com"
+                >
+                  hola@tierraquerida.com
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
 
-    <!-- ✅ Menú móvil JS mínimo -->
-    <script>
-      (function () {
-        const menu = document.getElementById("mobile-menu");
-        const openBtn = document.getElementById("menu-toggle");
-        const closeBtn = document.getElementById("menu-close");
-        const backdrop = document.getElementById("menu-backdrop");
-
-        function openMenu() {
-          if (!menu) return;
-          menu.classList.remove("hidden");
-          menu.setAttribute("aria-hidden", "false");
-        }
-
-        function closeMenu() {
-          if (!menu) return;
-          menu.classList.add("hidden");
-          menu.setAttribute("aria-hidden", "true");
-        }
-
-        openBtn?.addEventListener("click", openMenu);
-        closeBtn?.addEventListener("click", closeMenu);
-        backdrop?.addEventListener("click", closeMenu);
-
-        menu?.querySelectorAll("a[href], button").forEach((node) => {
-          node.addEventListener("click", () => closeMenu());
-        });
-      })();
-    </script>
-
-    <!-- Sesión + UI global -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/session.js"></script>
-
-    <!-- Lógica de cuenta -->
     <script src="/account.js"></script>
-
-    <!-- Carrito: aquí lo mandamos a /cart (misma acción simple) -->
-    <script>
-      (function () {
-        const cartBtn = document.getElementById("cart-icon");
-        if (cartBtn) cartBtn.addEventListener("click", () => (window.location.href = "/cart"));
-      })();
-    </script>
   </body>
 </html>

@@ -2,6 +2,33 @@
 (function () {
   "use strict";
 
+  function clearSupabaseStorageEverywhere() {
+    try {
+      // elimina todo lo de supabase v2 (sb-... keys)
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("sb-")) localStorage.removeItem(k);
+        if (k.includes("supabase.auth")) localStorage.removeItem(k);
+      }
+    } catch {}
+
+    try {
+      // también limpia sessionStorage si guardó algo
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const k = sessionStorage.key(i);
+        if (!k) continue;
+        if (k.startsWith("sb-")) sessionStorage.removeItem(k);
+        if (k.includes("supabase.auth")) sessionStorage.removeItem(k);
+      }
+    } catch {}
+
+    // compat legacy
+    try {
+      localStorage.removeItem("burgerUser");
+    } catch {}
+  }
+
   function getSupabase() {
     if (window.__tqSupabase) return window.__tqSupabase;
 
@@ -14,12 +41,13 @@
       return null;
     }
     if (!url || !anonKey) {
-      console.warn("[session.js] Faltan SUPABASE_URL / SUPABASE_ANON_KEY (config.js).");
+      console.warn("[session.js] Faltan SUPABASE_URL / SUPABASE_ANON_KEY.");
       return null;
     }
 
     window.__tqSupabase = supabaseLib.createClient(url, anonKey, {
       auth: {
+        flowType: "pkce",
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
@@ -27,19 +55,6 @@
     });
 
     return window.__tqSupabase;
-  }
-
-  function getNextFromUrl() {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const next = params.get("next");
-      if (!next) return "";
-      if (!next.startsWith("/")) return "";
-      if (next.startsWith("//")) return "";
-      return next;
-    } catch {
-      return "";
-    }
   }
 
   async function getSession() {
@@ -54,30 +69,32 @@
     return data?.session || null;
   }
 
-  async function handleAuthCallbackIfNeeded() {
-    if (window.location.pathname !== "/auth/callback") return;
-
-    const sb = getSupabase();
-    if (!sb) {
-      window.location.replace("/login");
-      return;
-    }
-
-    const { data } = await sb.auth.getSession();
-    const session = data?.session;
-
-    if (session?.access_token) {
-      const next = getNextFromUrl();
-      window.location.replace(next || "/account");
-      return;
-    }
-
-    window.location.replace("/login");
+  async function isLoggedIn() {
+    const s = await getSession();
+    return !!s;
   }
 
-  document.addEventListener("DOMContentLoaded", async () => {
-    await handleAuthCallbackIfNeeded();
-  });
+  async function logout() {
+    const sb = getSupabase();
 
-  window.tqSession = { getSupabase, getSession };
+    try {
+      if (sb) {
+        // local es suficiente para navegador
+        const { error } = await sb.auth.signOut({ scope: "local" });
+        if (error) console.warn("[logout] signOut error:", error);
+      }
+    } catch (e) {
+      console.warn("[logout] error:", e);
+    } finally {
+      clearSupabaseStorageEverywhere();
+      window.location.replace("/");
+    }
+  }
+
+  window.tqSession = {
+    getSupabase,
+    getSession,
+    isLoggedIn,
+    logout,
+  };
 })();
