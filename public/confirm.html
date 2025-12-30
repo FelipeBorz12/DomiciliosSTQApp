@@ -20,7 +20,7 @@
       })();
     </script>
 
-    <!-- ✅ Cloudflare Turnstile -->
+    <!-- ✅ Cloudflare Turnstile (igual que login) -->
     <script
       src="https://challenges.cloudflare.com/turnstile/v0/api.js"
       async
@@ -462,18 +462,19 @@
                   </div>
                 </div>
 
-                <!-- ✅ Anti-bot obligatorio -->
+                <!-- ✅ Turnstile: mismo estilo que login -->
                 <div class="mb-4">
                   <div
                     class="cf-turnstile"
-                    data-sitekey="0x4AAAAAACJnxTuK3GmDGBe51wSsOboGs1Y"
+                    data-sitekey="0x4AAAAAACJnxeR3E7NemaeK"
                     data-theme="dark"
+                    data-size="normal"
                     data-callback="onOrderTurnstile"
                     data-expired-callback="onOrderTurnstileExpired"
                     data-error-callback="onOrderTurnstileError"
                   ></div>
                   <p id="antibot-msg" class="mt-2 text-xs text-white/60">
-                    Valida la verificación para habilitar el envío por WhatsApp.
+                    Verificación para evitar bots.
                   </p>
                 </div>
 

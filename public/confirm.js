@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const nameInput = document.getElementById("client-name");
   const emailInput = document.getElementById("client-email");
-  const phoneInput = document.getElementById("client-phone"); // ✅ 10 dígitos SIN +57
+  const phoneInput = document.getElementById("client-phone");
   const addressInput = document.getElementById("client-address");
   const notesInput = document.getElementById("client-notes");
 
@@ -31,16 +31,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendWhatsappBtn = document.getElementById("send-whatsapp-btn");
   const refreshMessageBtn = document.getElementById("refresh-message-btn");
 
-  const cartIcon = document.getElementById("cart-icon");
-  const cartCount = document.getElementById("cart-count");
+  const cartCountDesktop = document.getElementById("cart-count");
   const cartCountBadge = document.getElementById("cart-count-badge");
+
+  const antibotMsgEl = document.getElementById("antibot-msg");
 
   // ---- Estado ----
   let antiBotOk = false;
   let cartItems = [];
   let userData = null;
+
   let puntosVenta = [];
   let selectedPV = null;
+
   let syncingPV = false;
 
   // ---- Utils ----
@@ -57,12 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
     return "$" + n.toLocaleString("es-CO");
   }
 
-  function safeJson(obj) {
-    try {
-      return JSON.parse(JSON.stringify(obj));
-    } catch {
-      return null;
-    }
+  function safeText(v) {
+    return (v ?? "").toString().trim();
   }
 
   function toInt(v, def = 0) {
@@ -70,14 +69,28 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number.isFinite(n) ? Math.trunc(n) : def;
   }
 
-  function digitsOnly(v) {
-    return String(v || "").replace(/\D/g, "");
+  function setAntiBotMsg(text, isError = false) {
+    if (!antibotMsgEl) return;
+    antibotMsgEl.textContent = text || "";
+    antibotMsgEl.classList.toggle("text-red-400", !!isError);
+    antibotMsgEl.classList.toggle("text-white/60", !isError);
   }
 
-  function phoneFullFromInput10() {
-    const ten = digitsOnly(phoneInput?.value || "");
-    if (ten.length !== 10) return "";
-    return "+57" + ten;
+  // ---- LocalStorage ----
+  function saveUserToLocal(data) {
+    try {
+      if (!data) return;
+      localStorage.setItem("burgerUser", JSON.stringify(data));
+    } catch {}
+  }
+
+  function getLocalUserIfAny() {
+    try {
+      const raw = localStorage.getItem("burgerUser");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
   }
 
   // ---- Carrito ----
@@ -95,33 +108,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function syncCartBadges() {
-    const count = Array.isArray(cartItems)
-      ? cartItems.reduce((acc, it) => acc + Number(it.quantity || 1), 0)
-      : 0;
-
-    if (cartCount) cartCount.textContent = String(count || 0);
-    if (cartCountBadge) cartCountBadge.textContent = String(count || 0);
+  function syncBadges() {
+    const count = cartItems.reduce(
+      (acc, it) => acc + Number(it.quantity || 1),
+      0
+    );
+    if (cartCountDesktop) cartCountDesktop.textContent = String(count);
+    if (cartCountBadge) cartCountBadge.textContent = String(count);
   }
 
-  cartIcon?.addEventListener("click", () => {
-    try {
-      const raw = localStorage.getItem("burgerCart");
-      const parsed = raw ? JSON.parse(raw) : [];
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        alert("Tu carrito está vacío.");
-        return;
-      }
-      window.location.href = "/cart";
-    } catch {
-      window.location.href = "/cart";
-    }
-  });
-
   // ---- Validaciones ----
-  function validatePhone10(value) {
-    const d = digitsOnly(value);
-    return /^\d{10}$/.test(d);
+  function validatePhone10Digits(value) {
+    if (!value) return false;
+    return /^\d{10}$/.test(value.trim());
   }
 
   function validateEmail(value) {
@@ -140,18 +139,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 0);
   }
 
-  // ---- Usuario (sesión + formulario) ----
-  function saveUserToLocal(data) {
-    try {
-      if (!data) return;
-      localStorage.setItem("burgerUser", JSON.stringify(data));
-    } catch {}
-  }
-
+  // ---- Hidratar inputs ----
   function hydrateUserInputs(data) {
     if (!data) return;
+
     const correo = data.correo || data.email || "";
-    const perfil = data.perfil || {};
+    const perfil = data.perfil || data.formulario || data.profile || {};
 
     const nombre = perfil.nombre || data.nombre || "";
     const celular = perfil.celular || data.celular || "";
@@ -165,9 +158,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (nameInput && nombre) nameInput.value = nombre;
     if (emailInput && correo) emailInput.value = correo;
 
+    // Aquí el input es solo 10 dígitos (sin +57)
     if (phoneInput && celular) {
-      const d = digitsOnly(celular);
-      phoneInput.value = d.length >= 10 ? d.slice(-10) : d;
+      const digits = String(celular).replace(/\D/g, "");
+      if (digits.length === 12 && digits.startsWith("57"))
+        phoneInput.value = digits.slice(2);
+      else if (digits.length >= 10) phoneInput.value = digits.slice(-10);
     }
 
     if (addressInput && direccion) addressInput.value = direccion;
@@ -175,41 +171,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadUser() {
     try {
-      const session = await window.tqSession?.getSession?.();
-      const email = session?.user?.email ? String(session.user.email) : "";
+      // 1) Si hay sesión Supabase => ya está logueado
+      const s = await window.tqSession?.getSession?.();
+      const emailFromSession = s?.user?.email ? String(s.user.email) : "";
 
-      if (!email) {
-        userData = null;
-        noUserWarning?.classList.remove("hidden");
+      if (emailFromSession) {
+        noUserWarning?.classList.add("hidden");
+
+        // set email si está vacío
+        if (emailInput && !emailInput.value.trim()) emailInput.value = emailFromSession;
+
+        // 2) Intenta traer formulario desde Supabase (tabla formulario por correo)
+        let form = null;
+        try {
+          form = await window.tqSession?.fetchFormularioByCorreo?.(emailFromSession);
+        } catch (e) {
+          console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
+        }
+
+        // 3) Mezcla con local si existe
+        const local = getLocalUserIfAny();
+        const merged = {
+          ...(local || {}),
+          correo: emailFromSession,
+          perfil: {
+            ...((local && local.perfil) || {}),
+            ...(form || {}),
+          },
+        };
+
+        userData = merged;
+        saveUserToLocal(merged);
+        hydrateUserInputs(merged);
         return;
       }
 
-      noUserWarning?.classList.add("hidden");
-
-      let form = null;
-      try {
-        form = await window.tqSession?.fetchFormularioByCorreo?.(email);
-      } catch (e) {
-        console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
+      // 4) si no hay sesión, usa local si hay
+      const local = getLocalUserIfAny();
+      if (local?.correo) {
+        userData = local;
+        noUserWarning?.classList.add("hidden");
+        hydrateUserInputs(local);
+        return;
       }
 
-      const merged = {
-        correo: email,
-        email,
-        perfil: {
-          nombre: form?.nombre || "",
-          celular: form?.celular ? String(form.celular) : "",
-          direccionentrega: form?.direccionentrega || "",
-          Departamento: form?.Departamento || "",
-          Municipio: form?.Municipio || "",
-          Barrio: form?.Barrio || "",
-        },
-        formulario: form || null,
-      };
-
-      userData = merged;
-      saveUserToLocal(merged);
-      hydrateUserInputs(merged);
+      userData = null;
+      noUserWarning?.classList.remove("hidden");
     } catch (err) {
       console.error("[confirm.js] Error cargando usuario:", err);
       userData = null;
@@ -217,155 +224,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---- PV Card estilo stores ----
-  function pvMapsLink(pv) {
-    const lat = Number(pv?.Latitud);
-    const lng = Number(pv?.Longitud);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      return `https://www.google.com/maps?q=${lat},${lng}`;
-    }
-    const addr = encodeURIComponent(
-      `${pv?.Direccion || ""} ${pv?.Municipio || ""} ${pv?.Departamento || ""}`
-    );
-    return `https://www.google.com/maps?q=${addr}`;
-  }
-
-  function renderPvCard(pv, distanceKmText = "") {
-    if (!pvCard) return;
-    if (!pv) {
-      pvCard.classList.add("hidden");
-      pvCard.innerHTML = "";
-      return;
-    }
-
-    const img =
-      pv.URL_image || pv.url_image || pv.imagen || pv.image || "/img/logo.png";
-    const name = pv.Barrio || "Punto de venta";
-    const addr = `${pv.Direccion || "Dirección no disponible"} - ${
-      pv.Municipio || ""
-    }`;
-    const whatsapp = String(pv.num_whatsapp || "").trim();
-    const maps = pvMapsLink(pv);
-
-    pvCard.classList.remove("hidden");
-    pvCard.innerHTML = `
-      <div class="rounded-2xl bg-surface-dark p-4 border border-border-dark shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-        <div class="flex gap-4">
-          <div class="w-20 h-20 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
-            <img src="${img}" alt="${name}" class="w-full h-full object-cover" loading="lazy"
-                 onerror="this.src='/img/logo.png';" />
-          </div>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between gap-2">
-              <h3 class="text-white font-extrabold text-base sm:text-lg leading-tight truncate">${name}</h3>
-              ${
-                distanceKmText
-                  ? `<span class="shrink-0 text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">${distanceKmText}</span>`
-                  : ""
-              }
-            </div>
-
-            <p class="text-white/60 text-sm font-semibold truncate mt-1">${addr}</p>
-            ${
-              whatsapp
-                ? `<p class="text-white/60 text-sm font-semibold truncate mt-1">WhatsApp: ${whatsapp}</p>`
-                : `<p class="text-white/50 text-sm font-semibold truncate mt-1">WhatsApp no disponible</p>`
-            }
-          </div>
-        </div>
-
-        <div class="flex gap-3 mt-4">
-          <a
-            href="${maps}"
-            target="_blank"
-            rel="noopener"
-            class="flex-1 inline-flex items-center justify-center rounded-full h-10 bg-primary hover:bg-red-700 text-white text-sm font-extrabold transition-colors gap-2"
-          >
-            <span class="material-symbols-outlined text-[18px]">navigation</span>
-            Cómo llegar
-          </a>
-
-          ${
-            whatsapp
-              ? `<a
-                  href="https://wa.me/${whatsapp.replace(/\D/g, "")}"
-                  target="_blank"
-                  rel="noopener"
-                  class="inline-flex items-center justify-center rounded-full h-10 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-extrabold transition-colors gap-2"
-                >
-                  <span class="material-symbols-outlined text-[18px]">chat</span>
-                  WhatsApp
-                </a>`
-              : ""
-          }
-        </div>
-
-        <p class="text-xs text-white/45 mt-3">
-          Este WhatsApp será el destino del mensaje y el punto de venta del pedido.
-        </p>
-      </div>
-    `;
-  }
-
-  // ---- Form ----
-  function validateForm() {
-    if (!sendWhatsappBtn) return;
-
-    const nameOk = !!(nameInput && nameInput.value.trim());
-
-    const emailVal = emailInput ? emailInput.value.trim() : "";
-    const emailOk = validateEmail(emailVal);
-
-    const phoneVal = phoneInput ? phoneInput.value.trim() : "";
-    const phoneOk = validatePhone10(phoneVal);
-
-    const addressOk = !!(addressInput && addressInput.value.trim());
-
-    const cartOk = cartItems && cartItems.length > 0;
-
-    const pvId = Number(selectedPV?.id);
-    const pvOk = !!(
-      selectedPV &&
-      Number.isFinite(pvId) &&
-      pvId > 0 &&
-      String(selectedPV.num_whatsapp || "").trim()
-    );
-
-    const paymentOk = !!(
-      paymentMethodSelect && paymentMethodSelect.value.trim()
-    );
-
-    if (phoneError) {
-      if (phoneVal && !phoneOk) phoneError.classList.remove("hidden");
-      else phoneError.classList.add("hidden");
-    }
-
-    if (emailError) {
-      if (emailVal && !emailOk) emailError.classList.remove("hidden");
-      else emailError.classList.add("hidden");
-    }
-
-    if (paymentError) {
-      if (paymentTouched && !paymentOk) paymentError.classList.remove("hidden");
-      else paymentError.classList.add("hidden");
-    }
-
-    const allOk =
-      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
-
-    // ✅ CLAVE: solo habilita si el form está ok y Turnstile está ok
-    sendWhatsappBtn.disabled = !(allOk && antiBotOk);
-  }
-
   // ---- WhatsApp message ----
   function buildOrderText(pedidoId = null) {
     const name = nameInput?.value?.trim() || "No especificado";
     const email = emailInput?.value?.trim() || "No especificado";
-
-    const phone10 = digitsOnly(phoneInput?.value || "");
-    const phone = phone10.length === 10 ? `+57${phone10}` : "No especificado";
-
+    const phoneDigits = phoneInput?.value?.trim() || "";
+    const phone = phoneDigits ? `+57${phoneDigits}` : "No especificado";
     const address = addressInput?.value?.trim() || "No especificado";
     const notes = notesInput?.value?.trim() || "";
 
@@ -450,6 +314,142 @@ document.addEventListener("DOMContentLoaded", () => {
     orderText.dataset.userEdited = "1";
   });
 
+  // ---- PV Card: estilo tipo store.js (tarjeta linda) ----
+  function renderPVCard(pv, distanceKmText = "") {
+    if (!pvCard) return;
+
+    if (!pv) {
+      pvCard.classList.add("hidden");
+      pvCard.innerHTML = "";
+      return;
+    }
+
+    const name = safeText(pv.Barrio) || "Punto de venta";
+    const addr = `${safeText(pv.Direccion)} - ${safeText(pv.Municipio)}`;
+    const wa = safeText(pv.num_whatsapp);
+    const dept = safeText(pv.Departamento);
+    const mpio = safeText(pv.Municipio);
+
+    pvCard.classList.remove("hidden");
+    pvCard.innerHTML = `
+      <div class="rounded-2xl bg-surface-dark border border-border-dark p-4 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-white font-extrabold text-lg leading-tight truncate">${name}</p>
+            <p class="text-white/60 text-sm font-semibold truncate mt-1">${addr}</p>
+            <p class="text-white/45 text-xs font-extrabold uppercase tracking-[0.2em] mt-3">
+              ${dept}${dept && mpio ? " • " : ""}${mpio}
+              ${distanceKmText ? ` • ${distanceKmText}` : ""}
+            </p>
+          </div>
+          <span class="material-symbols-outlined text-primary">storefront</span>
+        </div>
+
+        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            id="pv-use-btn"
+            class="flex-1 inline-flex items-center justify-center h-10 rounded-full bg-primary hover:bg-red-700 text-white text-sm font-extrabold transition-colors gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+            Usar este punto
+          </button>
+
+          ${
+            wa
+              ? `
+            <a
+              href="https://wa.me/${wa.replace(/\D/g, "")}"
+              target="_blank"
+              rel="noopener"
+              class="flex-1 inline-flex items-center justify-center h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-extrabold transition-colors gap-2"
+            >
+              <span class="material-symbols-outlined text-[18px]">chat</span>
+              WhatsApp
+            </a>`
+              : `
+            <div class="flex-1 inline-flex items-center justify-center h-10 rounded-full bg-white/5 border border-white/10 text-white/50 text-sm font-extrabold">
+              Sin WhatsApp
+            </div>`
+          }
+        </div>
+      </div>
+    `;
+
+    const useBtn = document.getElementById("pv-use-btn");
+    useBtn?.addEventListener("click", () => {
+      // sincroniza selects
+      syncingPV = true;
+      if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
+        pvDeptSelect.value = pv.Departamento || "";
+        onDeptChange();
+        pvMpioSelect.value = pv.Municipio || "";
+        onMpioChange();
+        pvBarrioSelect.value = pv.Barrio || "";
+      }
+      syncingPV = false;
+
+      selectedPV = pv;
+
+      if (orderText) orderText.dataset.userEdited = "0";
+      updateOrderTextLive(true);
+      validateForm();
+
+      if (pvMessage) {
+        pvMessage.textContent =
+          "Punto de venta seleccionado. El mensaje de WhatsApp se actualiza automáticamente.";
+      }
+    });
+  }
+
+  function validateForm() {
+    if (!sendWhatsappBtn) return;
+
+    const nameOk = !!(nameInput && nameInput.value.trim());
+
+    const emailVal = emailInput ? emailInput.value.trim() : "";
+    const emailOk = validateEmail(emailVal);
+
+    const phoneDigits = phoneInput ? phoneInput.value.trim() : "";
+    const phoneOk = validatePhone10Digits(phoneDigits);
+
+    const addressOk = !!(addressInput && addressInput.value.trim());
+    const cartOk = cartItems && cartItems.length > 0;
+
+    const pvId = Number(selectedPV?.id);
+    const pvOk = !!(
+      selectedPV &&
+      Number.isFinite(pvId) &&
+      pvId > 0 &&
+      String(selectedPV.num_whatsapp || "").trim()
+    );
+
+    const paymentOk = !!(
+      paymentMethodSelect && paymentMethodSelect.value.trim()
+    );
+
+    if (phoneError) {
+      if (phoneDigits && !phoneOk) phoneError.classList.remove("hidden");
+      else phoneError.classList.add("hidden");
+    }
+
+    if (emailError) {
+      if (emailVal && !emailOk) emailError.classList.remove("hidden");
+      else emailError.classList.add("hidden");
+    }
+
+    if (paymentError) {
+      if (paymentTouched && !paymentOk) paymentError.classList.remove("hidden");
+      else paymentError.classList.add("hidden");
+    }
+
+    const allOk =
+      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
+
+    // ✅ Obligatorio: antiBotOk
+    sendWhatsappBtn.disabled = !(allOk && antiBotOk);
+  }
+
   // ---- Puntos de venta ----
   async function fetchPuntosVenta() {
     const res = await fetch("/api/puntos-venta");
@@ -468,8 +468,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!Array.isArray(puntosVenta) || puntosVenta.length === 0) return;
 
     const departamentos = Array.from(
-      new Set(puntosVenta.map((pv) => pv.Departamento))
-    ).sort();
+      new Set(puntosVenta.map((pv) => pv.Departamento).filter(Boolean))
+    ).sort((a, b) => String(a).localeCompare(String(b), "es"));
 
     pvDeptSelect.innerHTML = '<option value="">Departamento</option>';
     departamentos.forEach((d) => {
@@ -496,7 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!syncingPV) {
       selectedPV = null;
-      renderPvCard(null);
+      renderPVCard(null);
     }
 
     if (!dept) {
@@ -509,8 +509,9 @@ document.addEventListener("DOMContentLoaded", () => {
         puntosVenta
           .filter((pv) => pv.Departamento === dept)
           .map((pv) => pv.Municipio)
+          .filter(Boolean)
       )
-    ).sort();
+    ).sort((a, b) => String(a).localeCompare(String(b), "es"));
 
     municipios.forEach((m) => {
       const opt = document.createElement("option");
@@ -532,7 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!syncingPV) {
       selectedPV = null;
-      renderPvCard(null);
+      renderPVCard(null);
     }
 
     if (!dept || !mpio) {
@@ -543,7 +544,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const barrios = puntosVenta
       .filter((pv) => pv.Departamento === dept && pv.Municipio === mpio)
       .map((pv) => pv.Barrio)
-      .sort();
+      .filter(Boolean)
+      .sort((a, b) => String(a).localeCompare(String(b), "es"));
 
     barrios.forEach((b) => {
       const opt = document.createElement("option");
@@ -573,7 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (found) {
       selectedPV = found;
-      renderPvCard(found);
+      renderPVCard(found);
 
       if (orderText) orderText.dataset.userEdited = "0";
       updateOrderTextLive(true);
@@ -638,7 +640,7 @@ document.addEventListener("DOMContentLoaded", () => {
           puntosVenta.forEach((pv) => {
             const pvLat = Number(pv.Latitud);
             const pvLon = Number(pv.Longitud);
-            if (!Number.isFinite(pvLat) || !Number.isFinite(pvLon)) return;
+            if (Number.isNaN(pvLat) || Number.isNaN(pvLon)) return;
             const d = distanciaKm(userLat, userLon, pvLat, pvLon);
             if (d < bestDist) {
               bestDist = d;
@@ -653,8 +655,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
+          // ✅ Muestra tarjeta bonita (como pediste)
+          renderPVCard(best, `~${bestDist.toFixed(1)} km`);
+
+          // también deja selectedPV (para que valide)
           selectedPV = best;
 
+          // si quieres que automáticamente seleccione en dropdowns, deja esto:
           syncingPV = true;
           if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
             pvDeptSelect.value = best.Departamento || "";
@@ -668,15 +675,13 @@ document.addEventListener("DOMContentLoaded", () => {
           syncingPV = false;
 
           selectedPV = best;
-          renderPvCard(best, `~${bestDist.toFixed(1)} km`);
-
           if (orderText) orderText.dataset.userEdited = "0";
           updateOrderTextLive(true);
           validateForm();
 
           if (pvMessage) {
             pvMessage.textContent =
-              `Punto de venta sugerido: ${best.Barrio || "Punto de venta"} ` +
+              `Punto de venta cercano detectado: ${best.Barrio || "Sede"} ` +
               `(a ~${bestDist.toFixed(1)} km).`;
           }
         } catch (err) {
@@ -688,17 +693,71 @@ document.addEventListener("DOMContentLoaded", () => {
       },
       (error) => {
         console.error("[confirm.js] Geolocalización error:", error);
-        if (pvMessage)
-          pvMessage.textContent = "No se pudo obtener tu ubicación.";
+        if (pvMessage) pvMessage.textContent = "No se pudo obtener tu ubicación.";
       }
     );
   }
 
-  // ✅ Mapea carrito -> items para pedido_items
+  // ---- Anti-bot: server verify ----
+  async function verifyAntiBotServer(token) {
+    const res = await fetch("/api/antibot/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ cf_turnstile_response: token }),
+    });
+
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error(data?.message || "No se pudo validar anti-bot");
+    return true;
+  }
+
+  // ✅ Callbacks que Turnstile llama (strings en HTML)
+  window.onOrderTurnstile = async function (token) {
+    antiBotOk = false;
+    if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
+
+    try {
+      setAntiBotMsg("Validando…");
+      await verifyAntiBotServer(token);
+      antiBotOk = true;
+      setAntiBotMsg("Verificación lista ✅ Ya puedes enviar tu pedido.");
+    } catch (e) {
+      console.error("[anti-bot] verify error:", e);
+      antiBotOk = false;
+      setAntiBotMsg("Falló la verificación. Intenta de nuevo.", true);
+
+      if (window.turnstile) {
+        try {
+          window.turnstile.reset();
+        } catch {}
+      }
+    } finally {
+      validateForm();
+    }
+  };
+
+  window.onOrderTurnstileExpired = function () {
+    antiBotOk = false;
+    setAntiBotMsg("La verificación expiró. Vuélvela a completar.", true);
+    validateForm();
+  };
+
+  window.onOrderTurnstileError = function () {
+    antiBotOk = false;
+    setAntiBotMsg(
+      "Error cargando verificación anti-bot. Recarga la página.",
+      true
+    );
+    validateForm();
+  };
+
+  // ---- Enviar ----
   function mapCartToPedidoItems() {
     const mapped = cartItems
       .map((item) => {
         const qty = Math.max(1, toInt(item.quantity ?? item.qty ?? 1, 1));
+
         const menuIdRaw =
           item.menu_id ?? item.menuId ?? item.id ?? item.productId;
         const menu_id = Number(menuIdRaw);
@@ -708,16 +767,16 @@ document.addEventListener("DOMContentLoaded", () => {
           return null;
         }
 
-        const extras = Array.isArray(item.extras) ? safeJson(item.extras) : [];
+        const extras = Array.isArray(item.extras) ? item.extras : [];
         const modifications = Array.isArray(item.modifications)
-          ? safeJson(item.modifications)
+          ? item.modifications
           : [];
 
         return {
           menu_id,
           qty,
-          extras: extras || [],
-          modifications: modifications || [],
+          extras,
+          modifications,
         };
       })
       .filter(Boolean);
@@ -726,15 +785,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function sendOrder() {
-    // ✅ BLOQUEO FINAL: si no pasó Turnstile NO se envía
+    // ✅ anti-bot obligatorio
     if (!antiBotOk) {
-      alert("Completa la verificación anti-bot para enviar el pedido.");
+      alert("Completa la verificación anti-bot antes de enviar.");
       return;
     }
 
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
-    const phoneFull = phoneFullFromInput10();
+    const phoneDigits = phoneInput?.value?.trim();
     const address = addressInput?.value?.trim();
     const paymentMethod = paymentMethodSelect?.value?.trim();
 
@@ -745,18 +804,21 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (!name) return alert("Ingresa tu nombre.");
+    if (!validateEmail(email || "")) return alert("Ingresa un correo válido.");
+    if (!validatePhone10Digits(phoneDigits || "")) {
+      return alert("Tu celular debe tener 10 dígitos (sin +57).");
+    }
+    if (!address) return alert("Ingresa tu dirección.");
+
     const pv_id = Number(selectedPV?.id);
     if (
-      !name ||
-      !email ||
-      !phoneFull ||
-      !address ||
       !selectedPV ||
       !selectedPV.num_whatsapp ||
       !Number.isFinite(pv_id) ||
       pv_id <= 0
     ) {
-      alert("Faltan datos obligatorios o punto de venta.");
+      alert("Selecciona un punto de venta válido (con WhatsApp).");
       return;
     }
 
@@ -771,14 +833,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
 
-    // 1) Crear pedido en BD
     let pedidoId = null;
+
+    // 1) Crear pedido en BD
     try {
       const payload = {
         nombre_cliente: email,
         resumen_pedido: "",
         direccion_cliente: address,
-        celular_cliente: phoneFull,
+        celular_cliente: `+57${phoneDigits}`,
         metodo_pago: paymentMethod,
         pv_id,
         delivery_fee: DELIVERY_FEE,
@@ -849,7 +912,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 5) Limpiar carrito y redirigir
     localStorage.removeItem("burgerCart");
     cartItems = [];
-    syncCartBadges();
+    syncBadges();
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
@@ -867,6 +930,34 @@ document.addEventListener("DOMContentLoaded", () => {
     updateOrderTextLive();
   }
 
+  const tryHydrateByEmail = debounce(async () => {
+    const emailVal = emailInput?.value?.trim() || "";
+    if (!validateEmail(emailVal)) return;
+
+    // intenta formulario
+    try {
+      const form = await window.tqSession?.fetchFormularioByCorreo?.(emailVal);
+      if (form) {
+        const local = getLocalUserIfAny();
+        const merged = {
+          ...(local || {}),
+          correo: emailVal,
+          perfil: {
+            ...((local && local.perfil) || {}),
+            ...(form || {}),
+          },
+        };
+        userData = merged;
+        saveUserToLocal(merged);
+        hydrateUserInputs(merged);
+
+        if (orderText) orderText.dataset.userEdited = "0";
+        updateOrderTextLive(true);
+        validateForm();
+      }
+    } catch {}
+  }, 450);
+
   // ---- Eventos ----
   backButton?.addEventListener("click", () => {
     if (window.history.length > 1) window.history.back();
@@ -882,7 +973,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   nameInput?.addEventListener("input", onAnyFormChange);
-  emailInput?.addEventListener("input", onAnyFormChange);
+
+  emailInput?.addEventListener("input", () => {
+    onAnyFormChange();
+    tryHydrateByEmail();
+  });
+
   phoneInput?.addEventListener("input", onAnyFormChange);
   addressInput?.addEventListener("input", onAnyFormChange);
   notesInput?.addEventListener("input", onAnyFormChange);
@@ -908,77 +1004,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sendWhatsappBtn?.addEventListener("click", sendOrder);
 
-  // ---- Anti-bot (Turnstile) ----
-  const msgEl = document.getElementById("antibot-msg");
-
-  function setAntiBotMsg(text, isError = false) {
-    if (!msgEl) return;
-    msgEl.textContent = text || "";
-    msgEl.classList.toggle("text-red-400", !!isError);
-    msgEl.classList.toggle("text-white/60", !isError);
-  }
-
-  async function verifyAntiBotServer(token) {
-    const res = await fetch("/api/antibot/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ cf_turnstile_response: token }),
-    });
-
-    const data = await res.json().catch(() => null);
-    if (!res.ok)
-      throw new Error(data?.message || "No se pudo validar anti-bot");
-    return true;
-  }
-
-  // ✅ Turnstile callbacks del HTML
-  window.onOrderTurnstile = async function (token) {
-    antiBotOk = false;
-    if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
-
-    try {
-      setAntiBotMsg("Validando…");
-      await verifyAntiBotServer(token);
-      antiBotOk = true;
-      setAntiBotMsg("Verificación lista ✅ Ya puedes enviar tu pedido.");
-    } catch (e) {
-      console.error("[anti-bot] verify error:", e);
-      antiBotOk = false;
-      setAntiBotMsg("Falló la verificación. Intenta de nuevo.", true);
-      if (window.turnstile) {
-        try {
-          window.turnstile.reset();
-        } catch {}
-      }
-    } finally {
-      validateForm();
-    }
-  };
-
-  window.onOrderTurnstileExpired = function () {
-    antiBotOk = false;
-    setAntiBotMsg("La verificación expiró. Vuélvela a completar.", true);
-    validateForm();
-  };
-
-  window.onOrderTurnstileError = function () {
-    antiBotOk = false;
-    setAntiBotMsg(
-      "Error cargando verificación anti-bot. Recarga la página.",
-      true
-    );
-    validateForm();
-  };
-
   // ---- init ----
   async function init() {
-    // ✅ confirm requiere sesión
-    const ok = await window.tqSession?.requireLoginOrRedirect?.();
-    if (!ok) return;
+    // por defecto: antiBot no ok
+    antiBotOk = false;
+    setAntiBotMsg("Verificación para evitar bots.");
 
     loadCart();
-    syncCartBadges();
+    syncBadges();
 
     await loadUser();
 
@@ -1002,10 +1035,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (orderText) orderText.dataset.userEdited = "0";
     updateOrderTextLive(true);
-
-    // ✅ por seguridad: si no pasó Turnstile, NO habilitar aunque el form esté ok
-    antiBotOk = false;
-    setAntiBotMsg("Completa la verificación para habilitar el envío.");
     validateForm();
   }
 
