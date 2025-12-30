@@ -132,6 +132,19 @@ app.get("/account", (_req, res) =>
   res.sendFile(path.join(publicPath, "account.html"))
 );
 
+app.get("/account", (_req, res) =>
+  res.sendFile(path.join(publicPath, "account.html"))
+);
+
+app.get("/auth/callback", (_req, res) =>
+  res.sendFile(path.join(publicPath, "auth-callback.html"))
+);
+
+app.get("/login", (_req, res) =>
+  res.sendFile(path.join(publicPath, "login.html"))
+);
+
+
 // ===================== ANTI-BOT =====================
 app.post("/api/antibot/verify", verifyTurnstile, (_req: Request, res: Response) => {
   return res.json({ ok: true });
