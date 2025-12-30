@@ -13,13 +13,6 @@
     el.classList.toggle("hidden", !msg);
   }
 
-  function setSetPassError(msg) {
-    const el = $("setpass-error");
-    if (!el) return;
-    el.textContent = msg || "";
-    el.classList.toggle("hidden", !msg);
-  }
-
   function showLoader(msg) {
     const loader = $("global-loader");
     const txt = $("loader-text");
@@ -38,21 +31,36 @@
 
   function ensureSb() {
     if (!window.sb) {
-      console.error("[auth] window.sb no existe (cliente supabase)");
+      console.error("[auth] window.sb no existe. Debes crear el cliente Supabase en login.html (inline).");
       setError("Error interno: cliente de autenticación no cargó.");
       return false;
     }
     return true;
   }
 
+  function safeNext(next) {
+    if (!next) return "";
+    if (next.startsWith("http://") || next.startsWith("https://")) return "";
+    if (!next.startsWith("/")) return "";
+    if (next.startsWith("//")) return "";
+    return next;
+  }
+
+  function getNextParam() {
+    const params = new URLSearchParams(window.location.search);
+    return safeNext(params.get("next") || "");
+  }
+
   function goIndex() {
     window.location.replace("/");
   }
 
-  function goRegisterPrefill(email) {
-    window.location.href = `/register?correo=${encodeURIComponent(email)}`;
+  function goNextOrIndex() {
+    const next = getNextParam();
+    window.location.replace(next || "/");
   }
 
+  // Turnstile token
   function getTurnstileToken() {
     const el = document.querySelector('input[name="cf-turnstile-response"]');
     return String(el?.value || "").trim();
@@ -81,6 +89,7 @@
     }
   }
 
+  // ✅ backend: /api/auth/exists -> { exists: boolean }
   async function emailExists(correo) {
     try {
       const res = await fetch(`/api/auth/exists?correo=${encodeURIComponent(correo)}`, {
@@ -95,28 +104,37 @@
     }
   }
 
-  function showSetPasswordView() {
-    const loginView = $("login-view");
-    const setPassView = $("set-password-view");
-
-    // si no existen, fallback a register
-    if (!setPassView) return false;
-
-    if (loginView) loginView.classList.add("hidden");
-    setPassView.classList.remove("hidden");
-    return true;
+  function goRegisterPrefill(email) {
+    window.location.href = `/register?correo=${encodeURIComponent(email)}`;
   }
 
-  async function getAccessToken() {
+  function readEmailPasswordFromForm(form) {
+    const emailEl =
+      form?.querySelector('input[name="correo"]') ||
+      form?.querySelector('input[name="email"]') ||
+      form?.querySelector('input[type="email"]');
+
+    const passEl =
+      form?.querySelector('input[name="contrasena"]') ||
+      form?.querySelector('input[name="password"]') ||
+      form?.querySelector('input[type="password"]');
+
+    const email = normalizeEmail(emailEl?.value);
+    const password = String(passEl?.value || "");
+    return { email, password };
+  }
+
+  // ✅ Si ya hay sesión, no mostrar login: redirigir
+  async function redirectIfAlreadyLoggedIn() {
+    if (!ensureSb()) return;
     try {
       const { data } = await window.sb.auth.getSession();
-      return data?.session?.access_token || "";
-    } catch {
-      return "";
-    }
+      if (data?.session) {
+        goNextOrIndex();
+      }
+    } catch {}
   }
 
-  // ===================== LOGIN MANUAL (bcrypt en backend) =====================
   async function onSubmitLogin(e) {
     e.preventDefault();
     setError("");
@@ -124,17 +142,7 @@
     if (!ensureSb()) return;
 
     const form = e.currentTarget;
-
-    const emailEl =
-      form?.querySelector('input[name="correo"]') ||
-      form?.querySelector('input[type="email"]');
-
-    const passEl =
-      form?.querySelector('input[name="contrasena"]') ||
-      form?.querySelector('input[type="password"]');
-
-    const email = normalizeEmail(emailEl?.value);
-    const password = String(passEl?.value || "");
+    const { email, password } = readEmailPasswordFromForm(form);
 
     if (!email || !password) {
       setError("Correo y contraseña son obligatorios.");
@@ -143,7 +151,7 @@
 
     showLoader("Verificando…");
 
-    // si no existe, manda a register
+    // ✅ si no existe en tu tabla usuarios -> register
     const exists = await emailExists(email);
     if (!exists) {
       hideLoader();
@@ -151,7 +159,7 @@
       return;
     }
 
-    // Turnstile (si está)
+    // ✅ turnstile (si está)
     const anti = await verifyAntiBotIfPresent();
     if (!anti.ok) {
       hideLoader();
@@ -162,60 +170,34 @@
     showLoader("Iniciando sesión…");
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ correo: email, contrasena: password }),
-      });
+      // ✅ LOGIN REAL: Supabase Auth (NO /api/auth/login)
+      const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
 
-      const j = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        if (res.status === 404) {
-          hideLoader();
-          goRegisterPrefill(email);
-          return;
-        }
-        if (res.status === 401) {
-          setError("Contraseña incorrecta.");
-          return;
-        }
-        if (res.status === 409 && j?.code === "PASSWORD_NOT_SET") {
-          setError("Este usuario no tiene contraseña. Inicia con Google y crea tu contraseña.");
-          return;
-        }
-
-        setError(j?.message || "No se pudo iniciar sesión.");
+      if (error || !data?.session) {
+        console.error("[login] error:", error);
+        setError("Credenciales inválidas. Verifica correo y contraseña.");
         return;
       }
 
-      // ✅ Setear sesión Supabase en el navegador
-      if (j?.session?.access_token && j?.session?.refresh_token) {
-        await window.sb.auth.setSession({
-          access_token: j.session.access_token,
-          refresh_token: j.session.refresh_token,
-        });
-      }
-
-      goIndex();
+      // ✅ después del login: index o next
+      goNextOrIndex();
     } catch (err) {
-      console.error("[login bcrypt] error:", err);
+      console.error("[login] error inesperado:", err);
       setError("Error inesperado iniciando sesión.");
     } finally {
       hideLoader();
     }
   }
 
-  // ===================== GOOGLE =====================
   async function onGoogleClick() {
     setError("");
     if (!ensureSb()) return;
 
     showLoader("Redirigiendo a Google…");
 
-    // volver a esta misma ruta
-    const redirectTo = window.location.origin + window.location.pathname;
+    // volvemos a /login para completar el exchange PKCE y luego redirigir
+    const next = getNextParam();
+    const redirectTo = window.location.origin + "/login" + (next ? `?next=${encodeURIComponent(next)}` : "");
 
     try {
       const { error } = await window.sb.auth.signInWithOAuth({
@@ -235,149 +217,51 @@
     }
   }
 
-  async function checkGoogleStatusAndRoute() {
-    // ya hay sesión google, validar contra backend
-    const token = await getAccessToken();
-    if (!token) return false;
-
-    try {
-      const res = await fetch("/api/auth/google/status", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-
-      const j = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        setError(j?.message || "No se pudo validar el usuario con Google.");
-        return true;
-      }
-
-      // si NO existe -> pedir contraseña y crear
-      if (!j?.exists) {
-        const shown = showSetPasswordView();
-        if (!shown) {
-          // si tu login.html no tiene vista set-password, manda a register
-          goRegisterPrefill(j?.correo || "");
-        }
-        return true;
-      }
-
-      // existe pero necesita password (hash faltante)
-      if (j?.needs_password) {
-        const shown = showSetPasswordView();
-        if (!shown) goRegisterPrefill(j?.correo || "");
-        return true;
-      }
-
-      // existe y todo ok
-      goIndex();
-      return true;
-    } catch (e) {
-      console.error("[google/status] error:", e);
-      setError("Error validando usuario con Google.");
-      return true;
-    }
-  }
-
-  async function onSubmitSetPassword() {
-    setSetPassError("");
+  // ✅ manejo retorno de Google (PKCE)
+  async function handleOAuthReturnIfAny() {
     if (!ensureSb()) return;
 
-    const p1 = String($("new-pass")?.value || "");
-    const p2 = String($("new-pass-2")?.value || "");
+    const params = new URLSearchParams(window.location.search);
 
-    if (p1.length < 8) {
-      setSetPassError("La contraseña debe tener mínimo 8 caracteres.");
-      return;
-    }
-    if (p1 !== p2) {
-      setSetPassError("Las contraseñas no coinciden.");
-      return;
-    }
-
-    showLoader("Creando usuario…");
-
+    // si supabase ya detectó sesión en url, redirige
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        setSetPassError("No hay sesión de Google activa.");
+      const { data } = await window.sb.auth.getSession();
+      if (data?.session) {
+        goNextOrIndex();
         return;
       }
+    } catch {}
 
-      const res = await fetch("/api/auth/google/complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-        body: JSON.stringify({ contrasena: p1 }),
-      });
+    if (!params.has("code")) return;
 
-      const j = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        setSetPassError(j?.message || "No se pudo completar el registro.");
-        return;
+    showLoader("Procesando inicio de sesión…");
+    try {
+      const code = params.get("code");
+      if (code) {
+        const ex = await window.sb.auth.exchangeCodeForSession(code);
+        if (ex?.data?.session) {
+          goNextOrIndex();
+          return;
+        }
       }
-
-      goIndex();
+      setError("No se pudo completar el inicio de sesión con Google.");
     } catch (e) {
-      console.error("[google/complete] error:", e);
-      setSetPassError("Error inesperado guardando contraseña.");
+      console.error("[oauth return] error:", e);
+      setError("Error procesando el inicio de sesión con Google.");
     } finally {
       hideLoader();
     }
   }
 
-  async function handleOAuthReturnIfAny() {
-    if (!ensureSb()) return;
-
-    // Si ya hay sesión -> revisar estado en backend
-    try {
-      const { data } = await window.sb.auth.getSession();
-      if (data?.session) {
-        await checkGoogleStatusAndRoute();
-        return;
-      }
-    } catch {}
-
-    // Si viene con ?code=..., forzar exchange y luego revisar estado
-    const params = new URLSearchParams(window.location.search);
-    if (params.has("code")) {
-      showLoader("Procesando inicio de sesión…");
-      try {
-        const code = params.get("code");
-        if (code) {
-          await window.sb.auth.exchangeCodeForSession(code);
-        }
-        await checkGoogleStatusAndRoute();
-      } catch (e) {
-        console.error("[oauth return] error:", e);
-        setError("Error procesando el inicio de sesión con Google.");
-      } finally {
-        hideLoader();
-      }
-    }
-  }
-
-  // ===================== INIT =====================
   document.addEventListener("DOMContentLoaded", async () => {
     const form = $("login-form");
     const googleBtn = $("google-login");
-    const setPassBtn = $("setpass-btn");
-    const skipBtn = $("skip-btn");
 
     form?.addEventListener("submit", onSubmitLogin);
     googleBtn?.addEventListener("click", onGoogleClick);
 
-    // si tu login.html NO tiene estos botones/inputs, no pasa nada
-    setPassBtn?.addEventListener("click", onSubmitSetPassword);
-    skipBtn?.addEventListener("click", () => goIndex());
-
     await handleOAuthReturnIfAny();
+    await redirectIfAlreadyLoggedIn();
 
     console.log("[auth] listeners listos");
   });
