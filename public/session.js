@@ -20,10 +20,6 @@
         if (k.includes("supabase.auth")) sessionStorage.removeItem(k);
       }
     } catch {}
-
-    try {
-      localStorage.removeItem("burgerUser"); // compat legacy
-    } catch {}
   }
 
   function getSupabase() {
@@ -66,39 +62,49 @@
     return data?.session || null;
   }
 
-  async function getAccessToken() {
-    const s = await getSession();
-    return s?.access_token || "";
-  }
-
   async function isLoggedIn() {
     const s = await getSession();
     return !!s;
   }
 
-  async function fetchMe() {
-    const token = await getAccessToken();
-    if (!token) return null;
+  function safePath(path) {
+    if (!path) return "/";
+    // solo rutas internas
+    if (path.startsWith("http://") || path.startsWith("https://")) return "/";
+    if (!path.startsWith("/")) return "/";
+    if (path.startsWith("//")) return "/";
+    return path;
+  }
 
-    try {
-      const res = await fetch("/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "include",
-      });
-      if (!res.ok) return null;
-      return await res.json();
-    } catch {
-      return null;
-    }
+  function buildNext() {
+    // guarda ruta + query actual para volver después del login
+    const p = safePath(window.location.pathname);
+    const q = window.location.search || "";
+    // no queremos next hacia /login ni /auth/callback
+    if (p.startsWith("/login") || p.startsWith("/auth/callback")) return "";
+    return encodeURIComponent(p + q);
+  }
+
+  function goLoginWithNext() {
+    const next = buildNext();
+    window.location.href = next ? `/login?next=${next}` : "/login";
+  }
+
+  function goAccount() {
+    window.location.href = "/account";
+  }
+
+  async function goAccountOrLogin() {
+    const s = await getSession();
+    if (s) return goAccount();
+    return goLoginWithNext();
   }
 
   async function logout() {
     const sb = getSupabase();
-
     try {
       if (sb) {
-        // ✅ global revoca refresh token en Supabase (mejor logout real)
-        const { error } = await sb.auth.signOut({ scope: "global" });
+        const { error } = await sb.auth.signOut({ scope: "local" });
         if (error) console.warn("[logout] signOut error:", error);
       }
     } catch (e) {
@@ -109,58 +115,63 @@
     }
   }
 
-  function safeNext(next) {
-    if (!next) return "";
-    if (next.startsWith("http://") || next.startsWith("https://")) return "";
-    if (!next.startsWith("/")) return "";
-    if (next.startsWith("//")) return "";
-    return next;
+  // ✅ En páginas con navbar: engancha el botón de usuario
+  function bindAccountButtons() {
+    const ids = [
+      "user-icon",         // la mayoría de páginas
+      "user-btn",          // history.html usa este
+      "mobile-profile-btn" // menú móvil (si existe)
+    ];
+
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // evita doble binding si session.js se carga dos veces
+      if (el.dataset.tqBound === "1") return;
+      el.dataset.tqBound = "1";
+
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        goAccountOrLogin();
+      });
+    });
   }
 
-  async function requireLoginOrRedirect(nextPath) {
-    const ok = await isLoggedIn();
-    if (ok) return true;
+  // ✅ Alterna items del menú móvil si existen
+  async function syncMobileMenu() {
+    const s = await getSession();
+    const logged = !!s;
 
-    const next = encodeURIComponent(safeNext(nextPath || (window.location.pathname + window.location.search)));
-    window.location.href = `/login?next=${next}`;
-    return false;
-  }
+    const loginItem = document.getElementById("mobile-login-item");
+    const profileItem = document.getElementById("mobile-profile-item");
+    const logoutItem = document.getElementById("mobile-logout-item");
+    const logoutBtn = document.getElementById("mobile-logout-btn");
 
-  // ✅ Botón usuario (si existe en cualquier página)
-  async function wireUserButtons() {
-    const userIcon = document.getElementById("user-icon");
-    if (userIcon) {
-      userIcon.addEventListener("click", async () => {
-        const ok = await isLoggedIn();
-        if (ok) {
-          window.location.href = "/account";
-        } else {
-          const next = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = `/login?next=${next}`;
-        }
+    if (loginItem) loginItem.classList.toggle("hidden", logged);
+    if (profileItem) profileItem.classList.toggle("hidden", !logged);
+    if (logoutItem) logoutItem.classList.toggle("hidden", !logged);
+
+    if (logoutBtn && logoutBtn.dataset.tqBound !== "1") {
+      logoutBtn.dataset.tqBound = "1";
+      logoutBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        logout();
       });
     }
-
-    const logoutBtn = document.getElementById("logout-btn");
-    if (logoutBtn) logoutBtn.addEventListener("click", logout);
-
-    const logoutMenu = document.getElementById("logout-menu");
-    if (logoutMenu) logoutMenu.addEventListener("click", logout);
   }
 
-  // ✅ Exponer API
+  // ✅ Exponer API global (lo que ya usas)
   window.tqSession = {
     getSupabase,
     getSession,
-    getAccessToken,
     isLoggedIn,
-    fetchMe,
     logout,
-    requireLoginOrRedirect,
-    wireUserButtons,
+    goAccountOrLogin,
   };
 
   document.addEventListener("DOMContentLoaded", () => {
-    wireUserButtons();
+    bindAccountButtons();
+    syncMobileMenu();
   });
 })();

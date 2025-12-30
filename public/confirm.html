@@ -7,22 +7,19 @@
 
     <!-- ✅ Forzar SIEMPRE dark -->
     <script>
-      import "/session.js";
+            const s = await window.tqSession.getSession();
+      if (!s) window.location.replace("/login?next=" + encodeURIComponent(location.pathname + location.search));
 
-      const user = JSON.parse(localStorage.getItem("burgerUser"));
-      if (!user) {
-        window.location.replace("/login.html");
-      }
 
-      (function () {
-        const root = document.documentElement;
-        const forceDark = () => {
-          if (!root.classList.contains("dark")) root.classList.add("dark");
-        };
-        forceDark();
-        const obs = new MutationObserver(forceDark);
-        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
-      })();
+            (function () {
+              const root = document.documentElement;
+              const forceDark = () => {
+                if (!root.classList.contains("dark")) root.classList.add("dark");
+              };
+              forceDark();
+              const obs = new MutationObserver(forceDark);
+              obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+            })();
     </script>
     <script
       src="https://challenges.cloudflare.com/turnstile/v0/api.js"
