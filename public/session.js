@@ -20,20 +20,11 @@
         if (k.includes("supabase.auth")) sessionStorage.removeItem(k);
       }
     } catch {}
-  }
 
-  function hasStoredSbSession() {
-    // Supabase v2 suele guardar algo como: sb-<ref>-auth-token
+    // legacy (por si aún existe)
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i) || "";
-        if (k.startsWith("sb-") && k.includes("-auth-token")) {
-          const raw = localStorage.getItem(k);
-          if (raw && raw.length > 10) return true;
-        }
-      }
+      localStorage.removeItem("burgerUser");
     } catch {}
-    return false;
   }
 
   function safePath(path) {
@@ -64,7 +55,6 @@
     return new Promise((resolve) => {
       if (window.supabase && window.supabase.createClient) return resolve(true);
 
-      // si no está cargada la lib, la inyectamos
       const s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
       s.async = true;
@@ -97,9 +87,9 @@
   }
 
   async function getSession() {
-    // si no hay lib o config, igual evitamos mandarte a login si ya hay token guardado
     if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
 
+    await ensureSupabaseLoaded();
     const sb = getSupabase();
     if (!sb) return null;
 
@@ -111,17 +101,24 @@
     return data?.session || null;
   }
 
-  async function goAccountOrLogin() {
-    // 1) si hay token guardado, NO rebotes al login
-    if (hasStoredSbSession()) return goAccount();
-
-    // 2) intenta supabase real
-    await ensureSupabaseLoaded();
+  async function isLoggedIn() {
     const s = await getSession();
-    if (s) return goAccount();
+    return !!s;
+  }
 
-    // 3) no hay sesión
+  async function goAccountOrLogin() {
+    const logged = await isLoggedIn();
+    if (logged) return goAccount();
     return goLoginWithNext();
+  }
+
+  async function requireLoginOrRedirect() {
+    const logged = await isLoggedIn();
+    if (!logged) {
+      goLoginWithNext();
+      return false;
+    }
+    return true;
   }
 
   async function logout() {
@@ -140,48 +137,81 @@
     }
   }
 
+  // ✅ IMPORTANTE: usamos CAPTURE y cortamos propagación para que index.js (u otro) no lo pise.
   function bindAccountButtons() {
     const ids = ["user-icon", "user-btn", "mobile-profile-btn"];
+
     ids.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       if (el.dataset.tqBound === "1") return;
       el.dataset.tqBound = "1";
 
-      el.addEventListener("click", (e) => {
-        e.preventDefault();
-        goAccountOrLogin();
-      });
+      el.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation(); // ✅ mata otros listeners del mismo click
+          goAccountOrLogin();
+        },
+        { capture: true }
+      );
     });
+
+    // logout desktop (si existe)
+    const logoutMenu = document.getElementById("logout-menu");
+    if (logoutMenu && logoutMenu.dataset.tqBound !== "1") {
+      logoutMenu.dataset.tqBound = "1";
+      logoutMenu.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          logout();
+        },
+        { capture: true }
+      );
+    }
+
+    // logout móvil
+    const logoutBtn = document.getElementById("mobile-logout-btn");
+    if (logoutBtn && logoutBtn.dataset.tqBound !== "1") {
+      logoutBtn.dataset.tqBound = "1";
+      logoutBtn.addEventListener(
+        "click",
+        (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          logout();
+        },
+        { capture: true }
+      );
+    }
   }
 
   async function syncMobileMenu() {
-    // Si hay token guardado, asumimos logueado para UI (sin esperar red)
-    const logged = hasStoredSbSession() || !!(await getSession());
+    const logged = await isLoggedIn();
 
     const loginItem = document.getElementById("mobile-login-item");
     const profileItem = document.getElementById("mobile-profile-item");
     const logoutItem = document.getElementById("mobile-logout-item");
-    const logoutBtn = document.getElementById("mobile-logout-btn");
 
     if (loginItem) loginItem.classList.toggle("hidden", logged);
     if (profileItem) profileItem.classList.toggle("hidden", !logged);
     if (logoutItem) logoutItem.classList.toggle("hidden", !logged);
-
-    if (logoutBtn && logoutBtn.dataset.tqBound !== "1") {
-      logoutBtn.dataset.tqBound = "1";
-      logoutBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        logout();
-      });
-    }
   }
 
   window.tqSession = {
     getSupabase,
     getSession,
+    isLoggedIn,
     logout,
     goAccountOrLogin,
+    requireLoginOrRedirect,
+    bindAccountButtons,
   };
 
   document.addEventListener("DOMContentLoaded", () => {
