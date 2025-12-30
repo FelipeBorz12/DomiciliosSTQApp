@@ -1,178 +1,153 @@
 // public/account.js
-(function () {
-  "use strict";
+function $(id) {
+  return document.getElementById(id);
+}
 
-  function $(id) {
-    return document.getElementById(id);
+function setStatus(text) {
+  const pill = $("status-pill");
+  if (!pill) return;
+  pill.textContent = text || "—";
+}
+
+function showError(msg) {
+  const box = $("error-box");
+  if (!box) return;
+  if (!msg) {
+    box.classList.add("hidden");
+    box.textContent = "";
+    return;
+  }
+  box.textContent = msg;
+  box.classList.remove("hidden");
+}
+
+function normalizePayload(correo) {
+  const nombre = ($("f-nombre")?.value || "").trim();
+  const tipodocumento = ($("f-tipodocumento")?.value || "").trim();
+  const documento = ($("f-documento")?.value || "").trim();
+  const celularRaw = ($("f-celular")?.value || "").trim();
+  const direccionentrega = ($("f-direccion")?.value || "").trim();
+  const Departamento = ($("f-departamento")?.value || "...").trim() || "...";
+  const Municipio = ($("f-municipio")?.value || "...").trim() || "...";
+  const Barrio = ($("f-barrio")?.value || "...").trim() || "...";
+
+  // celular es numeric en tu tabla
+  const celular = celularRaw ? Number(String(celularRaw).replace(/\D/g, "")) : NaN;
+
+  return {
+    correo,
+    nombre,
+    tipodocumento,
+    documento,
+    celular,
+    direccionentrega,
+    Departamento,
+    Municipio,
+    Barrio,
+  };
+}
+
+function fillFormFromRow(me, row) {
+  $("f-correo").value = me?.email || "";
+
+  $("f-nombre").value = row?.nombre || me?.user_metadata?.full_name || "";
+  $("f-tipodocumento").value = row?.tipodocumento || "";
+  $("f-documento").value = row?.documento || "";
+  $("f-celular").value = row?.celular != null ? String(row.celular) : "";
+  $("f-direccion").value = row?.direccionentrega || "";
+
+  $("f-departamento").value = row?.Departamento || "...";
+  $("f-municipio").value = row?.Municipio || "...";
+  $("f-barrio").value = row?.Barrio || "...";
+}
+
+async function loadProfile() {
+  showError("");
+  setStatus("Cargando...");
+
+  const ok = await window.tqSession.requireLoginOrRedirect();
+  if (!ok) return;
+
+  const me = await window.tqSession.fetchMe();
+  if (!me?.email) {
+    setStatus("Sin correo");
+    showError("No pude detectar tu correo de sesión. Revisa tu login.");
+    return;
   }
 
-  function showPanel(name) {
-    const map = {
-      empty: $("panel-empty"),
-      perfil: $("panel-perfil"),
-      pqrs: $("panel-pqrs"),
-    };
-
-    Object.keys(map).forEach((k) => {
-      if (!map[k]) return;
-      map[k].classList.toggle("hidden", k !== name);
-    });
-
-    const items = document.querySelectorAll(".acct-item");
-    items.forEach((btn) => {
-      const tab = btn.getAttribute("data-tab");
-      const active = tab === name;
-      btn.classList.toggle("bg-black/5", active);
-    });
+  // pinta nombre en header (si existe)
+  const nameHeader = document.getElementById("user-name-header");
+  if (nameHeader) {
+    const nm = me.user_metadata?.full_name || me.email;
+    nameHeader.textContent = nm || "";
   }
 
-  function setValue(id, v) {
-    const el = $(id);
-    if (el) el.value = v ?? "";
-  }
+  $("f-correo").value = me.email;
 
-  function setText(id, v) {
-    const el = $(id);
-    if (el) el.textContent = v ?? "";
-  }
+  try {
+    const row = await window.tqSession.fetchFormularioByCorreo(me.email);
 
-  function setDisabledProfile(disabled) {
-    const ids = ["nombre", "celular", "direccionentrega", "Departamento", "Municipio", "Barrio"];
-    ids.forEach((id) => {
-      const el = $(id);
-      if (el) el.disabled = disabled;
-    });
-
-    const saveBtn = $("save-btn");
-    if (saveBtn) saveBtn.disabled = disabled;
-  }
-
-  function toast(msg, ms = 3200) {
-    // si no tienes toast, usa alert
-    const el = $("toast");
-    if (!el) return alert(msg);
-    el.textContent = msg;
-    el.classList.remove("hidden");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.add("hidden"), ms);
-  }
-
-  async function loadProfile() {
-    const me = await window.tqSession.fetchMe();
-    if (!me?.correo) return null;
-
-    setText("account-email", me.correo);
-
-    const p = me.perfil || {};
-    setValue("nombre", p.nombre || "");
-    setValue("celular", p.celular || "");
-    setValue("direccionentrega", p.direccionentrega || "");
-    setValue("Departamento", p.Departamento || "...");
-    setValue("Municipio", p.Municipio || "...");
-    setValue("Barrio", p.Barrio || "...");
-
-    return me;
-  }
-
-  async function saveProfile() {
-    const token = await window.tqSession.getAccessToken();
-    if (!token) return { ok: false, message: "Sin sesión" };
-
-    const payload = {
-      nombre: String($("nombre")?.value || "").trim(),
-      celular: String($("celular")?.value || "").trim(),
-      direccionentrega: String($("direccionentrega")?.value || "").trim(),
-      Departamento: String($("Departamento")?.value || "...").trim() || "...",
-      Municipio: String($("Municipio")?.value || "...").trim() || "...",
-      Barrio: String($("Barrio")?.value || "...").trim() || "...",
-    };
-
-    const res = await fetch("/api/profile", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-      body: JSON.stringify(payload),
-    });
-
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, message: json?.message || "No se pudo guardar" };
-    return { ok: true };
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    // ✅ obliga sesión
-    const ok = await window.tqSession.requireLoginOrRedirect("/account");
-    if (!ok) return;
-
-    // ✅ tabs
-    showPanel("empty");
-
-    document.querySelectorAll(".acct-item").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const tab = btn.getAttribute("data-tab") || "empty";
-        showPanel(tab);
-      });
-    });
-
-    // ✅ history
-    const goHistory = $("go-history");
-    if (goHistory) {
-      goHistory.addEventListener("click", () => {
-        window.location.href = "/history";
-      });
+    if (row) {
+      fillFormFromRow(me, row);
+      setStatus("Datos cargados");
+    } else {
+      // no hay fila en formulario aún
+      fillFormFromRow(me, null);
+      setStatus("Completa tu info");
     }
+  } catch (e) {
+    console.error("[account] fetch formulario error:", e);
+    setStatus("Error");
+    showError(
+      "No pude leer tu información. Revisa RLS/policies en Supabase para la tabla formulario."
+    );
+  }
+}
 
-    // ✅ logout (menú)
-    const logoutMenu = $("logout-menu");
-    if (logoutMenu) {
-      logoutMenu.addEventListener("click", () => window.tqSession.logout());
-    }
+async function onSave(e) {
+  e.preventDefault();
+  showError("");
+  setStatus("Guardando...");
 
-    // ✅ perfil: cargar y bloquear campos
-    setDisabledProfile(true);
-    await loadProfile();
+  const me = await window.tqSession.fetchMe();
+  if (!me?.email) {
+    setStatus("Error");
+    showError("No hay sesión activa.");
+    return;
+  }
 
-    // ✅ botón editar
-    const editBtn = $("edit-btn");
-    if (editBtn) {
-      editBtn.addEventListener("click", () => {
-        const nowDisabled = !!$("nombre")?.disabled;
-        setDisabledProfile(!nowDisabled); // toggle
-        editBtn.textContent = nowDisabled ? "Bloquear" : "Editar";
-      });
-    }
+  const payload = normalizePayload(me.email);
 
-    // ✅ guardar
-    const form = $("account-form");
-    if (form) {
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+  // validaciones mínimas (tu tabla tiene NOT NULL en casi todo)
+  if (!payload.nombre) return showError("Escribe tu nombre.");
+  if (!payload.tipodocumento) return showError("Selecciona tipo de documento.");
+  if (!payload.documento) return showError("Escribe tu documento.");
+  if (!payload.celular || Number.isNaN(payload.celular))
+    return showError("Escribe un celular válido.");
+  if (!payload.direccionentrega) return showError("Escribe tu dirección.");
 
-        const saveBtn = $("save-btn");
-        const status = $("save-status");
+  try {
+    await window.tqSession.saveFormulario(payload);
+    setStatus("Guardado ✅");
+  } catch (e2) {
+    console.error("[account] save error:", e2);
+    setStatus("Error");
+    showError(
+      e2?.message ||
+        "No pude guardar. Revisa policies/RLS y que exista el correo en usuarios."
+    );
+  }
+}
 
-        if (saveBtn) saveBtn.disabled = true;
-        if (status) status.textContent = "Guardando...";
-
-        const r = await saveProfile();
-        if (!r.ok) {
-          toast(r.message || "No se pudo guardar.");
-          if (status) status.textContent = "";
-          // si estamos en modo edición, re-habilita
-          const editMode = $("nombre") && !$("nombre").disabled;
-          if (saveBtn && editMode) saveBtn.disabled = false;
-          return;
-        }
-
-        toast("Perfil actualizado ✅");
-        if (status) status.textContent = "Guardado.";
-        // mantener editable si estaban editando
-        const editMode = $("nombre") && !$("nombre").disabled;
-        if (saveBtn && editMode) saveBtn.disabled = false;
-      });
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  // botón logout
+  document.getElementById("logout-btn")?.addEventListener("click", () => {
+    window.tqSession.logout();
   });
-})();
+
+  // form submit
+  document.getElementById("profile-form")?.addEventListener("submit", onSave);
+
+  // cargar perfil
+  loadProfile();
+});

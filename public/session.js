@@ -21,7 +21,6 @@
       }
     } catch {}
 
-    // legacy (por si aún existe)
     try {
       localStorage.removeItem("burgerUser");
     } catch {}
@@ -106,6 +105,20 @@
     return !!s;
   }
 
+  async function fetchMe() {
+    const session = await getSession();
+    if (!session?.user) return null;
+
+    const u = session.user;
+    return {
+      id: u.id,
+      email: u.email || null,
+      phone: u.phone || null,
+      user_metadata: u.user_metadata || {},
+      created_at: u.created_at || null,
+    };
+  }
+
   async function goAccountOrLogin() {
     const logged = await isLoggedIn();
     if (logged) return goAccount();
@@ -137,7 +150,56 @@
     }
   }
 
-  // ✅ IMPORTANTE: usamos CAPTURE y cortamos propagación para que index.js (u otro) no lo pise.
+  // ✅ FORMULARIO: trae la fila por correo
+  async function fetchFormularioByCorreo(correo) {
+    if (!correo) return null;
+
+    await ensureSupabaseLoaded();
+    const sb = getSupabase();
+    if (!sb) throw new Error("Supabase no inicializado");
+
+    const { data, error } = await sb
+      .from("formulario")
+      .select("*")
+      .eq("correo", correo)
+      .order("id", { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+    return data?.[0] || null;
+  }
+
+  // ✅ FORMULARIO: guarda (si existe actualiza, si no inserta)
+  async function saveFormulario(payload) {
+    await ensureSupabaseLoaded();
+    const sb = getSupabase();
+    if (!sb) throw new Error("Supabase no inicializado");
+
+    if (!payload?.correo) throw new Error("Falta correo");
+
+    const existing = await fetchFormularioByCorreo(payload.correo);
+
+    if (existing?.id) {
+      const { data, error } = await sb
+        .from("formulario")
+        .update(payload)
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
+    } else {
+      const { data, error } = await sb
+        .from("formulario")
+        .insert(payload)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  }
+
+  // ✅ IMPORTANTE: CAPTURE + stopImmediatePropagation para evitar listeners viejos
   function bindAccountButtons() {
     const ids = ["user-icon", "user-btn", "mobile-profile-btn"];
 
@@ -152,30 +214,13 @@
         (e) => {
           e.preventDefault();
           e.stopPropagation();
-          e.stopImmediatePropagation(); // ✅ mata otros listeners del mismo click
+          e.stopImmediatePropagation();
           goAccountOrLogin();
         },
         { capture: true }
       );
     });
 
-    // logout desktop (si existe)
-    const logoutMenu = document.getElementById("logout-menu");
-    if (logoutMenu && logoutMenu.dataset.tqBound !== "1") {
-      logoutMenu.dataset.tqBound = "1";
-      logoutMenu.addEventListener(
-        "click",
-        (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          e.stopImmediatePropagation();
-          logout();
-        },
-        { capture: true }
-      );
-    }
-
-    // logout móvil
     const logoutBtn = document.getElementById("mobile-logout-btn");
     if (logoutBtn && logoutBtn.dataset.tqBound !== "1") {
       logoutBtn.dataset.tqBound = "1";
@@ -208,10 +253,13 @@
     getSupabase,
     getSession,
     isLoggedIn,
+    fetchMe,
     logout,
     goAccountOrLogin,
     requireLoginOrRedirect,
     bindAccountButtons,
+    fetchFormularioByCorreo,
+    saveFormulario,
   };
 
   document.addEventListener("DOMContentLoaded", () => {

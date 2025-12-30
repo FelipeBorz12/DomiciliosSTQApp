@@ -3,256 +3,503 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Mi cuenta | Tierra Querida</title>
+    <title>Tierra Querida - Mi cuenta</title>
 
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
     <script>
-      window.SUPABASE_URL = "https://zvuzrpvsnkhnlfqtscrl.supabase.co";
-      window.SUPABASE_ANON_KEY =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
+      (function () {
+        const root = document.documentElement;
+        const forceDark = () => {
+          if (!root.classList.contains("dark")) root.classList.add("dark");
+        };
+        forceDark();
+        const obs = new MutationObserver(forceDark);
+        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+      })();
     </script>
 
-    <meta name="color-scheme" content="light dark" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+      rel="stylesheet"
+    />
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#e02424",
+              "background-dark": "#171111",
+              "surface-dark": "#261c1c",
+              "surface-dark-hover": "#3a2a2a",
+              "border-dark": "#382929",
+            },
+            fontFamily: {
+              display: ["Plus Jakarta Sans", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              lg: "1.5rem",
+              xl: "2rem",
+              "2xl": "2.5rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+    </style>
+
     <link rel="stylesheet" href="/styles.css" />
   </head>
 
-  <body class="bg-[#f7f3f3] text-[#1e1e1e]">
-    <!-- franja superior -->
-    <div class="h-40 bg-[#3b0a0f]"></div>
-
-    <main class="max-w-6xl mx-auto px-4 -mt-24 pb-10">
-      <div class="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6">
-        <!-- Menú izquierdo -->
-        <aside
-          class="bg-white rounded-3xl shadow-sm border border-black/5 overflow-hidden"
+  <body
+    class="bg-background-dark text-white font-display overflow-x-hidden selection:bg-primary selection:text-white"
+  >
+    <!-- LOADER -->
+    <div
+      id="page-loader"
+      class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-300"
+    >
+      <div class="flex flex-col items-center gap-4">
+        <img
+          src="/img/loader.gif"
+          alt="Cargando Tierra Querida"
+          class="w-24 h-24 object-contain"
+        />
+        <p
+          class="text-xs sm:text-sm font-semibold tracking-[0.3em] uppercase text-white/80 text-center"
         >
-          <div class="p-5 flex items-center gap-3 border-b border-black/5">
-            <div
-              class="size-10 rounded-full bg-black/5 flex items-center justify-center"
-            >
-              <span class="text-xl">👤</span>
-            </div>
-            <div>
-              <div class="font-extrabold">Mi cuenta</div>
-              <div id="account-email" class="text-sm text-black/60"></div>
-            </div>
-          </div>
+          Cargando
+        </p>
+      </div>
+    </div>
 
-          <nav class="py-2">
-            <button
-              data-tab="empty"
-              class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
-            >
-              <span class="opacity-70">🏠</span>
-              <span class="font-semibold">Inicio</span>
-            </button>
-
-            <button
-              data-tab="perfil"
-              class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
-            >
-              <span class="opacity-70">👤</span>
-              <span class="font-semibold">Perfil</span>
-            </button>
-
-            <button
-              id="go-history"
-              class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
-            >
-              <span class="opacity-70">🍽️</span>
-              <span class="font-semibold">Pedidos</span>
-            </button>
-
-            <button
-              data-tab="pqrs"
-              class="acct-item w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
-            >
-              <span class="opacity-70">🎧</span>
-              <span class="font-semibold">Contáctanos - PQRS</span>
-            </button>
-
-            <button
-              id="logout-menu"
-              class="w-full text-left px-5 py-4 hover:bg-black/5 flex items-center gap-3"
-            >
-              <span class="opacity-70">🚪</span>
-              <span class="font-semibold">Cerrar sesión</span>
-            </button>
-          </nav>
-        </aside>
-
-        <!-- Panel central -->
-        <section
-          class="bg-white rounded-3xl shadow-sm border border-black/5 p-6 md:p-10 min-h-[520px]"
+    <div class="relative flex min-h-screen w-full flex-col">
+      <!-- ================= HEADER (igual a index) ================= -->
+      <header
+        class="sticky top-0 z-50 w-full backdrop-blur-md bg-[#171111]/80 border-b border-border-dark"
+      >
+        <div
+          class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4 flex items-center justify-between gap-4"
         >
-          <!-- Empty -->
-          <div id="panel-empty">
+          <!-- Brand -->
+          <a href="/" class="flex items-center gap-3">
             <div
-              class="h-full flex flex-col items-center justify-center text-center py-16"
+              class="size-10 bg-primary rounded-full flex items-center justify-center overflow-hidden"
             >
               <img
-                src="/images/logo.png"
-                alt="Tierra Querida"
-                class="w-20 h-20 rounded-2xl mb-5"
+                src="/img/logo.png"
+                alt="Logo Tierra Querida"
+                class="w-full h-full object-cover"
+                loading="eager"
               />
-              <h2 class="text-2xl md:text-3xl font-extrabold">
-                Todavía no has realizado un pedido
+            </div>
+
+            <div class="hidden sm:block leading-tight">
+              <h2 class="text-lg font-extrabold tracking-tight">
+                Tierra Querida
               </h2>
-              <p class="text-black/60 mt-2">Realiza tu primer orden</p>
+              <p
+                class="text-[11px] text-white/60 font-semibold tracking-[0.2em] uppercase"
+              >
+                mi cuenta
+              </p>
+            </div>
+          </a>
+
+          <!-- Nav desktop -->
+          <nav class="hidden md:flex items-center gap-8">
+            <a
+              class="text-sm font-bold hover:text-primary transition-colors"
+              href="/#products-section"
+              >Menú</a
+            >
+            <a
+              class="text-sm font-bold text-white/70 hover:text-white transition-colors"
+              href="/#about-section"
+              >Nosotros</a
+            >
+            <a
+              class="text-sm font-bold text-white/70 hover:text-white transition-colors"
+              href="/stores"
+              >Sedes</a
+            >
+          </nav>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-3 sm:gap-4">
+            <!-- Search SOLO PC -->
+            <div
+              class="hidden lg:flex items-center bg-surface-dark rounded-full px-4 h-10 w-72 border border-transparent focus-within:border-primary/50 transition-colors"
+            >
+              <span class="material-symbols-outlined text-white/50 text-[20px]"
+                >search</span
+              >
+              <input
+                id="header-search"
+                class="bg-transparent border-none text-sm text-white placeholder-white/40 focus:ring-0 w-full h-full"
+                placeholder="Buscar tu antojo..."
+                type="text"
+                autocomplete="off"
+              />
+            </div>
+
+            <button
+              id="user-icon"
+              class="p-2 rounded-full hover:bg-white/10 transition-colors"
+              aria-label="Cuenta"
+              type="button"
+            >
+              <span class="material-symbols-outlined">person</span>
+            </button>
+
+            <!-- Carrito -->
+            <button
+              class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-4 h-10 rounded-full transition-all"
+              id="cart-icon"
+              aria-label="Carrito"
+              type="button"
+            >
+              <span class="material-symbols-outlined text-[20px]"
+                >shopping_bag</span
+              >
+              <span class="font-extrabold text-sm hidden sm:block" id="cart-count"
+                >0</span
+              >
+
+              <!-- Badge móvil -->
+              <span
+                class="cart-count absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-extrabold text-primary sm:hidden"
+              >
+                <span id="cart-count-badge">0</span>
+              </span>
+            </button>
+
+            <!-- Menú móvil -->
+            <button
+              class="md:hidden p-2 hover:bg-surface-dark rounded-full transition-colors"
+              id="menu-toggle"
+              aria-label="Menú"
+              type="button"
+            >
+              <span class="material-symbols-outlined">menu</span>
+            </button>
+
+            <span
+              id="user-name-header"
+              class="hidden lg:inline text-sm font-semibold text-white/80 truncate max-w-[180px]"
+            ></span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ================= MENÚ MÓVIL ================= -->
+      <nav
+        id="mobile-menu"
+        class="fixed inset-0 z-40 hidden bg-black/70 backdrop-blur-sm"
+        aria-hidden="true"
+      >
+        <div
+          class="h-full w-80 max-w-[88vw] bg-surface-dark border-r border-border-dark p-6"
+        >
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+              <div class="size-9 rounded-full overflow-hidden bg-primary">
+                <img src="/img/logo.png" alt="Logo" class="w-full h-full object-cover" />
+              </div>
+              <div class="leading-tight">
+                <p class="font-extrabold">Tierra Querida</p>
+                <p class="text-[11px] text-white/60 uppercase tracking-[0.2em] font-semibold">
+                  menú
+                </p>
+              </div>
+            </div>
+
+            <button
+              id="menu-close"
+              class="p-2 rounded-full hover:bg-white/10"
+              type="button"
+              aria-label="Cerrar"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <ul class="space-y-3 font-bold text-sm">
+            <li>
+              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/#products-section">Menú</a>
+            </li>
+            <li>
+              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/#about-section">Nosotros</a>
+            </li>
+            <li>
+              <a class="block px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10" href="/stores">Sedes</a>
+            </li>
+
+            <li class="pt-3 border-t border-border-dark"></li>
+
+            <li id="mobile-login-item">
+              <a class="block px-4 py-3 rounded-xl bg-primary hover:bg-red-700 text-center" href="/login">Iniciar sesión</a>
+            </li>
+
+            <li id="mobile-profile-item" class="hidden">
+              <button
+                id="mobile-profile-btn"
+                class="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
+                type="button"
+              >
+                Mi perfil
+              </button>
+            </li>
+
+            <li id="mobile-logout-item" class="hidden">
+              <button
+                id="mobile-logout-btn"
+                class="w-full text-left px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10"
+                type="button"
+              >
+                Cerrar sesión
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <button
+          id="menu-backdrop"
+          class="absolute inset-0 -z-10 w-full h-full"
+          type="button"
+          aria-label="Cerrar menú"
+        ></button>
+      </nav>
+
+      <!-- ================= MAIN ================= -->
+      <main
+        class="flex-1 w-full max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8"
+      >
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-primary font-extrabold uppercase tracking-[0.2em] text-[11px] mb-2">
+              Perfil
+            </p>
+            <h1 class="text-3xl sm:text-4xl font-black">Mi cuenta</h1>
+            <p class="text-white/60 mt-2">
+              Aquí se carga tu información desde <span class="font-bold">formulario</span> usando tu correo.
+            </p>
+          </div>
+
+          <button
+            id="logout-btn"
+            class="h-10 px-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold text-sm transition-colors inline-flex items-center gap-2"
+            type="button"
+          >
+            <span class="material-symbols-outlined text-[18px]">logout</span>
+            Cerrar sesión
+          </button>
+        </div>
+
+        <!-- Card -->
+        <section class="rounded-2xl border border-border-dark bg-surface-dark p-5 sm:p-6">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="text-lg font-extrabold">Datos de entrega</h2>
+            <span id="status-pill" class="text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/80">
+              —
+            </span>
+          </div>
+
+          <form id="profile-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Correo</label>
+              <input
+                id="f-correo"
+                type="email"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                readonly
+              />
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Nombre</label>
+              <input
+                id="f-nombre"
+                type="text"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="Tu nombre"
+              />
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Tipo documento</label>
+              <select
+                id="f-tipodocumento"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+              >
+                <option value="">Selecciona</option>
+                <option value="CC">CC</option>
+                <option value="CE">CE</option>
+                <option value="NIT">NIT</option>
+                <option value="PAS">PAS</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Documento</label>
+              <input
+                id="f-documento"
+                type="text"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="Número"
+              />
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Celular</label>
+              <input
+                id="f-celular"
+                type="tel"
+                inputmode="numeric"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="3000000000"
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Dirección de entrega</label>
+              <input
+                id="f-direccion"
+                type="text"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="Calle 123 #45-67"
+              />
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Departamento</label>
+              <input
+                id="f-departamento"
+                type="text"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="Antioquia"
+              />
+            </div>
+
+            <div>
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Municipio</label>
+              <input
+                id="f-municipio"
+                type="text"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="Medellín"
+              />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-xs font-extrabold text-white/60 uppercase tracking-wider">Barrio</label>
+              <input
+                id="f-barrio"
+                type="text"
+                class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
+                placeholder="Laureles"
+              />
+            </div>
+
+            <div class="sm:col-span-2 flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                id="save-btn"
+                type="submit"
+                class="h-12 px-6 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <span class="material-symbols-outlined text-[18px]">save</span>
+                Guardar
+              </button>
+
               <a
                 href="/"
-                class="mt-6 inline-flex items-center justify-center px-6 py-3 rounded-full bg-[#3b0a0f] text-white font-extrabold"
+                class="h-12 px-6 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold transition-colors inline-flex items-center justify-center gap-2"
               >
-                Ir al menú
+                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                Volver al inicio
               </a>
             </div>
-          </div>
+          </form>
 
-          <!-- Perfil -->
-          <div id="panel-perfil" class="hidden">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <h2 class="text-2xl md:text-3xl font-extrabold">Perfil</h2>
-                <p class="text-black/60 mt-1">
-                  Actualiza tus datos para agilizar tus pedidos.
-                </p>
-              </div>
-              <button
-                id="edit-btn"
-                class="px-4 py-2 rounded-xl bg-black/5 hover:bg-black/10 font-bold"
-              >
-                Editar
-              </button>
-            </div>
-
-            <div class="mt-6">
-              <form
-                id="account-form"
-                class="grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                <div>
-                  <label class="block text-sm text-black/70 mb-1">Nombre</label>
-                  <input
-                    id="nombre"
-                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
-                    disabled
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-sm text-black/70 mb-1"
-                    >Celular</label
-                  >
-                  <input
-                    id="celular"
-                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
-                    disabled
-                  />
-                </div>
-
-                <div class="md:col-span-2">
-                  <label class="block text-sm text-black/70 mb-1"
-                    >Dirección de entrega</label
-                  >
-                  <input
-                    id="direccionentrega"
-                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
-                    disabled
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-sm text-black/70 mb-1"
-                    >Departamento</label
-                  >
-                  <input
-                    id="Departamento"
-                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
-                    disabled
-                  />
-                </div>
-
-                <div>
-                  <label class="block text-sm text-black/70 mb-1"
-                    >Municipio</label
-                  >
-                  <input
-                    id="Municipio"
-                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
-                    disabled
-                  />
-                </div>
-
-                <div class="md:col-span-2">
-                  <label class="block text-sm text-black/70 mb-1">Barrio</label>
-                  <input
-                    id="Barrio"
-                    class="w-full bg-black/5 border border-black/10 rounded-xl px-3 py-2"
-                    disabled
-                  />
-                </div>
-
-                <div class="md:col-span-2 flex items-center gap-3 mt-2">
-                  <button
-                    id="save-btn"
-                    type="submit"
-                    class="px-6 py-3 rounded-2xl bg-[#3b0a0f] text-white font-extrabold hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled
-                  >
-                    Guardar cambios
-                  </button>
-                  <div id="save-status" class="text-sm text-black/60"></div>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <!-- PQRS -->
-          <div id="panel-pqrs" class="hidden">
-            <h2 class="text-2xl md:text-3xl font-extrabold">
-              Contáctanos - PQRS
-            </h2>
-            <p class="text-black/60 mt-2">
-              Si tienes una petición, queja, reclamo o sugerencia, escríbenos
-              por estos canales:
-            </p>
-
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="p-5 rounded-2xl bg-black/5 border border-black/10">
-                <div class="font-extrabold">WhatsApp</div>
-                <p class="text-black/60 text-sm mt-1">
-                  Atención rápida por chat.
-                </p>
-                <a
-                  class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
-                  href="#"
-                >
-                  Abrir WhatsApp
-                </a>
-              </div>
-
-              <div class="p-5 rounded-2xl bg-black/5 border border-black/10">
-                <div class="font-extrabold">Correo</div>
-                <p class="text-black/60 text-sm mt-1">
-                  Envíanos tu caso con detalles.
-                </p>
-                <a
-                  class="inline-flex mt-4 px-4 py-2 rounded-xl bg-white border border-black/10 font-bold"
-                  href="mailto:hola@tierraquerida.com"
-                >
-                  hola@tierraquerida.com
-                </a>
-              </div>
-            </div>
-          </div>
+          <p id="error-box" class="hidden mt-4 text-sm text-red-300 font-semibold"></p>
         </section>
-      </div>
-    </main>
+      </main>
+    </div>
+
+    <!-- MENU MÓVIL (inline, igual a index) -->
+    <script>
+      (function () {
+        const menu = document.getElementById("mobile-menu");
+        const openBtn = document.getElementById("menu-toggle");
+        const closeBtn = document.getElementById("menu-close");
+        const backdrop = document.getElementById("menu-backdrop");
+
+        function openMenu() {
+          if (!menu) return;
+          menu.classList.remove("hidden");
+          menu.setAttribute("aria-hidden", "false");
+        }
+
+        function closeMenu() {
+          if (!menu) return;
+          menu.classList.add("hidden");
+          menu.setAttribute("aria-hidden", "true");
+        }
+
+        openBtn?.addEventListener("click", openMenu);
+        closeBtn?.addEventListener("click", closeMenu);
+        backdrop?.addEventListener("click", closeMenu);
+
+        menu?.querySelectorAll("a[href], button").forEach((node) => {
+          node.addEventListener("click", () => closeMenu());
+        });
+      })();
+    </script>
+
+    <!-- LOADER -->
+    <script>
+      (function () {
+        const loader = document.getElementById("page-loader");
+        if (!loader) return;
+
+        function hideLoader() {
+          loader.classList.add("opacity-0", "pointer-events-none");
+          setTimeout(() => {
+            loader.style.display = "none";
+          }, 350);
+        }
+
+        window.addEventListener("load", hideLoader);
+      })();
+    </script>
 
     <script src="/supabase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/session.js"></script>
 
-    <script src="/account.js"></script>
+    <script type="module" src="/account.js"></script>
   </body>
 </html>
