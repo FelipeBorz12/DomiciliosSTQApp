@@ -4,7 +4,6 @@
 
   function clearSupabaseStorageEverywhere() {
     try {
-      // elimina todo lo de supabase v2 (sb-... keys)
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const k = localStorage.key(i);
         if (!k) continue;
@@ -14,7 +13,6 @@
     } catch {}
 
     try {
-      // también limpia sessionStorage si guardó algo
       for (let i = sessionStorage.length - 1; i >= 0; i--) {
         const k = sessionStorage.key(i);
         if (!k) continue;
@@ -23,9 +21,8 @@
       }
     } catch {}
 
-    // compat legacy
     try {
-      localStorage.removeItem("burgerUser");
+      localStorage.removeItem("burgerUser"); // compat legacy
     } catch {}
   }
 
@@ -69,9 +66,30 @@
     return data?.session || null;
   }
 
+  async function getAccessToken() {
+    const s = await getSession();
+    return s?.access_token || "";
+  }
+
   async function isLoggedIn() {
     const s = await getSession();
     return !!s;
+  }
+
+  async function fetchMe() {
+    const token = await getAccessToken();
+    if (!token) return null;
+
+    try {
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
   }
 
   async function logout() {
@@ -79,8 +97,8 @@
 
     try {
       if (sb) {
-        // local es suficiente para navegador
-        const { error } = await sb.auth.signOut({ scope: "local" });
+        // ✅ global revoca refresh token en Supabase (mejor logout real)
+        const { error } = await sb.auth.signOut({ scope: "global" });
         if (error) console.warn("[logout] signOut error:", error);
       }
     } catch (e) {
@@ -91,10 +109,58 @@
     }
   }
 
+  function safeNext(next) {
+    if (!next) return "";
+    if (next.startsWith("http://") || next.startsWith("https://")) return "";
+    if (!next.startsWith("/")) return "";
+    if (next.startsWith("//")) return "";
+    return next;
+  }
+
+  async function requireLoginOrRedirect(nextPath) {
+    const ok = await isLoggedIn();
+    if (ok) return true;
+
+    const next = encodeURIComponent(safeNext(nextPath || (window.location.pathname + window.location.search)));
+    window.location.href = `/login?next=${next}`;
+    return false;
+  }
+
+  // ✅ Botón usuario (si existe en cualquier página)
+  async function wireUserButtons() {
+    const userIcon = document.getElementById("user-icon");
+    if (userIcon) {
+      userIcon.addEventListener("click", async () => {
+        const ok = await isLoggedIn();
+        if (ok) {
+          window.location.href = "/account";
+        } else {
+          const next = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?next=${next}`;
+        }
+      });
+    }
+
+    const logoutBtn = document.getElementById("logout-btn");
+    if (logoutBtn) logoutBtn.addEventListener("click", logout);
+
+    const logoutMenu = document.getElementById("logout-menu");
+    if (logoutMenu) logoutMenu.addEventListener("click", logout);
+  }
+
+  // ✅ Exponer API
   window.tqSession = {
     getSupabase,
     getSession,
+    getAccessToken,
     isLoggedIn,
+    fetchMe,
     logout,
+    requireLoginOrRedirect,
+    wireUserButtons,
   };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    wireUserButtons();
+  });
 })();

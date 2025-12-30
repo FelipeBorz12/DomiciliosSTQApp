@@ -6,65 +6,86 @@
     return document.getElementById(id);
   }
 
-  function setText(id, value) {
-    const el = $(id);
-    if (el) el.textContent = value ?? "";
-  }
+  function showPanel(name) {
+    const map = {
+      empty: $("panel-empty"),
+      perfil: $("panel-perfil"),
+      pqrs: $("panel-pqrs"),
+    };
 
-  function setValue(id, value) {
-    const el = $(id);
-    if (el) el.value = value ?? "";
-  }
+    Object.keys(map).forEach((k) => {
+      if (!map[k]) return;
+      map[k].classList.toggle("hidden", k !== name);
+    });
 
-  function setTab(tab) {
-    const empty = $("panel-empty");
-    const perfil = $("panel-perfil");
-    const pqrs = $("panel-pqrs");
-
-    if (empty) empty.classList.toggle("hidden", tab !== "empty");
-    if (perfil) perfil.classList.toggle("hidden", tab !== "perfil");
-    if (pqrs) pqrs.classList.toggle("hidden", tab !== "pqrs");
-
-    document.querySelectorAll(".acct-item").forEach((btn) => {
-      const t = btn.getAttribute("data-tab");
-      btn.classList.toggle("bg-black/5", t === tab);
+    const items = document.querySelectorAll(".acct-item");
+    items.forEach((btn) => {
+      const tab = btn.getAttribute("data-tab");
+      const active = tab === name;
+      btn.classList.toggle("bg-black/5", active);
     });
   }
 
-  function lockProfileForm(locked) {
-    ["nombre", "celular", "direccionentrega", "Departamento", "Municipio", "Barrio"].forEach((id) => {
+  function setValue(id, v) {
+    const el = $(id);
+    if (el) el.value = v ?? "";
+  }
+
+  function setText(id, v) {
+    const el = $(id);
+    if (el) el.textContent = v ?? "";
+  }
+
+  function setDisabledProfile(disabled) {
+    const ids = ["nombre", "celular", "direccionentrega", "Departamento", "Municipio", "Barrio"];
+    ids.forEach((id) => {
       const el = $(id);
-      if (el) el.disabled = locked;
+      if (el) el.disabled = disabled;
     });
 
     const saveBtn = $("save-btn");
-    if (saveBtn) saveBtn.disabled = locked;
+    if (saveBtn) saveBtn.disabled = disabled;
   }
 
-  async function loadMeWithToken() {
-    const supa = window.tqSession?.getSupabase?.();
-    if (!supa) return null;
-
-    const { data } = await supa.auth.getSession();
-    const token = data?.session?.access_token;
-    if (!token) return null;
-
-    const res = await fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-      credentials: "include",
-    });
-
-    if (!res.ok) return null;
-    return await res.json();
+  function toast(msg, ms = 3200) {
+    // si no tienes toast, usa alert
+    const el = $("toast");
+    if (!el) return alert(msg);
+    el.textContent = msg;
+    el.classList.remove("hidden");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.add("hidden"), ms);
   }
 
-  async function saveProfile(payload) {
-    const supa = window.tqSession?.getSupabase?.();
-    if (!supa) return { ok: false, message: "Supabase no disponible" };
+  async function loadProfile() {
+    const me = await window.tqSession.fetchMe();
+    if (!me?.correo) return null;
 
-    const { data } = await supa.auth.getSession();
-    const token = data?.session?.access_token;
+    setText("account-email", me.correo);
+
+    const p = me.perfil || {};
+    setValue("nombre", p.nombre || "");
+    setValue("celular", p.celular || "");
+    setValue("direccionentrega", p.direccionentrega || "");
+    setValue("Departamento", p.Departamento || "...");
+    setValue("Municipio", p.Municipio || "...");
+    setValue("Barrio", p.Barrio || "...");
+
+    return me;
+  }
+
+  async function saveProfile() {
+    const token = await window.tqSession.getAccessToken();
     if (!token) return { ok: false, message: "Sin sesión" };
+
+    const payload = {
+      nombre: String($("nombre")?.value || "").trim(),
+      celular: String($("celular")?.value || "").trim(),
+      direccionentrega: String($("direccionentrega")?.value || "").trim(),
+      Departamento: String($("Departamento")?.value || "...").trim() || "...",
+      Municipio: String($("Municipio")?.value || "...").trim() || "...",
+      Barrio: String($("Barrio")?.value || "...").trim() || "...",
+    };
 
     const res = await fetch("/api/profile", {
       method: "PUT",
@@ -77,27 +98,26 @@
     });
 
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, message: json?.message || "Error guardando" };
+    if (!res.ok) return { ok: false, message: json?.message || "No se pudo guardar" };
     return { ok: true };
   }
 
   document.addEventListener("DOMContentLoaded", async () => {
-    // Requiere login
-    const logged = await window.tqSession?.isLoggedIn?.();
-    if (!logged) {
-      window.location.href = "/login?next=" + encodeURIComponent("/account");
-      return;
-    }
+    // ✅ obliga sesión
+    const ok = await window.tqSession.requireLoginOrRedirect("/account");
+    if (!ok) return;
 
-    // Menú
-    setTab("empty");
+    // ✅ tabs
+    showPanel("empty");
+
     document.querySelectorAll(".acct-item").forEach((btn) => {
       btn.addEventListener("click", () => {
         const tab = btn.getAttribute("data-tab") || "empty";
-        setTab(tab);
+        showPanel(tab);
       });
     });
 
+    // ✅ history
     const goHistory = $("go-history");
     if (goHistory) {
       goHistory.addEventListener("click", () => {
@@ -105,49 +125,27 @@
       });
     }
 
+    // ✅ logout (menú)
     const logoutMenu = $("logout-menu");
     if (logoutMenu) {
-      logoutMenu.addEventListener("click", async () => {
-        await window.tqSession?.logout?.();
-      });
+      logoutMenu.addEventListener("click", () => window.tqSession.logout());
     }
 
-    // Cargar perfil
-    const me = await loadMeWithToken();
-    if (!me?.correo) {
-      // si algo falla, manda a login
-      window.location.href = "/login?next=" + encodeURIComponent("/account");
-      return;
-    }
+    // ✅ perfil: cargar y bloquear campos
+    setDisabledProfile(true);
+    await loadProfile();
 
-    setText("account-email", me.correo);
-
-    const perfil = me.perfil || {};
-    setValue("nombre", perfil.nombre || "");
-    setValue("celular", perfil.celular || "");
-    setValue("direccionentrega", perfil.direccionentrega || "");
-    setValue("Departamento", perfil.Departamento || "...");
-    setValue("Municipio", perfil.Municipio || "...");
-    setValue("Barrio", perfil.Barrio || "...");
-
-    // Perfil bloqueado por defecto
-    lockProfileForm(true);
-
+    // ✅ botón editar
     const editBtn = $("edit-btn");
     if (editBtn) {
       editBtn.addEventListener("click", () => {
-        const locked = $("nombre")?.disabled !== false; // si está disabled => locked
-        lockProfileForm(!locked ? true : false);
-        editBtn.textContent = locked ? "Cancelar" : "Editar";
-        if (locked) setTab("perfil");
-        if (!locked) {
-          // cancel: recargar valores desde inputs actuales no hace falta, solo bloquear
-          const status = $("save-status");
-          if (status) status.textContent = "";
-        }
+        const nowDisabled = !!$("nombre")?.disabled;
+        setDisabledProfile(!nowDisabled); // toggle
+        editBtn.textContent = nowDisabled ? "Bloquear" : "Editar";
       });
     }
 
+    // ✅ guardar
     const form = $("account-form");
     if (form) {
       form.addEventListener("submit", async (e) => {
@@ -159,25 +157,21 @@
         if (saveBtn) saveBtn.disabled = true;
         if (status) status.textContent = "Guardando...";
 
-        const payload = {
-          nombre: ($("nombre")?.value || "").trim(),
-          celular: ($("celular")?.value || "").trim(),
-          direccionentrega: ($("direccionentrega")?.value || "").trim(),
-          Departamento: ($("Departamento")?.value || "...").trim() || "...",
-          Municipio: ($("Municipio")?.value || "...").trim() || "...",
-          Barrio: ($("Barrio")?.value || "...").trim() || "...",
-        };
-
-        const r = await saveProfile(payload);
+        const r = await saveProfile();
         if (!r.ok) {
-          if (status) status.textContent = r.message || "No se pudo guardar.";
-          if (saveBtn) saveBtn.disabled = false;
+          toast(r.message || "No se pudo guardar.");
+          if (status) status.textContent = "";
+          // si estamos en modo edición, re-habilita
+          const editMode = $("nombre") && !$("nombre").disabled;
+          if (saveBtn && editMode) saveBtn.disabled = false;
           return;
         }
 
-        if (status) status.textContent = "Guardado ✅";
-        lockProfileForm(true);
-        if (editBtn) editBtn.textContent = "Editar";
+        toast("Perfil actualizado ✅");
+        if (status) status.textContent = "Guardado.";
+        // mantener editable si estaban editando
+        const editMode = $("nombre") && !$("nombre").disabled;
+        if (saveBtn && editMode) saveBtn.disabled = false;
       });
     }
   });

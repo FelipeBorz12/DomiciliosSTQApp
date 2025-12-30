@@ -1,147 +1,112 @@
+<!-- public/recover.html -->
 <!DOCTYPE html>
-<html  lang="es">
+<html lang="es" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Recuperar contraseña</title>
+    <title>Recuperar contraseña | Tierra Querida</title>
 
-    <!-- ✅ Forzar SIEMPRE el tema oscuro SIN depender del modo del dispositivo -->
     <script>
-      (function () {
-        const root = document.documentElement;
-
-        const forceDark = () => {
-          if (!root.classList.contains("dark")) root.classList.add("dark");
-        };
-
-        forceDark();
-
-        // Si algún script intenta quitar "dark", lo volvemos a poner
-        const obs = new MutationObserver(forceDark);
-        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
-      })();
+      window.SUPABASE_URL = "https://zvuzrpvsnkhnlfqtscrl.supabase.co";
+      window.SUPABASE_ANON_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dXpycHZzbmtobmxmcXRzY3JsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MTIyNjMsImV4cCI6MjA3NDk4ODI2M30.jHsdk4byoUkmifOYch8soUoR5h6DInVbNbJcEQEfBng";
     </script>
+
+    <meta name="color-scheme" content="dark" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <script id="tailwind-config">
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#ec1313",
-              "background-light": "#f8f6f6",
-              "background-dark": "#221010",
-              accent: "#FFCC00",
-            },
-            fontFamily: {
-              display: ["Plus Jakarta Sans", "sans-serif"],
-            },
-          },
-        },
-      };
-    </script>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin="anonymous"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-      rel="stylesheet"
-    />
-    <style>
-      .material-symbols-outlined {
-        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-      }
-    </style>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body
-    class="bg-background-dark text-white font-display min-h-screen flex flex-col"
-  >
-    <div class="flex-1 max-w-md mx-auto w-full px-4 py-6 flex flex-col">
-      <!-- Top App Bar -->
-      <div class="flex items-center mb-4">
+
+  <body class="bg-[#221010] text-white min-h-screen flex flex-col">
+    <div class="flex-1 max-w-md mx-auto w-full px-4 py-8">
+      <div class="flex items-center mb-6">
         <button
           onclick="window.location.href='/login'"
           class="flex size-10 items-center justify-center rounded-full bg-black/30 border border-gray-700"
+          type="button"
         >
-          <span class="material-symbols-outlined text-white text-xl">
-            arrow_back
-          </span>
+          <span class="text-white text-xl">←</span>
         </button>
         <div class="flex-1 text-center">
-          <h2 class="text-white text-lg font-bold leading-tight">
-            Recuperar contraseña
-          </h2>
+          <h2 class="text-white text-lg font-bold">Recuperar contraseña</h2>
         </div>
         <div class="w-10"></div>
       </div>
 
-      <div class="pt-2 pb-4">
-        <h1 class="text-white text-[26px] font-bold leading-tight tracking-tight">
-          ¿Olvidaste tu contraseña?
-        </h1>
-        <p class="text-gray-400 text-base leading-normal pt-1">
-          Ingresa tu correo y te enviaremos instrucciones para recuperar tu
-          cuenta.
+      <!-- View: pedir email -->
+      <div id="recover-view" class="bg-black/30 border border-gray-700/60 rounded-2xl p-5">
+        <h1 class="text-2xl font-extrabold">¿Olvidaste tu contraseña?</h1>
+        <p class="text-white/70 mt-2 text-sm">
+          Escribe tu correo y te enviaremos un enlace para crear una nueva contraseña.
         </p>
+
+        <form id="recover-form" class="mt-5 flex flex-col gap-3">
+          <label class="flex flex-col">
+            <span class="text-sm font-medium mb-1">Correo</span>
+            <input
+              id="recover-email"
+              type="email"
+              required
+              placeholder="correo@ejemplo.com"
+              class="h-12 px-4 rounded-xl bg-black/30 border border-gray-700/80 text-white"
+            />
+          </label>
+
+          <p id="recover-error" class="text-red-400 text-sm hidden"></p>
+          <p id="recover-ok" class="text-green-300 text-sm hidden"></p>
+
+          <button
+            type="submit"
+            class="h-12 rounded-xl bg-[#ec1313] font-extrabold hover:opacity-90"
+          >
+            Enviar enlace
+          </button>
+        </form>
       </div>
 
-      <form id="recover-form" class="flex flex-col gap-y-3">
-        <label class="flex flex-col w-full">
-          <p class="text-white text-base font-medium pb-2">Correo</p>
-          <input
-            class="form-input w-full rounded-xl text-white border border-gray-700/80 bg-black/30 h-14 px-4 text-base"
-            placeholder="correo@ejemplo.com"
-            type="email"
-            name="correo"
-            required
-          />
-        </label>
+      <!-- View: set new password -->
+      <div id="setpass-view" class="hidden bg-black/30 border border-gray-700/60 rounded-2xl p-5">
+        <h1 class="text-2xl font-extrabold">Crea tu nueva contraseña</h1>
+        <p class="text-white/70 mt-2 text-sm">
+          Ingresa una contraseña de mínimo 8 caracteres.
+        </p>
 
-        <p
-          id="recover-error"
-          class="text-red-500 text-sm font-medium mt-1 hidden"
-        ></p>
-        <p
-          id="recover-success"
-          class="text-green-500 text-sm font-medium mt-1 hidden"
-        ></p>
+        <form id="setpass-form" class="mt-5 flex flex-col gap-3">
+          <label class="flex flex-col">
+            <span class="text-sm font-medium mb-1">Nueva contraseña</span>
+            <input
+              id="new-pass"
+              type="password"
+              required
+              class="h-12 px-4 rounded-xl bg-black/30 border border-gray-700/80 text-white"
+            />
+          </label>
 
-        <button
-          type="submit"
-          class="mt-3 flex items-center justify-center h-14 w-full rounded-xl bg-primary px-4 text-base font-bold text-white shadow-sm hover:bg-primary/90"
-        >
-          Enviar instrucciones
-        </button>
-      </form>
+          <label class="flex flex-col">
+            <span class="text-sm font-medium mb-1">Repite la contraseña</span>
+            <input
+              id="new-pass-2"
+              type="password"
+              required
+              class="h-12 px-4 rounded-xl bg-black/30 border border-gray-700/80 text-white"
+            />
+          </label>
 
-      <div class="mt-4 text-center text-sm text-gray-400">
-        ¿Recordaste tu contraseña?
-        <a href="/login" class="font-bold text-accent hover:underline">
-          Inicia sesión
-        </a>
-      </div>
+          <p id="setpass-error" class="text-red-400 text-sm hidden"></p>
+          <p id="setpass-ok" class="text-green-300 text-sm hidden"></p>
 
-      <!-- Botón Volver al inicio -->
-      <div class="mt-6">
-        <button
-          type="button"
-          onclick="window.location.href='/'"
-          class="w-full h-12 rounded-xl border border-gray-700 bg-black/40 text-sm font-medium text-white"
-        >
-          Volver al inicio
-        </button>
+          <button
+            type="submit"
+            class="h-12 rounded-xl bg-white text-black font-extrabold hover:opacity-90"
+          >
+            Guardar contraseña
+          </button>
+        </form>
       </div>
     </div>
 
-    <script type="module" src="/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/session.js"></script>
+    <script src="/recover.js"></script>
   </body>
 </html>
