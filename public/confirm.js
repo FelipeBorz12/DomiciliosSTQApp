@@ -1,4 +1,4 @@
-// public/confirm.js
+// /public/confirm.js
 document.addEventListener("DOMContentLoaded", () => {
   const DELIVERY_FEE = 5000; // COP
 
@@ -38,6 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- Estado ----
   let antiBotOk = false;
+  let turnstileToken = ""; // ✅ guardamos el token (1 solo uso) para enviarlo en POST /api/pedidos
   let cartItems = [];
   let userData = null;
 
@@ -179,12 +180,15 @@ document.addEventListener("DOMContentLoaded", () => {
         noUserWarning?.classList.add("hidden");
 
         // set email si está vacío
-        if (emailInput && !emailInput.value.trim()) emailInput.value = emailFromSession;
+        if (emailInput && !emailInput.value.trim())
+          emailInput.value = emailFromSession;
 
         // 2) Intenta traer formulario desde Supabase (tabla formulario por correo)
         let form = null;
         try {
-          form = await window.tqSession?.fetchFormularioByCorreo?.(emailFromSession);
+          form = await window.tqSession?.fetchFormularioByCorreo?.(
+            emailFromSession
+          );
         } catch (e) {
           console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
         }
@@ -314,7 +318,7 @@ document.addEventListener("DOMContentLoaded", () => {
     orderText.dataset.userEdited = "1";
   });
 
-  // ---- PV Card: estilo tipo store.js (tarjeta linda) ----
+  // ---- PV Card: tarjeta ----
   function renderPVCard(pv, distanceKmText = "") {
     if (!pvCard) return;
 
@@ -378,7 +382,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const useBtn = document.getElementById("pv-use-btn");
     useBtn?.addEventListener("click", () => {
-      // sincroniza selects
       syncingPV = true;
       if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
         pvDeptSelect.value = pv.Departamento || "";
@@ -446,8 +449,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const allOk =
       nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
 
-    // ✅ Obligatorio: antiBotOk
-    sendWhatsappBtn.disabled = !(allOk && antiBotOk);
+    // ✅ Obligatorio: captcha OK + token presente
+    sendWhatsappBtn.disabled = !(allOk && antiBotOk && !!turnstileToken);
   }
 
   // ---- Puntos de venta ----
@@ -655,13 +658,9 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
           }
 
-          // ✅ Muestra tarjeta bonita (como pediste)
           renderPVCard(best, `~${bestDist.toFixed(1)} km`);
-
-          // también deja selectedPV (para que valide)
           selectedPV = best;
 
-          // si quieres que automáticamente seleccione en dropdowns, deja esto:
           syncingPV = true;
           if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
             pvDeptSelect.value = best.Departamento || "";
@@ -698,53 +697,31 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // ---- Anti-bot: server verify ----
-  async function verifyAntiBotServer(token) {
-    const res = await fetch("/api/antibot/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({ cf_turnstile_response: token }),
-    });
+  // ✅ Callbacks Turnstile (NO hacemos fetch /api/antibot/verify aquí para no “gastar” el token)
+  window.onOrderTurnstile = function (token) {
+    // token 1 solo uso -> se usará en POST /api/pedidos
+    turnstileToken = String(token || "");
+    antiBotOk = !!turnstileToken;
 
-    const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(data?.message || "No se pudo validar anti-bot");
-    return true;
-  }
-
-  // ✅ Callbacks que Turnstile llama (strings en HTML)
-  window.onOrderTurnstile = async function (token) {
-    antiBotOk = false;
-    if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
-
-    try {
-      setAntiBotMsg("Validando…");
-      await verifyAntiBotServer(token);
-      antiBotOk = true;
+    if (antiBotOk) {
       setAntiBotMsg("Verificación lista ✅ Ya puedes enviar tu pedido.");
-    } catch (e) {
-      console.error("[anti-bot] verify error:", e);
-      antiBotOk = false;
+    } else {
       setAntiBotMsg("Falló la verificación. Intenta de nuevo.", true);
-
-      if (window.turnstile) {
-        try {
-          window.turnstile.reset();
-        } catch {}
-      }
-    } finally {
-      validateForm();
     }
+
+    validateForm();
   };
 
   window.onOrderTurnstileExpired = function () {
     antiBotOk = false;
+    turnstileToken = "";
     setAntiBotMsg("La verificación expiró. Vuélvela a completar.", true);
     validateForm();
   };
 
   window.onOrderTurnstileError = function () {
     antiBotOk = false;
+    turnstileToken = "";
     setAntiBotMsg(
       "Error cargando verificación anti-bot. Recarga la página.",
       true
@@ -786,14 +763,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function sendOrder() {
     // ✅ anti-bot obligatorio
-    if (!antiBotOk) {
+    if (!antiBotOk || !turnstileToken) {
       alert("Completa la verificación anti-bot antes de enviar.");
       return;
     }
 
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
-    const phoneDigits = phoneInput?.value?.trim();
+    const phoneDigits = phoneInput?.value?.trim(); // 10 dígitos
     const address = addressInput?.value?.trim();
     const paymentMethod = paymentMethodSelect?.value?.trim();
 
@@ -833,21 +810,31 @@ document.addEventListener("DOMContentLoaded", () => {
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
 
+    // Mensaje para WhatsApp (lo construimos después de crear pedido para incluir #id)
     let pedidoId = null;
 
-    // 1) Crear pedido en BD
+    // 1) Crear pedido en BD (incluye token de Turnstile para verifyTurnstile del backend)
     try {
       const payload = {
-        nombre_cliente: email,
-        resumen_pedido: "",
+        // ✅ token (mismo nombre que venías usando)
+        cf_turnstile_response: turnstileToken,
+
+        // datos cliente (separados)
+        nombre_cliente: name,
+        correo_cliente: email,
+        celular_cliente: phoneDigits, // ✅ guardamos 10 dígitos para búsquedas / historial
         direccion_cliente: address,
-        celular_cliente: `+57${phoneDigits}`,
         metodo_pago: paymentMethod,
+
         pv_id,
         delivery_fee: DELIVERY_FEE,
         subtotal,
         total,
+
         items,
+
+        // se llena después si quieres (en tu server.ts actual lo recibe)
+        resumen_pedido: "",
       };
 
       const res = await fetch("/api/pedidos", {
@@ -877,29 +864,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2) Mensaje final
     let message = orderText?.value?.trim();
-    if (!message) message = buildOrderText(pedidoId ?? undefined);
-
-    // 3) PATCH con resumen
-    if (pedidoId !== null && pedidoId !== undefined) {
-      try {
-        await fetch(`/api/pedidos/${pedidoId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            resumen_pedido: message,
-            metodo_pago: paymentMethod,
-          }),
-        });
-      } catch (e) {
-        console.warn("[confirm.js] PATCH resumen falló:", e);
-      }
+    if (!message || message === buildOrderText()) {
+      // si el usuario no editó o está vacío, regeneramos con #id si existe
+      message = buildOrderText(pedidoId ?? undefined);
     }
 
-    // 4) Abrir WhatsApp
-    const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(
-      /\D/g,
-      ""
-    );
+    // 3) Abrir WhatsApp
+    const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(/\D/g, "");
     if (!pvPhoneDigits) {
       alert("No hay WhatsApp configurado para el punto de venta.");
       return;
@@ -909,18 +880,27 @@ document.addEventListener("DOMContentLoaded", () => {
       "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
     window.open(url, "_blank");
 
-    // 5) Limpiar carrito y redirigir
+    // 4) Limpiar carrito y redirigir
     localStorage.removeItem("burgerCart");
     cartItems = [];
     syncBadges();
 
+    // ✅ IMPORTANTE: el token ya se usó, invalídalo localmente
+    antiBotOk = false;
+    turnstileToken = "";
+    try {
+      if (window.turnstile) window.turnstile.reset();
+    } catch {}
+
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
+    if (phoneDigits) params.set("celular", phoneDigits);
     if (pedidoId !== null && pedidoId !== undefined)
       params.set("pedidoId", String(pedidoId));
 
+    // ✅ redirige a /pedido
     const historyUrl =
-      "/history" + (params.toString() ? "?" + params.toString() : "");
+      "/pedido" + (params.toString() ? "?" + params.toString() : "");
     setTimeout(() => (window.location.href = historyUrl), 800);
   }
 
@@ -1008,7 +988,8 @@ document.addEventListener("DOMContentLoaded", () => {
   async function init() {
     // por defecto: antiBot no ok
     antiBotOk = false;
-    setAntiBotMsg("Verificación para evitar bots.");
+    turnstileToken = "";
+    setAntiBotMsg("Valida la verificación para evitar bots.");
 
     loadCart();
     syncBadges();
