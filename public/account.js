@@ -103,6 +103,11 @@ function sanitizePhone(v) {
   return raw || "";
 }
 
+function formatMoneyCOP(value) {
+  const n = Number(value || 0);
+  return "$" + n.toLocaleString("es-CO");
+}
+
 function normalizePayload(correo) {
   const nombre = ($("f-nombre")?.value || "").trim();
   const tipodocumento = ($("f-tipodocumento")?.value || "").trim();
@@ -146,7 +151,6 @@ function fillFromRow(me, row) {
   $("f-celular").value = row?.celular != null ? String(row.celular) : "";
 
   $("f-direccion").value = row?.direccionentrega || "";
-  // dept/mun/barrio se setean cuando carguemos los dropdowns
 }
 
 /* =========================
@@ -174,7 +178,6 @@ async function initCoverageDropdowns(existingRow) {
   const munSel = $("f-municipio");
   const barSel = $("f-barrio");
 
-  // Estados iniciales
   depSel.disabled = true;
   munSel.disabled = true;
   barSel.disabled = true;
@@ -184,23 +187,27 @@ async function initCoverageDropdowns(existingRow) {
     setSelectOptions(depSel, deps, { placeholder: "Selecciona departamento" });
     depSel.disabled = false;
 
-    // Preselección si ya existe
-    const existingDep = existingRow?.Departamento && existingRow.Departamento !== "..."
-      ? existingRow.Departamento
-      : "";
-    const existingMun = existingRow?.Municipio && existingRow.Municipio !== "..."
-      ? existingRow.Municipio
-      : "";
-    const existingBar = existingRow?.Barrio && existingRow.Barrio !== "..."
-      ? existingRow.Barrio
-      : "";
+    const existingDep =
+      existingRow?.Departamento && existingRow.Departamento !== "..."
+        ? existingRow.Departamento
+        : "";
+    const existingMun =
+      existingRow?.Municipio && existingRow.Municipio !== "..."
+        ? existingRow.Municipio
+        : "";
+    const existingBar =
+      existingRow?.Barrio && existingRow.Barrio !== "..."
+        ? existingRow.Barrio
+        : "";
 
     if (existingDep) depSel.value = existingDep;
 
     async function loadMunicipiosAndMaybeBarrios({ setExisting = false } = {}) {
       const dep = depSel.value;
       if (!dep) {
-        setSelectOptions(munSel, [], { placeholder: "Selecciona un departamento" });
+        setSelectOptions(munSel, [], {
+          placeholder: "Selecciona un departamento",
+        });
         munSel.disabled = true;
 
         setSelectOptions(barSel, [], { placeholder: "Selecciona municipio" });
@@ -211,8 +218,12 @@ async function initCoverageDropdowns(existingRow) {
       munSel.disabled = true;
       setSelectOptions(munSel, [], { placeholder: "Cargando municipios..." });
 
-      const municipios = await window.tqSession.fetchMunicipiosByDepartamento(dep);
-      setSelectOptions(munSel, municipios, { placeholder: "Selecciona municipio" });
+      const municipios = await window.tqSession.fetchMunicipiosByDepartamento(
+        dep
+      );
+      setSelectOptions(munSel, municipios, {
+        placeholder: "Selecciona municipio",
+      });
       munSel.disabled = false;
 
       if (setExisting && existingMun) munSel.value = existingMun;
@@ -233,18 +244,16 @@ async function initCoverageDropdowns(existingRow) {
       barSel.disabled = true;
       setSelectOptions(barSel, [], { placeholder: "Cargando barrios..." });
 
-      // Barrio: sugerencias desde formulario (dedupe)
       const barrios = await window.tqSession.fetchBarriosByDeptMun(dep, mun);
-
-      // si no hay barrios en formulario, al menos dejamos opción "..."
       const finalBarrios = barrios?.length ? barrios : ["..."];
 
       setSelectOptions(barSel, finalBarrios, { placeholder: "Selecciona barrio" });
       barSel.disabled = false;
 
       if (setExisting && existingBar) {
-        // Si el barrio no está en lista, lo inyectamos para no perderlo
-        const exists = Array.from(barSel.options).some((o) => o.value === existingBar);
+        const exists = Array.from(barSel.options).some(
+          (o) => o.value === existingBar
+        );
         if (!exists) {
           const opt = document.createElement("option");
           opt.value = existingBar;
@@ -256,7 +265,6 @@ async function initCoverageDropdowns(existingRow) {
     }
 
     depSel.addEventListener("change", () => {
-      // reset mun y barrio
       munSel.value = "";
       barSel.value = "";
       loadMunicipiosAndMaybeBarrios({ setExisting: false });
@@ -267,15 +275,9 @@ async function initCoverageDropdowns(existingRow) {
       loadBarrios({ setExisting: false });
     });
 
-    // Cargar municipios/barrios con valores existentes
     await loadMunicipiosAndMaybeBarrios({ setExisting: true });
-
   } catch (e) {
     console.error("[account] coverage dropdowns error:", e);
-    // fallback para no bloquear guardado
-    const depSel = $("f-departamento");
-    const munSel = $("f-municipio");
-    const barSel = $("f-barrio");
 
     depSel.innerHTML = `<option value="">No disponible</option>`;
     munSel.innerHTML = `<option value="">No disponible</option>`;
@@ -294,23 +296,23 @@ async function initCoverageDropdowns(existingRow) {
 }
 
 /* =========================
-   Pedidos: últimos 5 (por celular)
+   Pedidos: últimos 5 (por correo)
 ========================= */
-function renderOrders(orders) {
+function renderOrders(orders, correo) {
   const loading = $("orders-loading");
   const empty = $("orders-empty");
   const list = $("orders-list");
 
-  loading.classList.add("hidden");
+  loading?.classList.add("hidden");
 
   if (!orders || orders.length === 0) {
-    empty.classList.remove("hidden");
-    list.classList.add("hidden");
+    empty?.classList.remove("hidden");
+    list?.classList.add("hidden");
     return;
   }
 
-  empty.classList.add("hidden");
-  list.classList.remove("hidden");
+  empty?.classList.add("hidden");
+  list?.classList.remove("hidden");
   list.innerHTML = "";
 
   orders.forEach((o) => {
@@ -325,12 +327,18 @@ function renderOrders(orders) {
         })
       : "—";
 
-    const totalLabel =
-      typeof o.total === "number" ? window.tqSession.formatMoney(o.total) : "—";
+    const totalLabel = formatMoneyCOP(Number(o.total || 0));
 
     const row = document.createElement("div");
     row.className =
       "px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors";
+
+    const href =
+      "/history" +
+      "?correo=" +
+      encodeURIComponent(correo || "") +
+      "&pedidoId=" +
+      encodeURIComponent(String(o.id));
 
     row.innerHTML = `
       <div class="min-w-0 flex-1">
@@ -341,15 +349,12 @@ function renderOrders(orders) {
           Estado: <span class="text-white/80 font-extrabold">${o.estado || "—"}</span>
           · Total: <span class="text-white/80 font-extrabold">${totalLabel}</span>
         </p>
-        <p class="text-xs text-white/40 font-semibold mt-1 truncate">
-          ${o.resumen_pedido || ""}
-        </p>
       </div>
 
       <a
         class="shrink-0 size-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 inline-flex items-center justify-center text-white/80"
         title="Ver detalle"
-        href="/history.html?pedido_id=${encodeURIComponent(o.id)}"
+        href="${href}"
       >
         <span class="material-symbols-outlined text-[20px]">visibility</span>
       </a>
@@ -359,35 +364,42 @@ function renderOrders(orders) {
   });
 }
 
-async function loadLastOrdersByCelular(celular) {
+async function loadLastOrdersByCorreo(correo, limit = 5) {
   const loading = $("orders-loading");
   const empty = $("orders-empty");
   const list = $("orders-list");
 
-  loading.classList.remove("hidden");
-  empty.classList.add("hidden");
-  list.classList.add("hidden");
+  loading?.classList.remove("hidden");
+  empty?.classList.add("hidden");
+  list?.classList.add("hidden");
 
-  const cel = sanitizePhone(celular);
-  if (!cel) {
-    loading.classList.add("hidden");
-    empty.classList.remove("hidden");
-    empty.textContent =
-      "No puedo cargar pedidos: falta tu celular en el perfil.";
+  const email = String(correo || "").trim().toLowerCase();
+  if (!email) {
+    loading?.classList.add("hidden");
+    empty?.classList.remove("hidden");
+    empty.textContent = "No puedo cargar pedidos: falta tu correo.";
     return;
   }
 
   try {
-    const orders = await window.tqSession.fetchLastPedidosByCelular(cel, 5);
-    renderOrders(orders);
+    const res = await fetch(`/api/pedidos?correo=${encodeURIComponent(email)}`);
+    const data = await res.json().catch(() => []);
+    if (!res.ok) throw new Error(data?.message || "Error consultando pedidos");
+
+    const orders = Array.isArray(data) ? data.slice(0, limit) : [];
+    renderOrders(orders, email);
+
+    // también ajusta el link “Ver historial completo” con el correo
+    const fullLink = $("orders-history-link");
+    if (fullLink) fullLink.href = `/history?correo=${encodeURIComponent(email)}`;
   } catch (e) {
     console.error("[account] load orders error:", e);
-    loading.classList.add("hidden");
+    loading?.classList.add("hidden");
     showModal({
       type: "error",
       title: "No pude cargar tus pedidos",
       message:
-        "No pude leer pedidos desde Supabase.\nRevisa RLS/Policies en la tabla pedidos (y que pueda filtrar por celular_cliente).",
+        "No pude leer pedidos desde el servidor.\nRevisa que /api/pedidos esté respondiendo y que Supabase Admin funcione.",
     });
   }
 }
@@ -415,24 +427,20 @@ async function loadProfile() {
   try {
     const row = await window.tqSession.fetchFormularioByCorreo(me.email);
 
-    // llenar perfil
     fillFromRow(me, row);
 
-    // cargar cobertura (dropdowns) + setear valores existentes
     await initCoverageDropdowns(row || null);
 
-    // setear direccion / dept / mun / barrio después del init
     if (row) {
       $("f-direccion").value = row?.direccionentrega || "";
-      if (row?.Departamento && row.Departamento !== "...") $("f-departamento").value = row.Departamento;
-      // municipio y barrio los setea initCoverageDropdowns con setExisting
+      if (row?.Departamento && row.Departamento !== "...")
+        $("f-departamento").value = row.Departamento;
     }
 
     setStatus(row ? "Listo" : "Completar");
 
-    // cargar pedidos por celular del formulario
-    const cel = row?.celular != null ? String(row.celular) : $("f-celular").value;
-    await loadLastOrdersByCelular(cel);
+    // ✅ pedidos por correo (últimos 5)
+    await loadLastOrdersByCorreo(me.email, 5);
 
     if (!row) {
       showModal({
@@ -501,8 +509,8 @@ async function saveAll() {
       message: "Tu información fue guardada correctamente.",
     });
 
-    // refrescar pedidos por si cambió el celular
-    await loadLastOrdersByCelular(payload.celular);
+    // refrescar pedidos (por correo)
+    await loadLastOrdersByCorreo(me.email, 5);
   } catch (e) {
     console.error("[account] save error:", e);
     setStatus("Error");
