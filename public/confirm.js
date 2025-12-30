@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const nameInput = document.getElementById("client-name");
   const emailInput = document.getElementById("client-email");
-  const phoneInput = document.getElementById("client-phone");
+  const phoneInput = document.getElementById("client-phone"); // ✅ 10 dígitos SIN +57
   const addressInput = document.getElementById("client-address");
   const notesInput = document.getElementById("client-notes");
 
@@ -21,10 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const suggestPvBtn = document.getElementById("suggest-pv-btn");
   const pvMessage = document.getElementById("pv-message");
-  const pvCard = document.getElementById("pv-card");
-  const pvName = document.getElementById("pv-name");
-  const pvAddress = document.getElementById("pv-address");
-  const pvWhatsapp = document.getElementById("pv-whatsapp");
+  const pvCard = document.getElementById("pv-card"); // ✅ ahora renderizamos HTML aquí
 
   const pvDeptSelect = document.getElementById("pv-departamento");
   const pvMpioSelect = document.getElementById("pv-municipio");
@@ -34,16 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendWhatsappBtn = document.getElementById("send-whatsapp-btn");
   const refreshMessageBtn = document.getElementById("refresh-message-btn");
 
-  const cartBadgeDesktop = document.getElementById("cart-badge-desktop");
-  const cartBadgeMobile = document.getElementById("cart-badge-mobile");
-
-  const saveProfileBtn = document.getElementById("save-profile-btn");
-  const saveProfileStatus = document.getElementById("save-profile-status");
-
   // ---- Estado ----
   let antiBotOk = false;
   let cartItems = [];
-  let userData = null;
+  let userData = null; // objeto que guardamos (incluye perfil)
   let puntosVenta = [];
   let selectedPV = null;
 
@@ -63,16 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return "$" + n.toLocaleString("es-CO");
   }
 
-  function setSaveStatus(msg) {
-    if (!saveProfileStatus) return;
-    saveProfileStatus.textContent = msg;
-    saveProfileStatus.classList.remove("hidden");
-    clearTimeout(setSaveStatus._t);
-    setSaveStatus._t = setTimeout(() => {
-      saveProfileStatus.classList.add("hidden");
-    }, 2000);
-  }
-
   function safeJson(obj) {
     try {
       return JSON.parse(JSON.stringify(obj));
@@ -84,6 +65,16 @@ document.addEventListener("DOMContentLoaded", () => {
   function toInt(v, def = 0) {
     const n = Number(v);
     return Number.isFinite(n) ? Math.trunc(n) : def;
+  }
+
+  function digitsOnly(v) {
+    return String(v || "").replace(/\D/g, "");
+  }
+
+  function phoneFullFromInput10() {
+    const ten = digitsOnly(phoneInput?.value || "");
+    if (ten.length !== 10) return "";
+    return "+57" + ten;
   }
 
   // ---- LocalStorage ----
@@ -118,19 +109,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function syncBadges() {
-    const count = cartItems.reduce(
-      (acc, it) => acc + Number(it.quantity || 1),
-      0
-    );
-    if (cartBadgeDesktop) cartBadgeDesktop.textContent = String(count);
-    if (cartBadgeMobile) cartBadgeMobile.textContent = String(count);
+  // ✅ El contador ya lo maneja session.js globalmente en la mayoría
+  // pero aquí igual recalculamos por si esta página usa burgerCart directo
+  function syncBadgesFallback() {
+    try {
+      if (window.tqSession?.updateCartBadges) window.tqSession.updateCartBadges();
+    } catch {}
   }
 
   // ---- Validaciones ----
-  function validatePhone(value) {
-    if (!value) return false;
-    return /^\+57\d{10}$/.test(value.trim());
+  function validatePhone10(value) {
+    const d = digitsOnly(value);
+    return /^\d{10}$/.test(d);
   }
 
   function validateEmail(value) {
@@ -157,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const perfil = data.perfil || {};
 
     const nombre = perfil.nombre || data.nombre || "";
-    const celular = perfil.celular || data.celular || "";
+    const celular = perfil.celular || data.celular || ""; // puede venir +57...
     const direccion =
       perfil.direccionentrega ||
       perfil.direccion ||
@@ -169,13 +159,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (emailInput && correo) emailInput.value = correo;
 
     if (phoneInput && celular) {
-      const digits = String(celular).replace(/\D/g, "");
-      if (digits.length === 12 && digits.startsWith("57"))
-        phoneInput.value = "+" + digits;
-      else if (digits.length === 10) phoneInput.value = "+57" + digits;
-      else if (String(celular).startsWith("+57"))
-        phoneInput.value = String(celular);
-      else phoneInput.value = "+57" + digits;
+      const d = digitsOnly(celular);
+      // ✅ dejamos SOLO los últimos 10 dígitos en el input
+      phoneInput.value = d.length >= 10 ? d.slice(-10) : d;
     }
 
     if (addressInput && direccion) addressInput.value = direccion;
@@ -191,47 +177,91 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function fetchUserByCorreo(correo) {
-    const res = await fetch(
-      `/api/auth/user?correo=${encodeURIComponent(correo)}`
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data || null;
+  // ✅ prioridad: sesión supabase -> query ?correo -> local burgerUser
+  async function resolveCorreo() {
+    // 1) sesión supabase
+    try {
+      const s = await window.tqSession?.getSession?.();
+      const mail = s?.user?.email ? String(s.user.email).trim() : "";
+      if (mail) return mail;
+    } catch {}
+
+    // 2) query
+    const correoUrl = getCorreoFromURL();
+    if (correoUrl) return correoUrl;
+
+    // 3) local
+    const local = getLocalUserIfAny();
+    const correoLocal = local?.correo ? String(local.correo).trim() : "";
+    if (correoLocal) return correoLocal;
+
+    return "";
+  }
+
+  // ✅ Carga perfil desde tabla formulario (Supabase) por correo
+  async function loadUserFromSupabase(correo) {
+    // si hay sesión, ocultamos aviso aunque no exista fila en formulario
+    noUserWarning?.classList.add("hidden");
+
+    // intentar traer datos de formulario
+    let form = null;
+    try {
+      if (window.tqSession?.fetchFormularioByCorreo) {
+        form = await window.tqSession.fetchFormularioByCorreo(correo);
+      }
+    } catch (e) {
+      console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
+    }
+
+    // session me (para email fijo)
+    let me = null;
+    try {
+      me = await window.tqSession?.fetchMe?.();
+    } catch {}
+
+    const merged = {
+      correo: correo || me?.email || "",
+      email: correo || me?.email || "",
+      perfil: {
+        nombre: form?.nombre || "",
+        celular: form?.celular ? String(form.celular) : "",
+        direccionentrega: form?.direccionentrega || "",
+        Departamento: form?.Departamento || "",
+        Municipio: form?.Municipio || "",
+        Barrio: form?.Barrio || "",
+        tipodocumento: form?.tipodocumento || "",
+        documento: form?.documento || "",
+      },
+      formulario: form || null,
+    };
+
+    userData = merged;
+    saveUserToLocal(merged);
+    hydrateUserInputs(merged);
   }
 
   async function loadUser() {
     try {
-      const local = getLocalUserIfAny();
-      const correoLocal = local?.correo ? String(local.correo).trim() : "";
-      const correoUrl = getCorreoFromURL();
-      const correoBase = correoLocal || correoUrl || "";
+      const correo = await resolveCorreo();
 
-      if (correoBase) {
-        if (local?.correo && local.correo === correoBase) {
-          userData = local;
-          noUserWarning?.classList.add("hidden");
-          hydrateUserInputs(local);
-        }
+      // si NO hay sesión, mostramos aviso (pero ojo: confirm debe ser solo logueado)
+      const session = await window.tqSession?.getSession?.();
+      const logged = !!session;
 
-        const fromDb = await fetchUserByCorreo(correoBase);
-        if (fromDb?.correo) {
-          userData = fromDb;
-          noUserWarning?.classList.add("hidden");
-          hydrateUserInputs(fromDb);
-
-          const merged = {
-            ...(local || {}),
-            ...(fromDb || {}),
-            perfil: fromDb.perfil || (local && local.perfil) || {},
-          };
-          saveUserToLocal(merged);
-        }
+      if (!logged) {
+        userData = null;
+        noUserWarning?.classList.remove("hidden");
         return;
       }
 
-      userData = null;
-      noUserWarning?.classList.remove("hidden");
+      if (!correo) {
+        // hay sesión pero no email? muy raro, pero manejamos
+        userData = null;
+        noUserWarning?.classList.remove("hidden");
+        return;
+      }
+
+      await loadUserFromSupabase(correo);
     } catch (err) {
       console.error("[confirm.js] Error cargando usuario:", err);
       userData = null;
@@ -243,7 +273,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function buildOrderText(pedidoId = null) {
     const name = nameInput?.value?.trim() || "No especificado";
     const email = emailInput?.value?.trim() || "No especificado";
-    const phone = phoneInput?.value?.trim() || "No especificado";
+
+    const phone10 = digitsOnly(phoneInput?.value || "");
+    const phone = phone10.length === 10 ? `+57${phone10}` : "No especificado";
+
     const address = addressInput?.value?.trim() || "No especificado";
     const notes = notesInput?.value?.trim() || "";
 
@@ -276,8 +309,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (Array.isArray(item.modifications) && item.modifications.length) {
         lines.push(`   → Personalización: ${item.modifications.join(", ")}`);
       }
-
-      // ✅ QUITADO: término de la carne (no mostrar)
     });
 
     const header = [];
@@ -330,22 +361,95 @@ document.addEventListener("DOMContentLoaded", () => {
     orderText.dataset.userEdited = "1";
   });
 
-  function updatePVCard() {
-    if (!pvCard || !pvName || !pvAddress || !pvWhatsapp) return;
+  // ---- PV Card estilo stores ----
+  function pvMapsLink(pv) {
+    const lat = Number(pv?.Latitud);
+    const lng = Number(pv?.Longitud);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return `https://www.google.com/maps?q=${lat},${lng}`;
+    }
+    const addr = encodeURIComponent(
+      `${pv?.Direccion || ""} ${pv?.Municipio || ""} ${pv?.Departamento || ""}`
+    );
+    return `https://www.google.com/maps?q=${addr}`;
+  }
 
-    if (!selectedPV) {
+  function renderPvCard(pv, distanceKmText = "") {
+    if (!pvCard) return;
+    if (!pv) {
       pvCard.classList.add("hidden");
+      pvCard.innerHTML = "";
       return;
     }
 
+    const img =
+      pv.URL_image || pv.url_image || pv.imagen || pv.image || "/img/logo.png";
+    const name = pv.Barrio || "Punto de venta";
+    const addr = `${pv.Direccion || "Dirección no disponible"} - ${
+      pv.Municipio || ""
+    }`;
+    const whatsapp = String(pv.num_whatsapp || "").trim();
+    const maps = pvMapsLink(pv);
+
     pvCard.classList.remove("hidden");
-    pvName.textContent = selectedPV.Barrio || "Punto de venta";
-    pvAddress.textContent = `${selectedPV.Direccion || ""} - ${
-      selectedPV.Municipio || ""
-    }`;
-    pvWhatsapp.textContent = `WhatsApp: ${
-      selectedPV.num_whatsapp || "No disponible"
-    }`;
+    pvCard.innerHTML = `
+      <div class="rounded-2xl bg-surface-dark p-4 border border-border-dark shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div class="flex gap-4">
+          <div class="w-20 h-20 rounded-xl overflow-hidden border border-white/10 shrink-0 bg-black/40">
+            <img src="${img}" alt="${name}" class="w-full h-full object-cover" loading="lazy"
+                 onerror="this.src='/img/logo.png';" />
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between gap-2">
+              <h3 class="text-white font-extrabold text-base sm:text-lg leading-tight truncate">${name}</h3>
+              ${
+                distanceKmText
+                  ? `<span class="shrink-0 text-xs font-extrabold px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/70">${distanceKmText}</span>`
+                  : ""
+              }
+            </div>
+
+            <p class="text-white/60 text-sm font-semibold truncate mt-1">${addr}</p>
+            ${
+              whatsapp
+                ? `<p class="text-white/60 text-sm font-semibold truncate mt-1">WhatsApp: ${whatsapp}</p>`
+                : `<p class="text-white/50 text-sm font-semibold truncate mt-1">WhatsApp no disponible</p>`
+            }
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-4">
+          <a
+            href="${maps}"
+            target="_blank"
+            rel="noopener"
+            class="flex-1 inline-flex items-center justify-center rounded-full h-10 bg-primary hover:bg-red-700 text-white text-sm font-extrabold transition-colors gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">navigation</span>
+            Cómo llegar
+          </a>
+
+          ${
+            whatsapp
+              ? `<a
+                  href="https://wa.me/${whatsapp.replace(/\D/g, "")}"
+                  target="_blank"
+                  rel="noopener"
+                  class="inline-flex items-center justify-center rounded-full h-10 px-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-extrabold transition-colors gap-2"
+                >
+                  <span class="material-symbols-outlined text-[18px]">chat</span>
+                  WhatsApp
+                </a>`
+              : ""
+          }
+        </div>
+
+        <p class="text-xs text-white/45 mt-3">
+          Este WhatsApp será el destino del mensaje y el punto de venta del pedido.
+        </p>
+      </div>
+    `;
   }
 
   function validateForm() {
@@ -357,7 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const emailOk = validateEmail(emailVal);
 
     const phoneVal = phoneInput ? phoneInput.value.trim() : "";
-    const phoneOk = validatePhone(phoneVal);
+    const phoneOk = validatePhone10(phoneVal);
 
     const addressOk = !!(addressInput && addressInput.value.trim());
 
@@ -392,6 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const allOk =
       nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
+
     sendWhatsappBtn.disabled = !(allOk && antiBotOk);
   }
 
@@ -441,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!syncingPV) {
       selectedPV = null;
-      updatePVCard();
+      renderPvCard(null);
     }
 
     if (!dept) {
@@ -477,7 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!syncingPV) {
       selectedPV = null;
-      updatePVCard();
+      renderPvCard(null);
     }
 
     if (!dept || !mpio) {
@@ -518,7 +623,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (found) {
       selectedPV = found;
-      updatePVCard();
+      renderPvCard(found);
 
       if (orderText) orderText.dataset.userEdited = "0";
       updateOrderTextLive(true);
@@ -583,7 +688,7 @@ document.addEventListener("DOMContentLoaded", () => {
           puntosVenta.forEach((pv) => {
             const pvLat = Number(pv.Latitud);
             const pvLon = Number(pv.Longitud);
-            if (Number.isNaN(pvLat) || Number.isNaN(pvLon)) return;
+            if (!Number.isFinite(pvLat) || !Number.isFinite(pvLon)) return;
             const d = distanciaKm(userLat, userLon, pvLat, pvLon);
             if (d < bestDist) {
               bestDist = d;
@@ -599,8 +704,8 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           selectedPV = best;
-          updatePVCard();
 
+          // ✅ sincroniza selects
           syncingPV = true;
           if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
             pvDeptSelect.value = best.Departamento || "";
@@ -614,7 +719,9 @@ document.addEventListener("DOMContentLoaded", () => {
           syncingPV = false;
 
           selectedPV = best;
-          updatePVCard();
+
+          // ✅ card estilo stores + distancia
+          renderPvCard(best, `~${bestDist.toFixed(1)} km`);
 
           if (orderText) orderText.dataset.userEdited = "0";
           updateOrderTextLive(true);
@@ -638,39 +745,6 @@ document.addEventListener("DOMContentLoaded", () => {
           pvMessage.textContent = "No se pudo obtener tu ubicación.";
       }
     );
-  }
-
-  // ---- Guardar perfil ----
-  async function saveProfile() {
-    const name = nameInput?.value?.trim() || "";
-    const email = emailInput?.value?.trim() || "";
-    const phone = phoneInput?.value?.trim() || "";
-    const address = addressInput?.value?.trim() || "";
-
-    if (!name) return alert("Ingresa tu nombre.");
-    if (!validateEmail(email)) return alert("Ingresa un correo válido.");
-    if (!validatePhone(phone))
-      return alert("Tu celular debe ser +57 y 10 dígitos.");
-    if (!address) return alert("Ingresa tu dirección.");
-
-    const merged = userData && typeof userData === "object" ? userData : {};
-    merged.correo = email;
-    merged.nombre = merged.nombre || name;
-    merged.celular = merged.celular || phone;
-    merged.direccionentrega = merged.direccionentrega || address;
-    merged.perfil = merged.perfil || {};
-    merged.perfil.nombre = name;
-    merged.perfil.celular = phone;
-    merged.perfil.direccionentrega = address;
-
-    userData = merged;
-    saveUserToLocal(merged);
-
-    setSaveStatus("✅ Datos actualizados");
-
-    if (orderText) orderText.dataset.userEdited = "0";
-    updateOrderTextLive(true);
-    validateForm();
   }
 
   // ✅ Mapea carrito -> items para pedido_items
@@ -698,7 +772,6 @@ document.addEventListener("DOMContentLoaded", () => {
           qty,
           extras: extras || [],
           modifications: modifications || [],
-          // ✅ QUITADO: cooking
         };
       })
       .filter(Boolean);
@@ -709,7 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function sendOrder() {
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
-    const phone = phoneInput?.value?.trim();
+    const phoneFull = phoneFullFromInput10();
     const address = addressInput?.value?.trim();
     const paymentMethod = paymentMethodSelect?.value?.trim();
 
@@ -724,7 +797,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
       !name ||
       !email ||
-      !phone ||
+      !phoneFull ||
       !address ||
       !selectedPV ||
       !selectedPV.num_whatsapp ||
@@ -753,7 +826,7 @@ document.addEventListener("DOMContentLoaded", () => {
         nombre_cliente: email,
         resumen_pedido: "",
         direccion_cliente: address,
-        celular_cliente: phone,
+        celular_cliente: phoneFull,
         metodo_pago: paymentMethod,
         pv_id,
         delivery_fee: DELIVERY_FEE,
@@ -761,8 +834,6 @@ document.addEventListener("DOMContentLoaded", () => {
         total,
         items,
       };
-
-      console.log("[confirm.js] payload /api/pedidos =", payload);
 
       const res = await fetch("/api/pedidos", {
         method: "POST",
@@ -773,11 +844,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        console.error(
-          "[confirm.js] POST /api/pedidos NO OK:",
-          res.status,
-          data
-        );
+        console.error("[confirm.js] POST /api/pedidos NO OK:", res.status, data);
         alert(
           "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
         );
@@ -830,7 +897,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 5) Limpiar carrito y redirigir
     localStorage.removeItem("burgerCart");
     cartItems = [];
-    syncBadges();
+    syncBadgesFallback();
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
@@ -848,33 +915,6 @@ document.addEventListener("DOMContentLoaded", () => {
     updateOrderTextLive();
   }
 
-  const tryHydrateByEmail = debounce(async () => {
-    const emailVal = emailInput?.value?.trim() || "";
-    if (!validateEmail(emailVal)) return;
-
-    if (userData?.correo && userData.correo === emailVal) return;
-
-    const local = getLocalUserIfAny();
-    if (local?.correo === emailVal) {
-      userData = local;
-      hydrateUserInputs(local);
-      if (orderText) orderText.dataset.userEdited = "0";
-      updateOrderTextLive(true);
-      validateForm();
-      return;
-    }
-
-    const fromDb = await fetchUserByCorreo(emailVal);
-    if (fromDb?.correo) {
-      userData = fromDb;
-      hydrateUserInputs(fromDb);
-      saveUserToLocal(fromDb);
-      if (orderText) orderText.dataset.userEdited = "0";
-      updateOrderTextLive(true);
-      validateForm();
-    }
-  }, 450);
-
   // ---- Eventos ----
   backButton?.addEventListener("click", () => {
     if (window.history.length > 1) window.history.back();
@@ -889,15 +929,9 @@ document.addEventListener("DOMContentLoaded", () => {
     validateForm();
   });
 
-  saveProfileBtn?.addEventListener("click", saveProfile);
-
   nameInput?.addEventListener("input", onAnyFormChange);
 
-  emailInput?.addEventListener("input", () => {
-    onAnyFormChange();
-    tryHydrateByEmail();
-  });
-
+  emailInput?.addEventListener("input", onAnyFormChange);
   phoneInput?.addEventListener("input", onAnyFormChange);
   addressInput?.addEventListener("input", onAnyFormChange);
   notesInput?.addEventListener("input", onAnyFormChange);
@@ -923,36 +957,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   sendWhatsappBtn?.addEventListener("click", sendOrder);
 
-  // ---- init ----
-  async function init() {
-    loadCart();
-    syncBadges();
-
-    await loadUser();
-
-    if (!cartItems.length) {
-      if (orderText) {
-        orderText.value =
-          "No hay productos en el carrito.\nVuelve al menú y agrega productos antes de confirmar el pedido.";
-      }
-      if (pvMessage) pvMessage.textContent = "No hay productos en el carrito.";
-      if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
-      return;
-    }
-
-    try {
-      await ensurePuntosVentaLoaded();
-    } catch (err) {
-      console.error("[confirm.js] Error inicial cargando PV:", err);
-      if (pvMessage)
-        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
-    }
-
-    if (orderText) orderText.dataset.userEdited = "0";
-    updateOrderTextLive(true);
-    validateForm();
-  }
-  // ---- Anti-bot (Confirm) ----
+  // ---- Anti-bot ----
   const sendBtn = document.getElementById("send-whatsapp-btn");
   const msgEl = document.getElementById("antibot-msg");
 
@@ -996,7 +1001,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch {}
       }
     } finally {
-      validateForm(); // ✅ re-evalúa con antiBotOk
+      validateForm();
     }
   };
 
@@ -1014,6 +1019,40 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     validateForm();
   };
+
+  // ---- init ----
+  async function init() {
+    // ✅ Guard real: confirm debe requerir sesión
+    const ok = await window.tqSession?.requireLoginOrRedirect?.("/login");
+    if (!ok) return;
+
+    loadCart();
+    syncBadgesFallback();
+
+    await loadUser();
+
+    if (!cartItems.length) {
+      if (orderText) {
+        orderText.value =
+          "No hay productos en el carrito.\nVuelve al menú y agrega productos antes de confirmar el pedido.";
+      }
+      if (pvMessage) pvMessage.textContent = "No hay productos en el carrito.";
+      if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
+      return;
+    }
+
+    try {
+      await ensurePuntosVentaLoaded();
+    } catch (err) {
+      console.error("[confirm.js] Error inicial cargando PV:", err);
+      if (pvMessage)
+        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+    }
+
+    if (orderText) orderText.dataset.userEdited = "0";
+    updateOrderTextLive(true);
+    validateForm();
+  }
 
   init();
 });

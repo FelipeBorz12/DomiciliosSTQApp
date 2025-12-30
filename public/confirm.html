@@ -5,22 +5,21 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>Confirmar Pedido - Tierra Querida</title>
 
-    <!-- ✅ Forzar SIEMPRE dark -->
+    <!-- ✅ Forzar dark -->
+    <meta name="color-scheme" content="dark" />
+    <meta name="supported-color-schemes" content="dark" />
     <script>
-            const s = await window.tqSession.getSession();
-      if (!s) window.location.replace("/login?next=" + encodeURIComponent(location.pathname + location.search));
-
-
-            (function () {
-              const root = document.documentElement;
-              const forceDark = () => {
-                if (!root.classList.contains("dark")) root.classList.add("dark");
-              };
-              forceDark();
-              const obs = new MutationObserver(forceDark);
-              obs.observe(root, { attributes: true, attributeFilter: ["class"] });
-            })();
+      (function () {
+        const root = document.documentElement;
+        const forceDark = () => {
+          if (!root.classList.contains("dark")) root.classList.add("dark");
+        };
+        forceDark();
+        const obs = new MutationObserver(forceDark);
+        obs.observe(root, { attributes: true, attributeFilter: ["class"] });
+      })();
     </script>
+
     <script
       src="https://challenges.cloudflare.com/turnstile/v0/api.js"
       async
@@ -50,6 +49,7 @@
               "background-dark": "#171111",
               "surface-dark": "#261c1c",
               "surface-dark-hover": "#3a2a2a",
+              "border-dark": "#382929",
               whatsapp: "#25D366",
             },
             fontFamily: { display: ["Plus Jakarta Sans", "sans-serif"] },
@@ -87,7 +87,7 @@
     <div class="relative flex h-auto min-h-screen w-full flex-col">
       <!-- Header -->
       <header
-        class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 dark:bg-[#171111]/80 border-b border-[#382929]"
+        class="sticky top-0 z-50 w-full backdrop-blur-md bg-white/80 dark:bg-[#171111]/80 border-b border-border-dark"
       >
         <div
           class="max-w-[1440px] mx-auto px-6 lg:px-12 py-4 flex items-center justify-between gap-6"
@@ -98,9 +98,14 @@
               href="/"
             >
               <div
-                class="size-10 bg-primary rounded-full flex items-center justify-center text-white"
+                class="size-10 bg-primary rounded-full flex items-center justify-center overflow-hidden"
               >
-                <span class="material-symbols-outlined">lunch_dining</span>
+                <img
+                  src="/img/logo.png"
+                  alt="Logo Tierra Querida"
+                  class="w-full h-full object-cover"
+                  loading="eager"
+                />
               </div>
               <h2 class="text-xl font-bold tracking-tight hidden sm:block">
                 Tierra Querida
@@ -136,24 +141,24 @@
               <span class="material-symbols-outlined">person</span>
             </button>
 
+            <!-- ✅ Carrito unificado (session.js lo controla) -->
             <button
+              id="cart-icon"
               class="relative flex items-center gap-2 bg-primary hover:bg-red-700 text-white px-4 h-10 rounded-full transition-all group"
               aria-label="Carrito"
-              onclick="window.location.href='/cart'"
+              type="button"
             >
               <span class="material-symbols-outlined text-[20px]"
                 >shopping_bag</span
               >
-              <span
-                id="cart-badge-desktop"
-                class="font-bold text-sm hidden sm:block"
+              <span id="cart-count" class="font-bold text-sm hidden sm:block"
                 >0</span
               >
               <span
-                id="cart-badge-mobile"
-                class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary sm:hidden"
-                >0</span
+                class="cart-count absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary sm:hidden"
               >
+                <span id="cart-count-badge">0</span>
+              </span>
             </button>
           </div>
         </div>
@@ -182,7 +187,7 @@
           </div>
         </div>
 
-        <!-- Aviso no logueado -->
+        <!-- Aviso no logueado (solo si realmente NO hay sesión) -->
         <div
           id="no-user-warning"
           class="hidden bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl p-4 flex items-start gap-3"
@@ -204,10 +209,10 @@
           <div class="lg:col-span-7 flex flex-col gap-8">
             <!-- Datos del cliente -->
             <section
-              class="bg-white dark:bg-surface-dark rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-[#382929]"
+              class="bg-white dark:bg-surface-dark rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-border-dark"
             >
               <div
-                class="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-[#382929] pb-4"
+                class="flex items-center gap-3 mb-6 border-b border-gray-100 dark:border-border-dark pb-4"
               >
                 <div
                   class="size-10 rounded-full bg-primary/10 text-primary flex items-center justify-center"
@@ -231,7 +236,7 @@
                   />
                 </div>
 
-                <!-- ✅ Celular Colombia (prefijo fijo +57, usuario escribe 10 dígitos) -->
+                <!-- ✅ Usuario escribe 10 dígitos SIN +57 -->
                 <div class="col-span-1">
                   <label
                     class="block text-xs font-bold uppercase text-gray-500 mb-1"
@@ -249,7 +254,7 @@
                     <input
                       id="client-phone"
                       class="w-full min-w-0 bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-xl px-4 py-3 text-base md:text-sm font-medium transition-colors"
-                      placeholder="300 123 4567"
+                      placeholder="3001234567"
                       type="text"
                       inputmode="numeric"
                       autocomplete="tel-national"
@@ -258,11 +263,11 @@
                   </div>
 
                   <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Solo Colombia. Escribe 10 dígitos (sin +57).
+                    Escribe 10 dígitos (sin +57).
                   </p>
 
                   <p id="phone-error" class="mt-2 text-xs text-red-400 hidden">
-                    Ingresa un celular válido de Colombia (10 dígitos).
+                    Ingresa un celular válido (10 dígitos).
                   </p>
                 </div>
 
@@ -349,10 +354,10 @@
 
             <!-- Punto de venta -->
             <section
-              class="bg-white dark:bg-surface-dark rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-[#382929]"
+              class="bg-white dark:bg-surface-dark rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-border-dark"
             >
               <div
-                class="flex items-center justify-between gap-3 mb-6 border-b border-gray-100 dark:border-[#382929] pb-4"
+                class="flex items-center justify-between gap-3 mb-6 border-b border-gray-100 dark:border-border-dark pb-4"
               >
                 <div class="flex items-center gap-3">
                   <div
@@ -383,18 +388,8 @@
                 “Actualizar mensaje” para regenerar el texto de WhatsApp.
               </p>
 
-              <div
-                id="pv-card"
-                class="hidden mt-5 rounded-2xl border border-[#382929] bg-background-dark/30 p-4"
-              >
-                <p id="pv-name" class="font-extrabold text-white"></p>
-                <p id="pv-address" class="text-sm text-gray-300 mt-1"></p>
-                <p id="pv-whatsapp" class="text-sm text-gray-300 mt-1"></p>
-                <p class="text-xs text-gray-500 mt-3">
-                  Este WhatsApp será el destino del mensaje y el punto de venta
-                  del pedido.
-                </p>
-              </div>
+              <!-- ✅ Card estilo stores -->
+              <div id="pv-card" class="hidden mt-5"></div>
 
               <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <select
@@ -473,7 +468,8 @@
                     </button>
                   </div>
                 </div>
-                <!-- ✅ Anti-bot (obligatorio antes de habilitar WhatsApp) -->
+
+                <!-- ✅ Anti-bot -->
                 <div class="mb-4">
                   <div
                     class="cf-turnstile"
@@ -526,7 +522,7 @@
         </div>
       </main>
 
-      <footer class="bg-surface-dark border-t border-[#382929] py-10">
+      <footer class="bg-surface-dark border-t border-border-dark py-10">
         <div
           class="max-w-[1440px] mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-500"
         >
@@ -539,6 +535,7 @@
         </div>
       </footer>
     </div>
+
     <script src="/supabase-config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="/session.js"></script>
