@@ -492,10 +492,13 @@
                     class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
                   >
                     <option value="">Selecciona</option>
-                    <option value="CC">CC</option>
-                    <option value="CE">CE</option>
+                    <option value="Cédula">Cédula</option>
+                    <option value="Tarjeta de identidad">
+                      Tarjeta de identidad
+                    </option>
+                    <option value="Pasaporte">Pasaporte</option>
                     <option value="NIT">NIT</option>
-                    <option value="PAS">PAS</option>
+                    <option value="PPT">PPT</option>
                   </select>
                 </div>
 
@@ -547,8 +550,8 @@
                 <div>
                   <h2 class="text-lg font-extrabold">Dirección de entrega</h2>
                   <p class="text-sm text-white/55 font-semibold mt-1">
-                    Guardamos <span class="text-white/80">una sola dirección</span>
-                    (tabla <span class="text-white/80">formulario</span>).
+                    Guardamos <span class="text-white/80">una sola dirección</span
+                    >.
                   </p>
                 </div>
 
@@ -579,40 +582,47 @@
                 <div>
                   <label
                     class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
-                    >Departamento</label
+                    >Departamento (Cobertura)</label
                   >
-                  <input
+                  <select
                     id="f-departamento"
-                    type="text"
                     class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                    placeholder="Antioquia"
-                  />
+                  >
+                    <option value="">Cargando...</option>
+                  </select>
                 </div>
 
                 <div>
                   <label
                     class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
-                    >Municipio</label
+                    >Municipio (Cobertura)</label
                   >
-                  <input
+                  <select
                     id="f-municipio"
-                    type="text"
                     class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                    placeholder="Medellín"
-                  />
+                    disabled
+                  >
+                    <option value="">Selecciona un departamento</option>
+                  </select>
                 </div>
 
                 <div class="sm:col-span-2">
                   <label
                     class="text-xs font-extrabold text-white/60 uppercase tracking-wider"
-                    >Barrio</label
+                    >Barrio (Sugerencias)</label
                   >
-                  <input
+                  <select
                     id="f-barrio"
-                    type="text"
                     class="mt-2 w-full rounded-xl bg-background-dark/40 border border-white/10 focus:border-primary/60 focus:ring-primary/30 text-white"
-                    placeholder="Laureles"
-                  />
+                    disabled
+                  >
+                    <option value="">Selecciona municipio</option>
+                  </select>
+
+                  <p class="text-xs text-white/45 font-semibold mt-2">
+                    Si necesitas una lista oficial de barrios por cobertura,
+                    crea una tabla <span class="text-white/70">Barrios_list</span>.
+                  </p>
                 </div>
               </div>
             </div>
@@ -626,34 +636,48 @@
                 <div>
                   <h2 class="text-lg font-extrabold">Mis pedidos</h2>
                   <p class="text-sm text-white/55 font-semibold mt-1">
-                    Revisa tu historial completo.
+                    Últimos 5 pedidos (por tu celular).
                   </p>
                 </div>
 
                 <a
                   id="orders-history-link"
                   href="/orders"
-                  class="h-10 px-4 rounded-full bg-primary hover:bg-red-700 text-white font-extrabold text-sm transition-colors inline-flex items-center gap-2"
+                  class="h-10 px-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold text-sm transition-colors inline-flex items-center gap-2"
                 >
                   <span class="material-symbols-outlined text-[18px]"
                     >history</span
                   >
-                  Ver historial
+                  Ver historial completo
                 </a>
               </div>
 
               <div
-                class="rounded-2xl border border-white/10 bg-background-dark/40 p-5"
+                class="rounded-2xl border border-white/10 bg-background-dark/40 overflow-hidden"
               >
-                <p class="text-white/70 font-semibold">
-                  Aquí verás un resumen cuando conectemos la tabla de pedidos.
-                </p>
-                <p class="text-white/45 text-sm font-semibold mt-1">
-                  El botón “Ver historial” ya te lleva al listado completo.
-                </p>
-              </div>
+                <div
+                  class="px-4 py-3 border-b border-white/10 flex items-center justify-between"
+                >
+                  <p class="font-extrabold text-white/90 text-sm">
+                    Últimos pedidos
+                  </p>
+                  <p class="text-xs font-semibold text-white/40">
+                    Ver detalle: 👁
+                  </p>
+                </div>
 
-              <div id="orders-list" class="mt-5 grid grid-cols-1 gap-3"></div>
+                <div id="orders-loading" class="p-4 text-white/60 font-semibold">
+                  Cargando pedidos...
+                </div>
+
+                <div id="orders-empty" class="hidden p-4 text-white/60 font-semibold">
+                  No hay pedidos para este celular aún.
+                </div>
+
+                <div id="orders-list" class="hidden divide-y divide-white/10">
+                  <!-- filas por JS -->
+                </div>
+              </div>
             </div>
 
             <!-- CONTACTO -->
@@ -718,15 +742,6 @@
                     Enviar correo
                   </button>
                 </div>
-              </div>
-
-              <div
-                class="mt-5 rounded-2xl border border-white/10 bg-background-dark/40 p-5"
-              >
-                <p class="text-white/70 font-semibold">Tip:</p>
-                <p class="text-white/45 text-sm font-semibold mt-1">
-                  Si el problema es con un pedido, incluye tu nombre y celular.
-                </p>
               </div>
             </div>
           </section>

@@ -41,13 +41,14 @@
     return encodeURIComponent(p + q);
   }
 
-  function goLoginWithNext() {
+  function goLoginWithNext(loginPath = "/login") {
     const next = buildNext();
-    window.location.href = next ? `/login?next=${next}` : "/login";
+    window.location.href = next ? `${loginPath}?next=${next}` : loginPath;
   }
 
+  // ✅ IMPORTANTE: si tu archivo es /account.html, apunta allí
   function goAccount() {
-    window.location.href = "/account";
+    window.location.href = "/account.html";
   }
 
   function ensureSupabaseLoaded() {
@@ -88,7 +89,9 @@
   async function getSession() {
     if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) return null;
 
-    await ensureSupabaseLoaded();
+    const loaded = await ensureSupabaseLoaded();
+    if (!loaded) return null;
+
     const sb = getSupabase();
     if (!sb) return null;
 
@@ -122,13 +125,13 @@
   async function goAccountOrLogin() {
     const logged = await isLoggedIn();
     if (logged) return goAccount();
-    return goLoginWithNext();
+    return goLoginWithNext("/login");
   }
 
-  async function requireLoginOrRedirect() {
+  async function requireLoginOrRedirect(loginPath = "/login") {
     const logged = await isLoggedIn();
     if (!logged) {
-      goLoginWithNext();
+      goLoginWithNext(loginPath);
       return false;
     }
     return true;
@@ -147,6 +150,18 @@
     } finally {
       clearSupabaseStorageEverywhere();
       window.location.replace("/");
+    }
+  }
+
+  function formatMoney(n) {
+    try {
+      return new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+      }).format(Number(n || 0));
+    } catch {
+      return `$${n || 0}`;
     }
   }
 
@@ -199,6 +214,88 @@
     }
   }
 
+  // =========================
+  // Cobertura: Departamentos/Municipios/Barrios
+  // =========================
+  async function fetchDepartamentos() {
+    await ensureSupabaseLoaded();
+    const sb = getSupabase();
+    if (!sb) throw new Error("Supabase no inicializado");
+
+    const { data, error } = await sb
+      .from("Departamentos_list")
+      .select('"Nombre"')
+      .order('"Nombre"', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map((r) => r?.Nombre).filter(Boolean);
+  }
+
+  async function fetchMunicipiosByDepartamento(departamento) {
+    await ensureSupabaseLoaded();
+    const sb = getSupabase();
+    if (!sb) throw new Error("Supabase no inicializado");
+    if (!departamento) return [];
+
+    const { data, error } = await sb
+      .from("Municipio_list")
+      .select('"Nombre"')
+      .eq('"Departamento"', departamento)
+      .order('"Nombre"', { ascending: true });
+
+    if (error) throw error;
+    return (data || []).map((r) => r?.Nombre).filter(Boolean);
+  }
+
+  // ⚠️ No hay tabla de barrios: se sugiere con lo que ya existe en formulario
+  async function fetchBarriosByDeptMun(departamento, municipio) {
+    await ensureSupabaseLoaded();
+    const sb = getSupabase();
+    if (!sb) throw new Error("Supabase no inicializado");
+    if (!departamento || !municipio) return [];
+
+    const { data, error } = await sb
+      .from("formulario")
+      .select('"Barrio"')
+      .eq('"Departamento"', departamento)
+      .eq('"Municipio"', municipio)
+      .limit(300);
+
+    if (error) throw error;
+
+    const barrios = (data || [])
+      .map((r) => (r?.Barrio || "").trim())
+      .filter((b) => b && b !== "...");
+
+    return Array.from(new Set(barrios)).sort((a, b) => a.localeCompare(b, "es"));
+  }
+
+  // =========================
+  // Pedidos: últimos N por celular
+  // =========================
+  function normalizePhone(v) {
+    return String(v || "").replace(/\D/g, "");
+  }
+
+  async function fetchLastPedidosByCelular(celular, limit = 5) {
+    await ensureSupabaseLoaded();
+    const sb = getSupabase();
+    if (!sb) throw new Error("Supabase no inicializado");
+
+    const cel = normalizePhone(celular);
+    if (!cel) return [];
+
+    const { data, error } = await sb
+      .from("pedidos")
+      .select("id, resumen_pedido, estado, total, created_at, puntoventa")
+      .eq("celular_cliente", cel)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  }
+
   // ✅ IMPORTANTE: CAPTURE + stopImmediatePropagation para evitar listeners viejos
   function bindAccountButtons() {
     const ids = ["user-icon", "user-btn", "mobile-profile-btn"];
@@ -249,8 +346,11 @@
     if (logoutItem) logoutItem.classList.toggle("hidden", !logged);
   }
 
+  // Exponer API
   window.tqSession = {
+    // core
     getSupabase,
+    client: getSupabase(), // alias útil
     getSession,
     isLoggedIn,
     fetchMe,
@@ -258,8 +358,21 @@
     goAccountOrLogin,
     requireLoginOrRedirect,
     bindAccountButtons,
+
+    // utils
+    formatMoney,
+
+    // formulario
     fetchFormularioByCorreo,
     saveFormulario,
+
+    // cobertura
+    fetchDepartamentos,
+    fetchMunicipiosByDepartamento,
+    fetchBarriosByDeptMun,
+
+    // pedidos
+    fetchLastPedidosByCelular,
   };
 
   document.addEventListener("DOMContentLoaded", () => {
