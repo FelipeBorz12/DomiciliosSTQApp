@@ -38,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- Estado ----
   let antiBotOk = false;
-  let turnstileToken = ""; // ✅ guardamos el token (1 solo uso) para enviarlo en POST /api/pedidos
+  let turnstileToken = "";
   let cartItems = [];
   let userData = null;
 
@@ -159,7 +159,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (nameInput && nombre) nameInput.value = nombre;
     if (emailInput && correo) emailInput.value = correo;
 
-    // Aquí el input es solo 10 dígitos (sin +57)
     if (phoneInput && celular) {
       const digits = String(celular).replace(/\D/g, "");
       if (digits.length === 12 && digits.startsWith("57"))
@@ -172,18 +171,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadUser() {
     try {
-      // 1) Si hay sesión Supabase => ya está logueado
       const s = await window.tqSession?.getSession?.();
       const emailFromSession = s?.user?.email ? String(s.user.email) : "";
 
       if (emailFromSession) {
         noUserWarning?.classList.add("hidden");
-
-        // set email si está vacío
         if (emailInput && !emailInput.value.trim())
           emailInput.value = emailFromSession;
 
-        // 2) Intenta traer formulario desde Supabase (tabla formulario por correo)
         let form = null;
         try {
           form = await window.tqSession?.fetchFormularioByCorreo?.(
@@ -193,7 +188,6 @@ document.addEventListener("DOMContentLoaded", () => {
           console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
         }
 
-        // 3) Mezcla con local si existe
         const local = getLocalUserIfAny();
         const merged = {
           ...(local || {}),
@@ -210,7 +204,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // 4) si no hay sesión, usa local si hay
       const local = getLocalUserIfAny();
       if (local?.correo) {
         userData = local;
@@ -318,7 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
     orderText.dataset.userEdited = "1";
   });
 
-  // ---- PV Card: tarjeta ----
+  // ---- PV Card ----
   function renderPVCard(pv, distanceKmText = "") {
     if (!pvCard) return;
 
@@ -449,7 +442,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const allOk =
       nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
 
-    // ✅ Obligatorio: captcha OK + token presente
     sendWhatsappBtn.disabled = !(allOk && antiBotOk && !!turnstileToken);
   }
 
@@ -592,122 +584,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function toRad(deg) {
-    return (deg * Math.PI) / 180;
-  }
-
-  function distanciaKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(toRad(lat1)) *
-        Math.cos(toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  async function suggestNearestPV() {
-    try {
-      await ensurePuntosVentaLoaded();
-    } catch (err) {
-      console.error("[confirm.js] Error cargando puntos de venta:", err);
-      if (pvMessage)
-        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      if (pvMessage)
-        pvMessage.textContent = "Tu navegador no soporta geolocalización.";
-      return;
-    }
-
-    if (pvMessage) pvMessage.textContent = "Obteniendo ubicación...";
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        try {
-          const userLat = pos.coords.latitude;
-          const userLon = pos.coords.longitude;
-
-          if (pvMessage)
-            pvMessage.textContent = "Buscando punto de venta más cercano...";
-
-          let best = null;
-          let bestDist = Infinity;
-
-          puntosVenta.forEach((pv) => {
-            const pvLat = Number(pv.Latitud);
-            const pvLon = Number(pv.Longitud);
-            if (Number.isNaN(pvLat) || Number.isNaN(pvLon)) return;
-            const d = distanciaKm(userLat, userLon, pvLat, pvLon);
-            if (d < bestDist) {
-              bestDist = d;
-              best = pv;
-            }
-          });
-
-          if (!best) {
-            if (pvMessage)
-              pvMessage.textContent =
-                "No se pudo calcular el punto de venta más cercano.";
-            return;
-          }
-
-          renderPVCard(best, `~${bestDist.toFixed(1)} km`);
-          selectedPV = best;
-
-          syncingPV = true;
-          if (pvDeptSelect && pvMpioSelect && pvBarrioSelect) {
-            pvDeptSelect.value = best.Departamento || "";
-            onDeptChange();
-
-            pvMpioSelect.value = best.Municipio || "";
-            onMpioChange();
-
-            pvBarrioSelect.value = best.Barrio || "";
-          }
-          syncingPV = false;
-
-          selectedPV = best;
-          if (orderText) orderText.dataset.userEdited = "0";
-          updateOrderTextLive(true);
-          validateForm();
-
-          if (pvMessage) {
-            pvMessage.textContent =
-              `Punto de venta cercano detectado: ${best.Barrio || "Sede"} ` +
-              `(a ~${bestDist.toFixed(1)} km).`;
-          }
-        } catch (err) {
-          console.error("[confirm.js] Error en sugerencia PV:", err);
-          if (pvMessage)
-            pvMessage.textContent =
-              "Ocurrió un error al buscar el punto de venta.";
-        }
-      },
-      (error) => {
-        console.error("[confirm.js] Geolocalización error:", error);
-        if (pvMessage) pvMessage.textContent = "No se pudo obtener tu ubicación.";
-      }
-    );
-  }
-
-  // ✅ Callbacks Turnstile (NO hacemos fetch /api/antibot/verify aquí para no “gastar” el token)
+  // ✅ Turnstile callbacks
   window.onOrderTurnstile = function (token) {
-    // token 1 solo uso -> se usará en POST /api/pedidos
     turnstileToken = String(token || "");
     antiBotOk = !!turnstileToken;
 
-    if (antiBotOk) {
-      setAntiBotMsg("Verificación lista ✅ Ya puedes enviar tu pedido.");
-    } else {
-      setAntiBotMsg("Falló la verificación. Intenta de nuevo.", true);
-    }
+    if (antiBotOk) setAntiBotMsg("Verificación lista ✅ Ya puedes enviar tu pedido.");
+    else setAntiBotMsg("Falló la verificación. Intenta de nuevo.", true);
 
     validateForm();
   };
@@ -722,47 +605,28 @@ document.addEventListener("DOMContentLoaded", () => {
   window.onOrderTurnstileError = function () {
     antiBotOk = false;
     turnstileToken = "";
-    setAntiBotMsg(
-      "Error cargando verificación anti-bot. Recarga la página.",
-      true
-    );
+    setAntiBotMsg("Error cargando verificación anti-bot. Recarga la página.", true);
     validateForm();
   };
 
-  // ---- Enviar ----
   function mapCartToPedidoItems() {
-    const mapped = cartItems
+    return (cartItems || [])
       .map((item) => {
         const qty = Math.max(1, toInt(item.quantity ?? item.qty ?? 1, 1));
-
-        const menuIdRaw =
-          item.menu_id ?? item.menuId ?? item.id ?? item.productId;
+        const menuIdRaw = item.menu_id ?? item.menuId ?? item.id ?? item.productId;
         const menu_id = Number(menuIdRaw);
 
-        if (!menu_id || Number.isNaN(menu_id)) {
-          console.warn("[confirm.js] item sin menu_id válido:", item);
-          return null;
-        }
+        if (!menu_id || Number.isNaN(menu_id)) return null;
 
         const extras = Array.isArray(item.extras) ? item.extras : [];
-        const modifications = Array.isArray(item.modifications)
-          ? item.modifications
-          : [];
+        const modifications = Array.isArray(item.modifications) ? item.modifications : [];
 
-        return {
-          menu_id,
-          qty,
-          extras,
-          modifications,
-        };
+        return { menu_id, qty, extras, modifications };
       })
       .filter(Boolean);
-
-    return mapped;
   }
 
   async function sendOrder() {
-    // ✅ anti-bot obligatorio
     if (!antiBotOk || !turnstileToken) {
       alert("Completa la verificación anti-bot antes de enviar.");
       return;
@@ -770,7 +634,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const name = nameInput?.value?.trim();
     const email = emailInput?.value?.trim();
-    const phoneDigits = phoneInput?.value?.trim(); // 10 dígitos
+    const phoneDigits = phoneInput?.value?.trim();
     const address = addressInput?.value?.trim();
     const paymentMethod = paymentMethodSelect?.value?.trim();
 
@@ -789,52 +653,36 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!address) return alert("Ingresa tu dirección.");
 
     const pv_id = Number(selectedPV?.id);
-    if (
-      !selectedPV ||
-      !selectedPV.num_whatsapp ||
-      !Number.isFinite(pv_id) ||
-      pv_id <= 0
-    ) {
+    if (!selectedPV || !selectedPV.num_whatsapp || !Number.isFinite(pv_id) || pv_id <= 0) {
       alert("Selecciona un punto de venta válido (con WhatsApp).");
       return;
     }
 
     const items = mapCartToPedidoItems();
     if (!items.length) {
-      alert(
-        "Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente."
-      );
+      alert("Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente.");
       return;
     }
 
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
 
-    // Mensaje para WhatsApp (lo construimos después de crear pedido para incluir #id)
     let pedidoId = null;
 
-    // 1) Crear pedido en BD (incluye token de Turnstile para verifyTurnstile del backend)
+    // 1) Crear pedido en BD
     try {
       const payload = {
-        // ✅ token (mismo nombre que venías usando)
         cf_turnstile_response: turnstileToken,
-
-        // datos cliente (separados)
-        nombre_cliente: name,
-        correo_cliente: email,
-        celular_cliente: phoneDigits, // ✅ guardamos 10 dígitos para búsquedas / historial
+        nombre_cliente: email, // compatibilidad: tu backend usa esto como correo
+        resumen_pedido: "",
         direccion_cliente: address,
+        celular_cliente: `+57${phoneDigits}`,
         metodo_pago: paymentMethod,
-
         pv_id,
         delivery_fee: DELIVERY_FEE,
         subtotal,
         total,
-
         items,
-
-        // se llena después si quieres (en tu server.ts actual lo recibe)
-        resumen_pedido: "",
       };
 
       const res = await fetch("/api/pedidos", {
@@ -847,9 +695,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) {
         console.error("[confirm.js] POST /api/pedidos NO OK:", res.status, data);
-        alert(
-          "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
-        );
+        alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
       } else {
         if (data && typeof data.id !== "undefined") pedidoId = data.id;
         else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
@@ -857,35 +703,44 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
-      alert(
-        "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
-      );
+      alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
     }
 
     // 2) Mensaje final
     let message = orderText?.value?.trim();
-    if (!message || message === buildOrderText()) {
-      // si el usuario no editó o está vacío, regeneramos con #id si existe
-      message = buildOrderText(pedidoId ?? undefined);
+    if (!message) message = buildOrderText(pedidoId ?? undefined);
+
+    // 3) PATCH resumen
+    if (pedidoId !== null && pedidoId !== undefined) {
+      try {
+        await fetch(`/api/pedidos/${pedidoId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resumen_pedido: message,
+            metodo_pago: paymentMethod,
+          }),
+        });
+      } catch (e) {
+        console.warn("[confirm.js] PATCH resumen falló:", e);
+      }
     }
 
-    // 3) Abrir WhatsApp
+    // 4) Abrir WhatsApp
     const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(/\D/g, "");
     if (!pvPhoneDigits) {
       alert("No hay WhatsApp configurado para el punto de venta.");
       return;
     }
 
-    const url =
-      "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
+    const url = "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
     window.open(url, "_blank");
 
-    // 4) Limpiar carrito y redirigir
+    // 5) Limpiar carrito y redirigir a /history (sin rutas nuevas)
     localStorage.removeItem("burgerCart");
     cartItems = [];
     syncBadges();
 
-    // ✅ IMPORTANTE: el token ya se usó, invalídalo localmente
     antiBotOk = false;
     turnstileToken = "";
     try {
@@ -894,13 +749,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
-    if (phoneDigits) params.set("celular", phoneDigits);
-    if (pedidoId !== null && pedidoId !== undefined)
-      params.set("pedidoId", String(pedidoId));
+    if (pedidoId !== null && pedidoId !== undefined) params.set("pedidoId", String(pedidoId));
 
-    // ✅ redirige a /pedido
-    const historyUrl =
-      "/pedido" + (params.toString() ? "?" + params.toString() : "");
+    const historyUrl = "/history" + (params.toString() ? "?" + params.toString() : "");
     setTimeout(() => (window.location.href = historyUrl), 800);
   }
 
@@ -914,7 +765,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const emailVal = emailInput?.value?.trim() || "";
     if (!validateEmail(emailVal)) return;
 
-    // intenta formulario
     try {
       const form = await window.tqSession?.fetchFormularioByCorreo?.(emailVal);
       if (form) {
@@ -944,7 +794,13 @@ document.addEventListener("DOMContentLoaded", () => {
     else window.location.href = "/cart";
   });
 
-  suggestPvBtn?.addEventListener("click", suggestNearestPV);
+  suggestPvBtn?.addEventListener("click", async () => {
+    try {
+      await ensurePuntosVentaLoaded();
+    } catch (e) {
+      console.error("[confirm.js] ensurePuntosVentaLoaded error:", e);
+    }
+  });
 
   refreshMessageBtn?.addEventListener("click", () => {
     if (orderText) orderText.dataset.userEdited = "0";
@@ -986,7 +842,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- init ----
   async function init() {
-    // por defecto: antiBot no ok
     antiBotOk = false;
     turnstileToken = "";
     setAntiBotMsg("Valida la verificación para evitar bots.");
@@ -1010,8 +865,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error inicial cargando PV:", err);
-      if (pvMessage)
-        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
     }
 
     if (orderText) orderText.dataset.userEdited = "0";
