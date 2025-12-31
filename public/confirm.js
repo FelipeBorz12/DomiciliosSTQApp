@@ -76,6 +76,13 @@ document.addEventListener("DOMContentLoaded", () => {
     antibotMsgEl.classList.toggle("text-white/60", !isError);
   }
 
+  // ✅ PV label: solo Barrio (nunca "mpio-mpio")
+  function getPvLabelOnlyBarrio(pv) {
+    if (!pv) return "";
+    const barrio = safeText(pv.Barrio);
+    return barrio || "Punto de venta";
+  }
+
   // ---- LocalStorage ----
   function saveUserToLocal(data) {
     try {
@@ -171,7 +178,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadUser() {
     try {
-      // 1) Si hay sesión Supabase => ya está logueado
       const s = await window.tqSession?.getSession?.();
       const emailFromSession = s?.user?.email ? String(s.user.email) : "";
 
@@ -181,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (emailInput && !emailInput.value.trim())
           emailInput.value = emailFromSession;
 
-        // 2) Intenta traer formulario desde Supabase (tabla formulario por correo)
         let form = null;
         try {
           form = await window.tqSession?.fetchFormularioByCorreo?.(
@@ -191,7 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
           console.warn("[confirm.js] fetchFormularioByCorreo error:", e);
         }
 
-        // 3) Mezcla con local si existe
         const local = getLocalUserIfAny();
         const merged = {
           ...(local || {}),
@@ -208,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // 4) si no hay sesión, usa local si hay
       const local = getLocalUserIfAny();
       if (local?.correo) {
         userData = local;
@@ -235,7 +238,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const address = addressInput?.value?.trim() || "No especificado";
     const notes = notesInput?.value?.trim() || "";
 
-    const paymentMethod = paymentMethodSelect?.value?.trim() || "No especificado";
+    const paymentMethod =
+      paymentMethodSelect?.value?.trim() || "No especificado";
 
     const subtotal = computeSubtotal();
     const total = subtotal + DELIVERY_FEE;
@@ -291,7 +295,8 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     if (selectedPV) {
-      const pvNameText = selectedPV.Barrio || "Punto de venta";
+      // ✅ En el mensaje ya usas Barrio (esto está bien)
+      const pvNameText = getPvLabelOnlyBarrio(selectedPV);
       const pvAddrText = `${selectedPV.Direccion || ""} - ${
         selectedPV.Municipio || ""
       }`;
@@ -424,7 +429,9 @@ document.addEventListener("DOMContentLoaded", () => {
       String(selectedPV.num_whatsapp || "").trim()
     );
 
-    const paymentOk = !!(paymentMethodSelect && paymentMethodSelect.value.trim());
+    const paymentOk = !!(
+      paymentMethodSelect && paymentMethodSelect.value.trim()
+    );
 
     if (phoneError) {
       if (phoneDigits && !phoneOk) phoneError.classList.remove("hidden");
@@ -441,9 +448,9 @@ document.addEventListener("DOMContentLoaded", () => {
       else paymentError.classList.add("hidden");
     }
 
-    const allOk = nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
+    const allOk =
+      nameOk && emailOk && phoneOk && addressOk && cartOk && pvOk && paymentOk;
 
-    // ✅ antiBotOk obligatorio
     sendWhatsappBtn.disabled = !(allOk && antiBotOk);
   }
 
@@ -609,12 +616,14 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error cargando puntos de venta:", err);
-      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage)
+        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
       return;
     }
 
     if (!navigator.geolocation) {
-      if (pvMessage) pvMessage.textContent = "Tu navegador no soporta geolocalización.";
+      if (pvMessage)
+        pvMessage.textContent = "Tu navegador no soporta geolocalización.";
       return;
     }
 
@@ -626,7 +635,8 @@ document.addEventListener("DOMContentLoaded", () => {
           const userLat = pos.coords.latitude;
           const userLon = pos.coords.longitude;
 
-          if (pvMessage) pvMessage.textContent = "Buscando punto de venta más cercano...";
+          if (pvMessage)
+            pvMessage.textContent = "Buscando punto de venta más cercano...";
 
           let best = null;
           let bestDist = Infinity;
@@ -643,7 +653,9 @@ document.addEventListener("DOMContentLoaded", () => {
           });
 
           if (!best) {
-            if (pvMessage) pvMessage.textContent = "No se pudo calcular el punto de venta más cercano.";
+            if (pvMessage)
+              pvMessage.textContent =
+                "No se pudo calcular el punto de venta más cercano.";
             return;
           }
 
@@ -674,7 +686,9 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (err) {
           console.error("[confirm.js] Error en sugerencia PV:", err);
-          if (pvMessage) pvMessage.textContent = "Ocurrió un error al buscar el punto de venta.";
+          if (pvMessage)
+            pvMessage.textContent =
+              "Ocurrió un error al buscar el punto de venta.";
         }
       },
       (error) => {
@@ -701,7 +715,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return true;
   }
 
-  // ✅ Callbacks globales (Turnstile los llama)
   window.onOrderTurnstile = async function (token) {
     antiBotOk = false;
     if (sendWhatsappBtn) sendWhatsappBtn.disabled = true;
@@ -734,7 +747,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.onOrderTurnstileError = function () {
     antiBotOk = false;
-    setAntiBotMsg("Error cargando verificación anti-bot. Recarga la página.", true);
+    setAntiBotMsg(
+      "Error cargando verificación anti-bot. Recarga la página.",
+      true
+    );
     validateForm();
   };
 
@@ -744,7 +760,8 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((item) => {
         const qty = Math.max(1, toInt(item.quantity ?? item.qty ?? 1, 1));
 
-        const menuIdRaw = item.menu_id ?? item.menuId ?? item.id ?? item.productId;
+        const menuIdRaw =
+          item.menu_id ?? item.menuId ?? item.id ?? item.productId;
         const menu_id = Number(menuIdRaw);
 
         if (!menu_id || Number.isNaN(menu_id)) {
@@ -753,7 +770,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const extras = Array.isArray(item.extras) ? item.extras : [];
-        const modifications = Array.isArray(item.modifications) ? item.modifications : [];
+        const modifications = Array.isArray(item.modifications)
+          ? item.modifications
+          : [];
 
         return { menu_id, qty, extras, modifications };
       })
@@ -789,14 +808,21 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!address) return alert("Ingresa tu dirección.");
 
     const pv_id = Number(selectedPV?.id);
-    if (!selectedPV || !selectedPV.num_whatsapp || !Number.isFinite(pv_id) || pv_id <= 0) {
+    if (
+      !selectedPV ||
+      !selectedPV.num_whatsapp ||
+      !Number.isFinite(pv_id) ||
+      pv_id <= 0
+    ) {
       alert("Selecciona un punto de venta válido (con WhatsApp).");
       return;
     }
 
     const items = mapCartToPedidoItems();
     if (!items.length) {
-      alert("Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente.");
+      alert(
+        "Tu carrito tiene productos inválidos (sin id). Vuelve al menú y agrega productos nuevamente."
+      );
       return;
     }
 
@@ -805,7 +831,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let pedidoId = null;
 
-    // 1) Crear pedido en BD (cabecera + items en pedido_items por backend)
+    // ✅ Puntoventa SOLO barrio
+    const pvLabel = getPvLabelOnlyBarrio(selectedPV);
+
+    // 1) Crear pedido en BD (cabecera + items)
     try {
       const payload = {
         nombre_cliente: email,
@@ -814,10 +843,11 @@ document.addEventListener("DOMContentLoaded", () => {
         celular_cliente: `+57${phoneDigits}`,
         metodo_pago: paymentMethod,
         pv_id,
+        puntoventa: pvLabel, // ✅ AQUÍ: solo barrio
         delivery_fee: DELIVERY_FEE,
         subtotal,
         total,
-        items, // ✅ backend lo guarda en pedido_items
+        items,
       };
 
       const res = await fetch("/api/pedidos", {
@@ -830,7 +860,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!res.ok) {
         console.error("[confirm.js] POST /api/pedidos NO OK:", res.status, data);
-        alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
+        alert(
+          "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
+        );
       } else {
         if (data && typeof data.id !== "undefined") pedidoId = data.id;
         else if (Array.isArray(data) && data[0]?.id) pedidoId = data[0].id;
@@ -838,14 +870,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.error("[confirm.js] Error al llamar /api/pedidos:", err);
-      alert("Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema.");
+      alert(
+        "Se enviará el WhatsApp, pero hubo un error registrando el pedido en el sistema."
+      );
     }
 
     // 2) Mensaje final
     let message = orderText?.value?.trim();
     if (!message) message = buildOrderText(pedidoId ?? undefined);
 
-    // 3) PATCH con resumen + metodo_pago
+    // 3) PATCH con resumen + metodo_pago + puntoventa (por si el backend lo pisa)
     if (pedidoId !== null && pedidoId !== undefined) {
       try {
         await fetch(`/api/pedidos/${pedidoId}`, {
@@ -854,6 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             resumen_pedido: message,
             metodo_pago: paymentMethod,
+            puntoventa: pvLabel, // ✅ refuerzo: solo barrio
           }),
         });
       } catch (e) {
@@ -862,25 +897,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 4) Abrir WhatsApp
-    const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(/\D/g, "");
+    const pvPhoneDigits = String(selectedPV.num_whatsapp || "").replace(
+      /\D/g,
+      ""
+    );
     if (!pvPhoneDigits) {
       alert("No hay WhatsApp configurado para el punto de venta.");
       return;
     }
 
-    const url = "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
+    const url =
+      "https://wa.me/" + pvPhoneDigits + "?text=" + encodeURIComponent(message);
     window.open(url, "_blank");
 
-    // 5) Limpiar carrito y redirigir a history.html (ruta existente)
+    // 5) Limpiar carrito y redirigir
     localStorage.removeItem("burgerCart");
     cartItems = [];
     syncBadges();
 
     const params = new URLSearchParams();
     if (email) params.set("correo", email);
-    if (pedidoId !== null && pedidoId !== undefined) params.set("pedidoId", String(pedidoId));
+    if (pedidoId !== null && pedidoId !== undefined)
+      params.set("pedidoId", String(pedidoId));
 
-    const historyUrl = "/history" + (params.toString() ? "?" + params.toString() : "");
+    const historyUrl =
+      "/history" + (params.toString() ? "?" + params.toString() : "");
     setTimeout(() => (window.location.href = historyUrl), 800);
   }
 
@@ -987,7 +1028,8 @@ document.addEventListener("DOMContentLoaded", () => {
       await ensurePuntosVentaLoaded();
     } catch (err) {
       console.error("[confirm.js] Error inicial cargando PV:", err);
-      if (pvMessage) pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
+      if (pvMessage)
+        pvMessage.textContent = "No se pudieron cargar los puntos de venta.";
     }
 
     if (orderText) orderText.dataset.userEdited = "0";
